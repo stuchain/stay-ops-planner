@@ -10,6 +10,7 @@
     "test": "node -e \"process.exit(0)\""
   },
   "dependencies": {
+    "@stay-ops/db": "workspace:*",
     "@stay-ops/shared": "workspace:*",
     "next": "^15.1.6",
     "react": "^19.0.0",

@@ -16,5 +16,12 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
     },
   },
-  { ignores: ["dist/**", "node_modules/**"] },
+  {
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "prisma/migrations/**",
+      "prisma/seed.ts",
+    ],
+  },
 );
