@@ -8,6 +8,10 @@ process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayop
 
 const prisma = new PrismaClient();
 
+function uniqueSuffix(): string {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
 async function truncateDomain() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
@@ -38,10 +42,11 @@ describe("db constraints — uniqueness and FK", () => {
   });
 
   it("rejects duplicate (channel, external_booking_id)", async () => {
+    const ext = `EXT-${uniqueSuffix()}`;
     await prisma.booking.create({
       data: {
         channel: Channel.airbnb,
-        externalBookingId: "EXT-1",
+        externalBookingId: ext,
         status: BookingStatus.confirmed,
         checkinDate: new Date("2026-05-01T00:00:00.000Z"),
         checkoutDate: new Date("2026-05-04T00:00:00.000Z"),
@@ -53,7 +58,7 @@ describe("db constraints — uniqueness and FK", () => {
       prisma.booking.create({
         data: {
           channel: Channel.airbnb,
-          externalBookingId: "EXT-1",
+          externalBookingId: ext,
           status: BookingStatus.confirmed,
           checkinDate: new Date("2026-06-01T00:00:00.000Z"),
           checkoutDate: new Date("2026-06-03T00:00:00.000Z"),
@@ -65,7 +70,7 @@ describe("db constraints — uniqueness and FK", () => {
 
   it("rejects assignment with non-existent booking_id", async () => {
     const room = await prisma.room.create({
-      data: { code: "R1", displayName: "Room 1" },
+      data: { code: `R-${uniqueSuffix()}`, displayName: "Room 1" },
     });
 
     try {

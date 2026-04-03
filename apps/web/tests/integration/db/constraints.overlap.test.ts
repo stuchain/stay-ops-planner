@@ -15,6 +15,26 @@ process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayop
 
 const prisma = new PrismaClient();
 
+/** Postgres exclusion violations surface as PrismaClientUnknownRequestError in some driver paths. */
+function expectExclusionOrKnownConstraintViolation(e: unknown): void {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    expect(["P2010", "P2002"]).toContain(e.code);
+    return;
+  }
+  if (
+    e instanceof Error &&
+    e.constructor.name === "PrismaClientUnknownRequestError" &&
+    /exclusion|violat|constraint/i.test(e.message)
+  ) {
+    return;
+  }
+  throw e;
+}
+
+function uniqueSuffix(): string {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
 async function truncateDomain() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
@@ -45,11 +65,12 @@ describe("db constraints — overlap", () => {
   });
 
   it("rejects two overlapping assignments for the same room (DB exclusion)", async () => {
-    const room = await prisma.room.create({ data: { code: "R1" } });
+    const s = uniqueSuffix();
+    const room = await prisma.room.create({ data: { code: `R-${s}` } });
     const b1 = await prisma.booking.create({
       data: {
         channel: Channel.airbnb,
-        externalBookingId: "B1",
+        externalBookingId: `B1-${s}`,
         status: BookingStatus.confirmed,
         checkinDate: new Date("2026-05-01T00:00:00.000Z"),
         checkoutDate: new Date("2026-05-04T00:00:00.000Z"),
@@ -59,7 +80,7 @@ describe("db constraints — overlap", () => {
     const b2 = await prisma.booking.create({
       data: {
         channel: Channel.airbnb,
-        externalBookingId: "B2",
+        externalBookingId: `B2-${s}`,
         status: BookingStatus.confirmed,
         checkinDate: new Date("2026-05-10T00:00:00.000Z"),
         checkoutDate: new Date("2026-05-20T00:00:00.000Z"),
@@ -87,18 +108,17 @@ describe("db constraints — overlap", () => {
       });
       expect.fail("expected exclusion or constraint violation");
     } catch (e) {
-      expect(e).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
-      const code = (e as Prisma.PrismaClientKnownRequestError).code;
-      expect(["P2010", "P2002"]).toContain(code);
+      expectExclusionOrKnownConstraintViolation(e);
     }
   });
 
   it("allows adjacent assignments (checkout equals next check-in)", async () => {
-    const room = await prisma.room.create({ data: { code: "R1" } });
+    const s = uniqueSuffix();
+    const room = await prisma.room.create({ data: { code: `R-${s}` } });
     const b1 = await prisma.booking.create({
       data: {
         channel: Channel.airbnb,
-        externalBookingId: "B1",
+        externalBookingId: `B1-${s}`,
         status: BookingStatus.confirmed,
         checkinDate: new Date("2026-05-01T00:00:00.000Z"),
         checkoutDate: new Date("2026-05-04T00:00:00.000Z"),
@@ -108,7 +128,7 @@ describe("db constraints — overlap", () => {
     const b2 = await prisma.booking.create({
       data: {
         channel: Channel.airbnb,
-        externalBookingId: "B2",
+        externalBookingId: `B2-${s}`,
         status: BookingStatus.confirmed,
         checkinDate: new Date("2026-05-04T00:00:00.000Z"),
         checkoutDate: new Date("2026-05-07T00:00:00.000Z"),
@@ -138,7 +158,8 @@ describe("db constraints — overlap", () => {
   });
 
   it("assertNoOverlap rejects interval overlapping a manual block", async () => {
-    const room = await prisma.room.create({ data: { code: "R1" } });
+    const s = uniqueSuffix();
+    const room = await prisma.room.create({ data: { code: `R-${s}` } });
     await prisma.manualBlock.create({
       data: {
         roomId: room.id,
@@ -160,11 +181,12 @@ describe("db constraints — overlap", () => {
   });
 
   it("assertNoOverlap rejects interval overlapping an assignment", async () => {
-    const room = await prisma.room.create({ data: { code: "R1" } });
+    const s = uniqueSuffix();
+    const room = await prisma.room.create({ data: { code: `R-${s}` } });
     const b1 = await prisma.booking.create({
       data: {
         channel: Channel.direct,
-        externalBookingId: "D1",
+        externalBookingId: `D1-${s}`,
         status: BookingStatus.confirmed,
         checkinDate: new Date("2026-07-01T00:00:00.000Z"),
         checkoutDate: new Date("2026-07-05T00:00:00.000Z"),
