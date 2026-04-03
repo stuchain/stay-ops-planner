@@ -4,6 +4,8 @@
 
 Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md). **Phased implementation spec:** [docs/phases/README.md](docs/phases/README.md).
 
+**Code review:** use [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md) as the checklist for module boundaries, API errors, and data access.
+
 ## Requirements
 
 - Node 20+
