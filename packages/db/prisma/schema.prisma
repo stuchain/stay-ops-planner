@@ -7,6 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
+  needs_reassignment
+}
+
+enum Channel {
+  airbnb
+  booking
+  direct
+}
+
 /// Internal operator identity (Phase 1). Optional FKs on assignments and audit.
 model User {
   id           String   @id @default(cuid())
@@ -41,8 +54,7 @@ model Room {
 /// Channel listing as seen from the provider (Hosthub listing id, etc.).
 model SourceListing {
   id                 String   @id @default(cuid())
-  /// Temporary string until canonical `Channel` enum (commit 2.2).
-  channel            String
+  channel            Channel
   externalListingId  String   @map("external_listing_id")
   title              String?
   createdAt          DateTime @default(now()) @map("created_at")
@@ -57,11 +69,9 @@ model SourceListing {
 model Booking {
   id                String   @id @default(cuid())
   sourceListingId   String?  @map("source_listing_id")
-  /// Temporary string until canonical `Channel` enum (commit 2.2).
-  channel           String
+  channel           Channel
   externalBookingId String   @map("external_booking_id")
-  /// Temporary string until canonical `BookingStatus` enum (commit 2.2).
-  status            String
+  status            BookingStatus
   checkinDate       DateTime @db.Date @map("checkin_date")
   checkoutDate      DateTime @db.Date @map("checkout_date")
   nights            Int
