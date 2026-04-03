@@ -22,4 +22,5 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 
 - `apps/web` — Next.js (App Router) UI and route handlers
 - `packages/db` — Prisma schema and data access (wired in later phases)
-- `packages/shared` — Shared types, env validation, and helpers
+- `packages/shared` — Shared types, env validation (Zod), and helpers
+- `packages/worker` — Background jobs (BullMQ) entrypoint; stub until sync phases

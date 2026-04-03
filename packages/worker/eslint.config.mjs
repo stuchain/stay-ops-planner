@@ -16,12 +16,5 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
     },
   },
-  {
-    ignores: [
-      "dist/**",
-      "node_modules/**",
-      "vitest.config.ts",
-      "**/*.test.ts",
-    ],
-  },
+  { ignores: ["dist/**", "node_modules/**"] },
 );

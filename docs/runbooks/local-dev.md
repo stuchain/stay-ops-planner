@@ -6,6 +6,10 @@
 - pnpm (see root `package.json` `packageManager` pin)
 - Docker with Compose v2 (Docker Desktop or Engine + Compose plugin)
 
+## Environment variables
+
+Copy `.env.example` to `.env.local` before running the app or worker. Required keys are validated at startup (see `packages/shared/src/env.ts`): `DATABASE_URL`, `SESSION_SECRET` (32+ characters), and `APP_TIMEZONE`. Missing or invalid values fail the process with a JSON error listing fields.
+
 ## One-command stack (Postgres + Redis + web)
 
 From the repository root:

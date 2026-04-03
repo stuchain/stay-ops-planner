@@ -1,2 +1,2 @@
-/** Placeholder until shared types and validators are added in later phases. */
+export { EnvSchema, parseEnv, type Env } from "./env.js";
 export const sharedPackageReady = true;

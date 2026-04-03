@@ -1,0 +1,22 @@
+{
+  "name": "@stay-ops/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "test": "node -e \"process.exit(0)\""
+  },
+  "dependencies": {
+    "@stay-ops/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.16.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
+  }
+}

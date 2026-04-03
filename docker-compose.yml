@@ -38,6 +38,8 @@ services:
     environment:
       DATABASE_URL: postgresql://stayops:stayops@postgres:5432/stayops
       REDIS_URL: redis://redis:6379
+      SESSION_SECRET: replace-with-local-only-secret-at-least-32-characters-long
+      APP_TIMEZONE: Etc/UTC
       NODE_ENV: production
     ports:
       - "3000:3000"
