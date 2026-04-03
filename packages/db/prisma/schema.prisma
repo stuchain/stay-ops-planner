@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Internal operator identity (Phase 1). Optional FKs on assignments and audit.
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -15,10 +16,159 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  assignmentsCreated Assignment[] @relation("AssignmentCreatedBy")
+  assignmentsUpdated Assignment[] @relation("AssignmentUpdatedBy")
+  auditEvents        AuditEvent[]
+
   @@map("users")
 }
 
-/// Placeholder until core domain tables land in Phase 2.
-model SchemaBootstrap {
-  id String @id @default(cuid())
+/// Physical unit in the property (R1…RN in fixtures).
+model Room {
+  id          String   @id @default(cuid())
+  code        String?  @unique
+  displayName String?  @map("display_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  assignments   Assignment[]
+  manualBlocks  ManualBlock[]
+  cleaningTasks CleaningTask[]
+
+  @@map("rooms")
+}
+
+/// Channel listing as seen from the provider (Hosthub listing id, etc.).
+model SourceListing {
+  id                 String   @id @default(cuid())
+  /// Temporary string until canonical `Channel` enum (commit 2.2).
+  channel            String
+  externalListingId  String   @map("external_listing_id")
+  title              String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  bookings Booking[]
+
+  @@map("source_listings")
+}
+
+/// Canonical booking row; `raw_payload` stores provider JSON for Phase 3 mapping.
+model Booking {
+  id                String   @id @default(cuid())
+  sourceListingId   String?  @map("source_listing_id")
+  /// Temporary string until canonical `Channel` enum (commit 2.2).
+  channel           String
+  externalBookingId String   @map("external_booking_id")
+  /// Temporary string until canonical `BookingStatus` enum (commit 2.2).
+  status            String
+  checkinDate       DateTime @db.Date @map("checkin_date")
+  checkoutDate      DateTime @db.Date @map("checkout_date")
+  nights            Int
+  rawPayload        Json?    @map("raw_payload")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  sourceListing SourceListing? @relation(fields: [sourceListingId], references: [id], onDelete: SetNull)
+  assignment    Assignment?
+  cleaningTasks CleaningTask[]
+
+  @@index([checkinDate, checkoutDate])
+  @@index([status])
+  @@map("bookings")
+}
+
+/// At most one assignment per booking in v1 (`booking_id` unique).
+model Assignment {
+  id          String   @id @default(cuid())
+  bookingId   String   @unique @map("booking_id")
+  roomId      String   @map("room_id")
+  startDate   DateTime @db.Date @map("start_date")
+  endDate     DateTime @db.Date @map("end_date")
+  version     Int      @default(0)
+  createdById String?  @map("created_by_id")
+  updatedById String?  @map("updated_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  room      Room    @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  createdBy User?   @relation("AssignmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("AssignmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([roomId, startDate, endDate])
+  @@map("assignments")
+}
+
+model ManualBlock {
+  id        String   @id @default(cuid())
+  roomId    String   @map("room_id")
+  startDate DateTime @db.Date @map("start_date")
+  endDate   DateTime @db.Date @map("end_date")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("manual_blocks")
+}
+
+model CleaningTask {
+  id        String   @id @default(cuid())
+  bookingId String   @map("booking_id")
+  roomId    String   @map("room_id")
+  status    String?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  room    Room    @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@map("cleaning_tasks")
+}
+
+model SyncRun {
+  id          String    @id @default(cuid())
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  status      String?
+  source      String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  importErrors ImportError[]
+
+  @@map("sync_runs")
+}
+
+model ImportError {
+  id        String   @id @default(cuid())
+  syncRunId String   @map("sync_run_id")
+  code      String?
+  message   String
+  payload   Json?
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  syncRun SyncRun @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
+
+  @@index([resolved, createdAt])
+  @@map("import_errors")
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  payload    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_events")
 }
