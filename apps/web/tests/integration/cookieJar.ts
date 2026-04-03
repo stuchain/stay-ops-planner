@@ -17,8 +17,12 @@ export class CookieJar {
 
     for (const setCookie of setCookies) {
       // e.g. "stay_ops_session=token; Path=/; HttpOnly; SameSite=lax; Max-Age=86400"
-      const [pair] = setCookie.split(";");
-      const [name, value] = pair.split("=");
+      const [firstPart] = setCookie.split(";");
+      if (!firstPart) continue;
+      const eqIndex = firstPart.indexOf("=");
+      if (eqIndex === -1) continue;
+      const name = firstPart.slice(0, eqIndex).trim();
+      const value = firstPart.slice(eqIndex + 1).trim();
       if (!name) continue;
 
       const maxAgeMatch = /Max-Age=([0-9]+)/i.exec(setCookie);
