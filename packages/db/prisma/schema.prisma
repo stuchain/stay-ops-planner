@@ -62,6 +62,7 @@ model SourceListing {
 
   bookings Booking[]
 
+  @@unique([channel, externalListingId], map: "source_listings_channel_external_listing_id_key")
   @@map("source_listings")
 }
 
@@ -85,6 +86,7 @@ model Booking {
 
   @@index([checkinDate, checkoutDate])
   @@index([status])
+  @@unique([channel, externalBookingId], map: "bookings_channel_external_booking_id_key")
   @@map("bookings")
 }
 
