@@ -1,0 +1,62 @@
+# Local development
+
+## Prerequisites
+
+- Node 20+
+- pnpm (see root `package.json` `packageManager` pin)
+- Docker with Compose v2 (Docker Desktop or Engine + Compose plugin)
+
+## One-command stack (Postgres + Redis + web)
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- **Postgres** on host port `5432` (user/password/db: `stayops` / `stayops` / `stayops`)
+- **Redis** on host port `6379`
+- **web** on host port `3000`, after Postgres and Redis report healthy
+
+The `web` container receives `DATABASE_URL` and `REDIS_URL` pointing at the compose service hostnames (`postgres`, `redis`). For processes running on your **host** (e.g. `pnpm dev`), use `localhost` and the same ports — see `.env.example`.
+
+## Host-only app (containers for data services only)
+
+Useful for faster iteration on the Next app:
+
+```bash
+docker compose up -d postgres redis
+cp .env.example .env.local
+# Edit DATABASE_URL / REDIS_URL if your ports differ
+pnpm dev
+```
+
+## Port conflicts
+
+If `5432` or `6379` is already in use locally, change the **left** side of the port mapping in `docker-compose.yml`, for example:
+
+```yaml
+ports:
+  - "5433:5432"
+```
+
+Then set `DATABASE_URL` to use `localhost:5433` (and the same credentials/db name as in compose).
+
+## Reset local database data (destructive)
+
+Removes the named volume and recreates an empty Postgres data directory:
+
+```bash
+docker compose down -v
+docker compose up -d postgres redis
+```
+
+**Warning:** This deletes all data in the `postgres_data` volume. Do not use against shared or production databases.
+
+## Troubleshooting
+
+- **`docker compose config`** — validate YAML and merged settings.
+- **`docker compose ps`** — service status.
+- **`docker compose logs -f postgres`** / **`redis`** — service logs.
