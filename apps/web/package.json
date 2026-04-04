@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "node ../../packages/sync/node_modules/typescript/lib/tsc.js -p ../../packages/sync/tsconfig.json && vitest run"
   },
   "dependencies": {
     "@stay-ops/db": "workspace:*",
