@@ -7,7 +7,9 @@ import {
   SYNC_HOSTHUB_QUEUE_NAME,
 } from "@stay-ops/sync";
 import { Worker } from "bullmq";
+import { loadHosthubLocalEnv } from "./loadHosthubLocalEnv.js";
 
+loadHosthubLocalEnv();
 parseEnv(process.env);
 
 const redisUrlRaw = process.env.REDIS_URL?.trim();
