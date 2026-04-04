@@ -25,7 +25,8 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 - `apps/web` — Next.js (App Router) UI and route handlers
 - `packages/db` — Prisma schema and data access
 - `packages/shared` — Shared types, env validation (Zod), and helpers
-- `packages/worker` — Background jobs (BullMQ) entrypoint; stub for now
+- `packages/worker` — Background jobs (BullMQ) entrypoint
+- `packages/sync` — Hosthub client, webhooks queue, booking ingest ([Hosthub API docs](https://www.hosthub.com/docs/api/), [docs/vendor/hosthub-api.md](docs/vendor/hosthub-api.md))
 
 ## Current Repo Status
 

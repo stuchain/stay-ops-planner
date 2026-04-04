@@ -6,8 +6,6 @@ import { mapHosthubBookingStatus } from "./bookingStatus.js";
 import { mapHosthubListingChannel } from "./mapChannel.js";
 import { nightsBetweenCheckinCheckout, parseDateOnlyUtc } from "./dates.js";
 
-type Db = PrismaClient | Prisma.TransactionClient;
-
 async function upsertListingAndBooking(
   tx: Prisma.TransactionClient,
   dto: HosthubReservationDto,

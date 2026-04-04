@@ -5,5 +5,6 @@ export async function revalidateAssignmentIfNeeded(
   _tx: Prisma.TransactionClient,
   _bookingId: string,
 ): Promise<void> {
-  /* no-op */
+  void _tx;
+  void _bookingId;
 }

@@ -1,5 +1,5 @@
-import type { z } from "zod";
 import { HosthubReservationPageSchema, type HosthubReservationPage } from "./types.dto.js";
+import { normalizeHosthubReservationPagePayload } from "./normalize.js";
 import {
   errorFromHttpStatus,
   hosthubError,
@@ -15,6 +15,8 @@ export type HosthubClientOptions = {
   /** Base URL including API version path when required, e.g. https://app.hosthub.com/api/2019-03-01 */
   baseUrl: string;
   apiToken: string;
+  /** List endpoint path (default `/reservations`). Confirm in https://www.hosthub.com/docs/api/ */
+  listReservationsPath?: string;
   fetchFn?: typeof fetch;
   /** Default 30s */
   timeoutMs?: number;
@@ -56,9 +58,33 @@ export type HosthubRequestLog = (info: {
   requestId?: string;
 }) => void;
 
+function parseHosthubListResponse(body: unknown): HosthubClientResult<HosthubReservationPage> {
+  const normalized = normalizeHosthubReservationPagePayload(body);
+  if (!normalized) {
+    return {
+      ok: false,
+      error: hosthubError(
+        "HOSTHUB_PARSE_ERROR",
+        "Unrecognized Hosthub list response shape; compare with https://www.hosthub.com/docs/api/",
+      ),
+    };
+  }
+  const parsed = HosthubReservationPageSchema.safeParse(normalized);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: hosthubError("HOSTHUB_PARSE_ERROR", "Hosthub list response failed validation", {
+        cause: parsed.error,
+      }),
+    };
+  }
+  return { ok: true, value: parsed.data };
+}
+
 export class HosthubClient {
   private readonly baseUrl: string;
   private readonly apiToken: string;
+  private readonly listReservationsPath: string;
   private readonly fetchFn: typeof fetch;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
@@ -73,6 +99,8 @@ export class HosthubClient {
     }
     this.baseUrl = normalizeBaseUrl(options.baseUrl.trim());
     this.apiToken = options.apiToken.trim();
+    const path = options.listReservationsPath?.trim() || "/reservations";
+    this.listReservationsPath = path.startsWith("/") ? path : `/${path}`;
     this.fetchFn = options.fetchFn ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.maxRetries = options.maxRetries ?? 3;
@@ -86,15 +114,19 @@ export class HosthubClient {
     cursor: string | null;
     updatedSince?: string | null;
   }): Promise<HosthubClientResult<HosthubReservationPage>> {
-    const path = "/reservations";
+    const path = this.listReservationsPath;
     const url = new URL(path, `${this.baseUrl}/`);
     if (args.cursor) url.searchParams.set("cursor", args.cursor);
     if (args.updatedSince) url.searchParams.set("updated_since", args.updatedSince);
 
-    return this.getJson(url.toString(), path, HosthubReservationPageSchema);
+    return this.getJson(url.toString(), path, parseHosthubListResponse);
   }
 
-  private async getJson<T>(url: string, pathForLog: string, schema: z.ZodType<T>): Promise<HosthubClientResult<T>> {
+  private async getJson<T>(
+    url: string,
+    pathForLog: string,
+    parseBody: (body: unknown) => HosthubClientResult<T>,
+  ): Promise<HosthubClientResult<T>> {
     let lastError: HosthubClientError | undefined;
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
@@ -160,17 +192,7 @@ export class HosthubClient {
         };
       }
 
-      const parsed = schema.safeParse(body);
-      if (!parsed.success) {
-        return {
-          ok: false,
-          error: hosthubError("HOSTHUB_PARSE_ERROR", "Hosthub response failed validation", {
-            cause: parsed.error,
-          }),
-        };
-      }
-
-      return { ok: true, value: parsed.data };
+      return parseBody(body);
     }
 
     return {

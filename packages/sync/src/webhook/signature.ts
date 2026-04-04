@@ -1,6 +1,9 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-/** Default header for HMAC-SHA256 of raw body (confirm against Hosthub docs in production). */
+/**
+ * Default header for HMAC-SHA256 of raw body.
+ * Override with `HOSTHUB_WEBHOOK_SIGNATURE_HEADER` if https://www.hosthub.com/docs/api/ specifies a different name.
+ */
 export const HOSTHUB_WEBHOOK_SIGNATURE_HEADER = "x-hosthub-signature";
 
 export function sha256HexUtf8(input: string): string {

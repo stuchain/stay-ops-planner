@@ -43,6 +43,22 @@ describe("extractHosthubReservationDto", () => {
   it("parses nested reservation", () => {
     expect(extractHosthubReservationDto({ reservation: row })).toEqual(row);
   });
+
+  it("parses snake_case nested reservation", () => {
+    const snake = {
+      reservation_id: "r-snake",
+      listing_id: "l-snake",
+      status: "confirmed",
+      check_in: "2026-09-01",
+      check_out: "2026-09-04",
+    };
+    expect(extractHosthubReservationDto({ reservation: snake })).toMatchObject({
+      reservationId: "r-snake",
+      listingId: "l-snake",
+      checkIn: "2026-09-01",
+      checkOut: "2026-09-04",
+    });
+  });
 });
 
 describe("dates", () => {

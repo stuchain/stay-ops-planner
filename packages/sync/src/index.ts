@@ -12,6 +12,11 @@ export {
   type HosthubReservationPage,
 } from "./hosthub/types.dto.js";
 export {
+  coerceHosthubDateField,
+  normalizeHosthubReservationRecord,
+  normalizeHosthubReservationPagePayload,
+} from "./hosthub/normalize.js";
+export {
   hosthubError,
   errorFromHttpStatus,
   isRetryableHosthubError,

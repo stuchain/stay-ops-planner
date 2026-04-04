@@ -28,6 +28,10 @@ export const EnvSchema = z.object({
     z.string().url(),
   ),
   HOSTHUB_API_TOKEN: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** Path segment after API base for listing reservations (see https://www.hosthub.com/docs/api/). Default `/reservations`. */
+  HOSTHUB_API_RESERVATIONS_PATH: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** Override webhook HMAC header name if Hosthub docs specify a different name than `x-hosthub-signature`. */
+  HOSTHUB_WEBHOOK_SIGNATURE_HEADER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });

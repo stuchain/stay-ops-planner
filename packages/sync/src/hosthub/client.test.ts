@@ -119,4 +119,43 @@ describe("HosthubClient", () => {
     });
     expect((init.headers as Record<string, string>)["User-Agent"]).toContain("stay-ops-planner-sync");
   });
+
+  it("accepts reservations[] with snake_case rows (Hosthub-style list payloads)", async () => {
+    const altPage = {
+      reservations: [
+        {
+          id: "rX",
+          rental_id: "lX",
+          status: "confirmed",
+          check_in: "2026-05-01",
+          check_out: "2026-05-04",
+        },
+      ],
+      next_cursor: null,
+    };
+    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify(altPage), { status: 200 }));
+    const c = client(fetchFn);
+    const result = await c.listReservationsUpdatedSince({ cursor: null });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.data).toHaveLength(1);
+      expect(result.value.data[0]?.reservationId).toBe("rX");
+      expect(result.value.data[0]?.listingId).toBe("lX");
+    }
+  });
+
+  it("uses listReservationsPath for the request URL", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(validPage), { status: 200 }),
+    );
+    const c = new HosthubClient({
+      baseUrl: "https://example.test/api",
+      apiToken: "test-token",
+      fetchFn,
+      listReservationsPath: "/bookings",
+    });
+    await c.listReservationsUpdatedSince({ cursor: null });
+    const url = String(fetchFn.mock.calls[0]?.[0]);
+    expect(url).toContain("/bookings");
+  });
 });

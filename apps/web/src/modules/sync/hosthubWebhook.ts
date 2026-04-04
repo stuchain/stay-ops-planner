@@ -17,7 +17,9 @@ export async function handleHosthubWebhookPost(request: Request): Promise<Respon
   const webhookSecret = process.env.WEBHOOK_SECRET;
 
   if (webhookSecret) {
-    const sig = request.headers.get(HOSTHUB_WEBHOOK_SIGNATURE_HEADER);
+    const headerName =
+      process.env.HOSTHUB_WEBHOOK_SIGNATURE_HEADER?.trim() || HOSTHUB_WEBHOOK_SIGNATURE_HEADER;
+    const sig = request.headers.get(headerName);
     if (!verifyHosthubWebhookSignature(rawBody, webhookSecret, sig)) {
       return NextResponse.json(
         syncJsonError("WEBHOOK_INVALID_SIGNATURE", "Invalid or missing webhook signature"),

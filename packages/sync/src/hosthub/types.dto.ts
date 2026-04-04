@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Single reservation as returned by Hosthub-style list APIs (stub; align with OpenAPI when available). */
+/** Canonical reservation row after normalization (see `normalizeHosthubReservationRecord` and https://www.hosthub.com/docs/api/). */
 export const HosthubReservationDtoSchema = z.object({
   reservationId: z.string().min(1),
   listingId: z.string().min(1),

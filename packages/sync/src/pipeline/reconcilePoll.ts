@@ -30,9 +30,11 @@ export async function runHosthubReconcile(prisma: PrismaClient): Promise<void> {
     }
 
     const baseUrl = process.env.HOSTHUB_API_BASE?.trim() ?? "https://app.hosthub.com/api/2019-03-01";
+    const listPath = process.env.HOSTHUB_API_RESERVATIONS_PATH?.trim();
     const client = new HosthubClient({
       baseUrl,
       apiToken: token,
+      ...(listPath ? { listReservationsPath: listPath } : {}),
     });
 
     let cursor: string | null = null;
