@@ -9,6 +9,7 @@
     "dev": "pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/sync build && pnpm --filter @stay-ops/web dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs"
   }
 }

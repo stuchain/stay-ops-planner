@@ -5,6 +5,8 @@ dist
 .env
 .env.local
 .env.*.local
+# Hosthub API key for local smoke only (see .env.hosthub.example)
+.env.hosthub.local
 *.log
 coverage
 playwright-report
