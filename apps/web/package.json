@@ -24,6 +24,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "bullmq": "^5.34.5",
     "eslint": "^9.16.0",
     "eslint-config-next": "^15.1.6",
     "vitest": "^3.0.5",
