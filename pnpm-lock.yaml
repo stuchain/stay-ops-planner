@@ -146,6 +146,12 @@ importers:
       '@stay-ops/shared':
         specifier: workspace:*
         version: link:../shared
+      '@stay-ops/sync':
+        specifier: workspace:*
+        version: link:../sync
+      bullmq:
+        specifier: ^5.34.5
+        version: 5.73.0
     devDependencies:
       '@eslint/js':
         specifier: ^9.16.0

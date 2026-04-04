@@ -10,7 +10,9 @@
     "test": "node -e \"process.exit(0)\""
   },
   "dependencies": {
-    "@stay-ops/shared": "workspace:*"
+    "@stay-ops/shared": "workspace:*",
+    "@stay-ops/sync": "workspace:*",
+    "bullmq": "^5.34.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",

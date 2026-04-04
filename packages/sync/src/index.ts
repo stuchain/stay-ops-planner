@@ -23,7 +23,13 @@ export {
   JOB_HOSTHUB_INBOUND,
   JOB_HOSTHUB_RECONCILE,
 } from "./queue/constants.js";
+export { bullmqConnectionFromUrl } from "./queue/connection.js";
+export {
+  hosthubReconcileRepeatJobId,
+  registerHosthubReconcileRepeat,
+} from "./queue/reconcileRepeat.js";
 export { enqueueHosthubInbound, type HosthubInboundJobPayload } from "./queue/hosthubInboundQueue.js";
+export { processSyncHosthubJob } from "./jobs/processSyncHosthubJob.js";
 export {
   HOSTHUB_WEBHOOK_SIGNATURE_HEADER,
   sha256HexUtf8,

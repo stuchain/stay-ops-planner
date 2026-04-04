@@ -1,23 +1,11 @@
 import { Queue } from "bullmq";
 import { JOB_HOSTHUB_INBOUND, SYNC_HOSTHUB_QUEUE_NAME } from "./constants.js";
+import { bullmqConnectionFromUrl } from "./connection.js";
 
 export type HosthubInboundJobPayload = {
   dedupeKey: string;
   rawBody: string;
 };
-
-/** BullMQ passes options through to ioredis; avoid direct `new Redis()` (CJS/ESM default export typing). */
-function bullmqConnectionFromUrl(redisUrl: string) {
-  const u = new URL(redisUrl);
-  const port = u.port ? Number(u.port) : 6379;
-  return {
-    host: u.hostname,
-    port,
-    username: u.username ? decodeURIComponent(u.username) : undefined,
-    password: u.password ? decodeURIComponent(u.password) : undefined,
-    maxRetriesPerRequest: null,
-  };
-}
 
 const queueByRedisUrl = new Map<string, Queue<HosthubInboundJobPayload>>();
 
