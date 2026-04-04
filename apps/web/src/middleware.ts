@@ -14,9 +14,11 @@ export function middleware(request: NextRequest) {
   // Public allowlist (Phase 1)
   const isHealth = isApi && pathname === "/api/health" && method === "GET";
   const isLogin = isApi && pathname === "/api/auth/login" && method === "POST";
+  const isHosthubWebhook =
+    isApi && pathname === "/api/sync/hosthub/webhook" && method === "POST";
 
   if (!isApi && !isApp) return NextResponse.next();
-  if (isHealth || isLogin) return NextResponse.next();
+  if (isHealth || isLogin || isHosthubWebhook) return NextResponse.next();
 
   const { context, tokenPresent } = getSessionContextFromRequest(request);
   if (context) return NextResponse.next();

@@ -38,6 +38,7 @@ function uniqueSuffix(): string {
 async function truncateDomain() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "webhook_inbound_events",
       "import_errors",
       "audit_events",
       "assignments",

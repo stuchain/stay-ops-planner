@@ -12,6 +12,7 @@
   "dependencies": {
     "@stay-ops/db": "workspace:*",
     "@stay-ops/shared": "workspace:*",
+    "@stay-ops/sync": "workspace:*",
     "bcryptjs": "^2.4.3",
     "next": "^15.1.6",
     "react": "^19.0.0",

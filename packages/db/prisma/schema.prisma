@@ -171,6 +171,17 @@ model ImportError {
   @@map("import_errors")
 }
 
+/// Idempotent webhook deliveries (Phase 3). Unique dedupe_key ensures at-most-once enqueue per provider event.
+model WebhookInboundEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  dedupeKey   String   @unique @map("dedupe_key")
+  payloadHash String?  @map("payload_hash")
+  receivedAt  DateTime @default(now()) @map("received_at")
+
+  @@map("webhook_inbound_events")
+}
+
 model AuditEvent {
   id         String   @id @default(cuid())
   userId     String?  @map("user_id")
