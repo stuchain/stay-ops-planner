@@ -30,6 +30,14 @@ export {
 } from "./queue/reconcileRepeat.js";
 export { enqueueHosthubInbound, type HosthubInboundJobPayload } from "./queue/hosthubInboundQueue.js";
 export { processSyncHosthubJob } from "./jobs/processSyncHosthubJob.js";
+export { getSyncPrisma, disconnectSyncPrisma } from "./db/client.js";
+export { applyHosthubReservation } from "./pipeline/applyHosthubReservation.js";
+export { extractHosthubReservationDto } from "./pipeline/extractReservation.js";
+export { runHosthubReconcile } from "./pipeline/reconcilePoll.js";
+export { mapHosthubListingChannel } from "./pipeline/mapChannel.js";
+export { mapHosthubBookingStatus } from "./pipeline/bookingStatus.js";
+export { parseDateOnlyUtc, nightsBetweenCheckinCheckout } from "./pipeline/dates.js";
+export { revalidateAssignmentIfNeeded } from "./allocation/revalidateAssignment.js";
 export {
   HOSTHUB_WEBHOOK_SIGNATURE_HEADER,
   sha256HexUtf8,

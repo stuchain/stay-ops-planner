@@ -13,7 +13,7 @@ describe("EnvSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.LOG_LEVEL).toBe("info");
-      expect(result.data.HOSTHUB_API_BASE).toBe("https://app.hosthub.com");
+      expect(result.data.HOSTHUB_API_BASE).toBe("https://app.hosthub.com/api/2019-03-01");
     }
   });
 

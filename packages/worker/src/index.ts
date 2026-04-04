@@ -1,6 +1,7 @@
 import { parseEnv } from "@stay-ops/shared";
 import {
   bullmqConnectionFromUrl,
+  disconnectSyncPrisma,
   processSyncHosthubJob,
   registerHosthubReconcileRepeat,
   SYNC_HOSTHUB_QUEUE_NAME,
@@ -33,6 +34,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     console.info("stay-ops worker: shutdown", signal);
     await worker.close();
+    await disconnectSyncPrisma();
     process.exit(0);
   };
 

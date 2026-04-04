@@ -115,6 +115,9 @@ importers:
 
   packages/sync:
     dependencies:
+      '@stay-ops/db':
+        specifier: workspace:*
+        version: link:../db
       bullmq:
         specifier: ^5.34.5
         version: 5.73.0

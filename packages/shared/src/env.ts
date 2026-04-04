@@ -23,7 +23,8 @@ export const EnvSchema = z.object({
   APP_TIMEZONE: z.string().min(1, "APP_TIMEZONE is required"),
   REDIS_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   HOSTHUB_API_BASE: z.preprocess(
-    (v) => (v === "" || v === undefined ? "https://app.hosthub.com" : v),
+    (v) =>
+      v === "" || v === undefined ? "https://app.hosthub.com/api/2019-03-01" : v,
     z.string().url(),
   ),
   HOSTHUB_API_TOKEN: z.preprocess(emptyToUndefined, z.string().min(1).optional()),

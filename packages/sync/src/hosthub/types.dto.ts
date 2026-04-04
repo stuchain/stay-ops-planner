@@ -7,6 +7,8 @@ export const HosthubReservationDtoSchema = z.object({
   status: z.enum(["confirmed", "cancelled", "pending"]),
   checkIn: z.string().min(1),
   checkOut: z.string().min(1),
+  /** Optional source hint from Hosthub (airbnb, booking.com, etc.). */
+  listingChannel: z.string().optional(),
 });
 
 export type HosthubReservationDto = z.infer<typeof HosthubReservationDtoSchema>;
