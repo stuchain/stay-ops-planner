@@ -147,6 +147,10 @@ model SyncRun {
   completedAt DateTime? @map("completed_at")
   status      String?
   source      String?
+  /// Aggregated counters: fetched, upserted, errors, skipped (Phase 3).
+  statsJson   Json?     @map("stats_json")
+  /// Opaque pagination cursor for the next Hosthub poll (optional).
+  cursor      String?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 

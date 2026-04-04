@@ -17,6 +17,7 @@ async function truncateDomain() {
     TRUNCATE TABLE
       "webhook_inbound_events",
       "import_errors",
+      "sync_runs",
       "audit_events",
       "assignments",
       "cleaning_tasks",

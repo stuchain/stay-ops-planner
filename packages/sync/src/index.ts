@@ -39,6 +39,13 @@ export { mapHosthubBookingStatus } from "./pipeline/bookingStatus.js";
 export { parseDateOnlyUtc, nightsBetweenCheckinCheckout } from "./pipeline/dates.js";
 export { revalidateAssignmentIfNeeded } from "./allocation/revalidateAssignment.js";
 export {
+  emptySyncRunStats,
+  startSyncRun,
+  finalizeSyncRun,
+  recordImportError,
+  type SyncRunStatsJson,
+} from "./pipeline/syncRunService.js";
+export {
   HOSTHUB_WEBHOOK_SIGNATURE_HEADER,
   sha256HexUtf8,
   verifyHosthubWebhookSignature,
