@@ -14,8 +14,9 @@ function rowAsJson(row: unknown): Prisma.InputJsonValue {
 }
 
 /**
- * Pulls reservation pages from Hosthub and applies the same upsert path as webhooks.
+ * Pulls calendar event pages from Hosthub and applies the same upsert path as webhooks.
  * Records `sync_runs` + `import_errors` for observability.
+ * Persists `cursor` as Unix `updated_gte` watermark from max `updated` on fetched rows.
  */
 export async function runHosthubReconcile(prisma: PrismaClient): Promise<void> {
   const run = await startSyncRun(prisma, "hosthub_poll");
@@ -29,6 +30,18 @@ export async function runHosthubReconcile(prisma: PrismaClient): Promise<void> {
       return;
     }
 
+    const prev = await prisma.syncRun.findFirst({
+      where: { source: "hosthub_poll", status: "completed", cursor: { not: null } },
+      orderBy: { completedAt: "desc" },
+    });
+    let updatedGte: number | undefined;
+    if (prev?.cursor) {
+      const n = Number.parseInt(prev.cursor, 10);
+      if (Number.isFinite(n)) {
+        updatedGte = n;
+      }
+    }
+
     const baseUrl = process.env.HOSTHUB_API_BASE?.trim() ?? "https://app.hosthub.com/api/2019-03-01";
     const listPath = process.env.HOSTHUB_API_RESERVATIONS_PATH?.trim();
     const client = new HosthubClient({
@@ -37,20 +50,30 @@ export async function runHosthubReconcile(prisma: PrismaClient): Promise<void> {
       ...(listPath ? { listReservationsPath: listPath } : {}),
     });
 
-    let cursor: string | null = null;
+    let nextPageUrl: string | null = null;
+    let runMaxUpdated: number | undefined;
 
     for (;;) {
-      const page = await client.listReservationsUpdatedSince({ cursor });
+      const page = await client.listCalendarEventsPage({
+        nextPageUrl,
+        updatedGte: nextPageUrl ? undefined : updatedGte,
+      });
       if (!page.ok) {
         await recordImportError(prisma, run.id, "SOURCE_CONFLICT", page.error.message, {
           code: page.error.code,
           statusCode: page.error.statusCode,
         });
-        await finalizeSyncRun(prisma, run.id, "failed", stats, null);
+        await finalizeSyncRun(prisma, run.id, "failed", stats, prev?.cursor ?? null);
         throw new Error(`${page.error.code}: ${page.error.message}`);
       }
 
-      stats.fetched += page.value.data.length;
+      stats.fetched += page.value.data.length + page.value.skipped;
+      stats.skipped += page.value.skipped;
+
+      if (page.value.maxUpdated !== undefined) {
+        runMaxUpdated =
+          runMaxUpdated === undefined ? page.value.maxUpdated : Math.max(runMaxUpdated, page.value.maxUpdated);
+      }
 
       for (const row of page.value.data) {
         try {
@@ -63,14 +86,18 @@ export async function runHosthubReconcile(prisma: PrismaClient): Promise<void> {
         }
       }
 
-      const next = page.value.nextCursor;
+      const next = page.value.nextPageUrl;
       if (!next) {
         break;
       }
-      cursor = next;
+      nextPageUrl = next;
     }
 
-    await finalizeSyncRun(prisma, run.id, "completed", stats, null);
+    const cursorOut =
+      runMaxUpdated !== undefined
+        ? String(runMaxUpdated)
+        : (prev?.cursor ?? null);
+    await finalizeSyncRun(prisma, run.id, "completed", stats, cursorOut);
   } catch (e) {
     const current = await prisma.syncRun.findUnique({ where: { id: run.id } });
     if (current && !current.completedAt) {

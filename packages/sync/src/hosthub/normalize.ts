@@ -10,6 +10,43 @@ function pickString(r: Record<string, unknown>, ...keys: string[]): string | und
   return undefined;
 }
 
+function pickListingId(r: Record<string, unknown>): string | undefined {
+  const rental = r.rental;
+  if (rental !== null && typeof rental === "object" && !Array.isArray(rental)) {
+    const id = pickString(rental as Record<string, unknown>, "id", "rentalId", "rental_id");
+    if (id) {
+      return id;
+    }
+  }
+  return pickString(
+    r,
+    "listingId",
+    "listing_id",
+    "rental_id",
+    "rentalId",
+    "property_id",
+    "propertyId",
+  );
+}
+
+function pickListingChannel(r: Record<string, unknown>): string | undefined {
+  const src = r.source;
+  if (src !== null && typeof src === "object" && !Array.isArray(src)) {
+    const fromObj = pickString(src as Record<string, unknown>, "name", "channel_type_code", "channelTypeCode");
+    if (fromObj) {
+      return fromObj;
+    }
+  }
+  return pickString(
+    r,
+    "listingChannel",
+    "listing_channel",
+    "channel",
+    "source",
+    "platform",
+  );
+}
+
 /** Reduce ISO-8601 or date-only strings to `YYYY-MM-DD` when possible. */
 export function coerceHosthubDateField(value: string): string {
   const trimmed = value.trim();
@@ -34,9 +71,23 @@ function mapStatusRaw(raw: string): HosthubReservationDto["status"] {
   return "confirmed";
 }
 
+function parseUpdatedUnix(raw: unknown): number | undefined {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return undefined;
+  }
+  const u = (raw as Record<string, unknown>).updated;
+  if (typeof u === "number" && Number.isFinite(u)) {
+    return u;
+  }
+  if (typeof u === "string" && /^\d+$/.test(u.trim())) {
+    return Number.parseInt(u.trim(), 10);
+  }
+  return undefined;
+}
+
 /**
  * Maps a single JSON object from Hosthub list/webhook payloads into our canonical DTO.
- * Accepts common camelCase and snake_case field names; confirm against https://www.hosthub.com/docs/api/
+ * Calendar events: stable `id`, `date_from`/`date_to`, nested `rental`, `source`; skips `Hold` rows.
  */
 export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservationDto | null {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
@@ -44,27 +95,26 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
   }
   const r = raw as Record<string, unknown>;
 
+  const typeRaw = pickString(r, "type");
+  if (typeRaw && typeRaw.toLowerCase() === "hold") {
+    return null;
+  }
+
   const reservationId = pickString(
     r,
-    "reservationId",
-    "reservation_id",
     "id",
     "uuid",
+    "reservationId",
+    "reservation_id",
     "booking_id",
     "bookingId",
   );
-  const listingId = pickString(
-    r,
-    "listingId",
-    "listing_id",
-    "rental_id",
-    "rentalId",
-    "property_id",
-    "propertyId",
-  );
+  const listingId = pickListingId(r);
 
   const checkInRaw = pickString(
     r,
+    "date_from",
+    "dateFrom",
     "checkIn",
     "check_in",
     "arrival",
@@ -74,6 +124,8 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
   );
   const checkOutRaw = pickString(
     r,
+    "date_to",
+    "dateTo",
     "checkOut",
     "check_out",
     "departure",
@@ -86,17 +138,17 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
     return null;
   }
 
-  const statusRaw = pickString(r, "status", "state", "booking_status", "bookingStatus") ?? "confirmed";
-  const status = mapStatusRaw(statusRaw);
+  let status = mapStatusRaw(pickString(r, "status", "state", "booking_status", "bookingStatus") ?? "confirmed");
 
-  const listingChannel = pickString(
-    r,
-    "listingChannel",
-    "listing_channel",
-    "channel",
-    "source",
-    "platform",
-  );
+  if (r.is_visible === false) {
+    status = "cancelled";
+  }
+  const cancelledAt = pickString(r, "cancelled_at", "cancelledAt");
+  if (cancelledAt) {
+    status = "cancelled";
+  }
+
+  const listingChannel = pickListingChannel(r);
 
   return {
     reservationId,
@@ -145,10 +197,36 @@ function extractNextCursor(o: Record<string, unknown>): string | null | undefine
   return undefined;
 }
 
+function extractNextPageUrl(o: Record<string, unknown>): string | null {
+  const nav = o.navigation;
+  if (nav !== null && typeof nav === "object" && !Array.isArray(nav)) {
+    const next = (nav as Record<string, unknown>).next;
+    if (next === null) {
+      return null;
+    }
+    if (typeof next === "string" && next.trim().length > 0) {
+      return next.trim();
+    }
+  }
+  const legacy = extractNextCursor(o);
+  if (legacy === null) {
+    return null;
+  }
+  if (legacy === undefined) {
+    return null;
+  }
+  if (legacy.startsWith("http://") || legacy.startsWith("https://")) {
+    return legacy;
+  }
+  return null;
+}
+
 /** Normalizes list response shapes documented under https://www.hosthub.com/docs/api/ (and common JSON:API-style wrappers). */
 export function normalizeHosthubReservationPagePayload(input: unknown): {
   data: HosthubReservationDto[];
-  nextCursor: string | null | undefined;
+  nextPageUrl: string | null;
+  skipped: number;
+  maxUpdated?: number;
 } | null {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     return null;
@@ -159,14 +237,31 @@ export function normalizeHosthubReservationPagePayload(input: unknown): {
     return null;
   }
   const data: HosthubReservationDto[] = [];
+  let maxUpdated: number | undefined;
   for (const item of arr) {
+    const u = parseUpdatedUnix(item);
+    if (u !== undefined) {
+      maxUpdated = maxUpdated === undefined ? u : Math.max(maxUpdated, u);
+    }
     const row = normalizeHosthubReservationRecord(item);
     if (row) {
       data.push(row);
     }
   }
-  return {
+  const skipped = arr.length - data.length;
+  const nextPageUrl = extractNextPageUrl(o);
+  const out: {
+    data: HosthubReservationDto[];
+    nextPageUrl: string | null;
+    skipped: number;
+    maxUpdated?: number;
+  } = {
     data,
-    nextCursor: extractNextCursor(o),
+    nextPageUrl,
+    skipped,
   };
+  if (maxUpdated !== undefined) {
+    out.maxUpdated = maxUpdated;
+  }
+  return out;
 }

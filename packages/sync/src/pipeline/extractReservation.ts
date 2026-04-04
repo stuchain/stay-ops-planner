@@ -2,7 +2,14 @@ import { normalizeHosthubReservationRecord } from "../hosthub/normalize.js";
 import type { HosthubReservationDto } from "../hosthub/types.dto.js";
 import { HosthubReservationDtoSchema } from "../hosthub/types.dto.js";
 
-const NESTED_KEYS = ["reservation", "data", "payload", "body"] as const;
+const NESTED_KEYS = [
+  "calendar_event",
+  "calendarEvent",
+  "reservation",
+  "data",
+  "payload",
+  "body",
+] as const;
 
 export function extractHosthubReservationDto(parsed: unknown): HosthubReservationDto | null {
   const fromNorm = normalizeHosthubReservationRecord(parsed);

@@ -15,7 +15,7 @@ export type HosthubClientOptions = {
   /** Base URL including API version path when required, e.g. https://app.hosthub.com/api/2019-03-01 */
   baseUrl: string;
   apiToken: string;
-  /** List endpoint path (default `/reservations`). Confirm in https://www.hosthub.com/docs/api/ */
+  /** List endpoint path (default `/calendar-events`). Override via HOSTHUB_API_RESERVATIONS_PATH. */
   listReservationsPath?: string;
   fetchFn?: typeof fetch;
   /** Default 30s */
@@ -99,7 +99,7 @@ export class HosthubClient {
     }
     this.baseUrl = normalizeBaseUrl(options.baseUrl.trim());
     this.apiToken = options.apiToken.trim();
-    const path = options.listReservationsPath?.trim() || "/reservations";
+    const path = options.listReservationsPath?.trim() || "/calendar-events";
     this.listReservationsPath = path.startsWith("/") ? path : `/${path}`;
     this.fetchFn = options.fetchFn ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? 30_000;
@@ -108,18 +108,50 @@ export class HosthubClient {
   }
 
   /**
-   * Idempotent GET: reservations updated since optional ISO timestamp, with optional opaque cursor.
+   * Resolve `navigation.next` or other request targets: absolute URL, or path relative to API base.
    */
-  async listReservationsUpdatedSince(args: {
-    cursor: string | null;
-    updatedSince?: string | null;
-  }): Promise<HosthubClientResult<HosthubReservationPage>> {
-    const path = this.listReservationsPath;
-    const url = new URL(path, `${this.baseUrl}/`);
-    if (args.cursor) url.searchParams.set("cursor", args.cursor);
-    if (args.updatedSince) url.searchParams.set("updated_since", args.updatedSince);
+  private resolveRequestUrl(nextPageUrl: string): string {
+    const t = nextPageUrl.trim();
+    if (t.startsWith("http://") || t.startsWith("https://")) {
+      return t;
+    }
+    const path = t.startsWith("/") ? t : `/${t}`;
+    return new URL(path, `${this.baseUrl}/`).toString();
+  }
 
-    return this.getJson(url.toString(), path, parseHosthubListResponse);
+  private pathForLogFromUrl(fetchUrl: string): string {
+    try {
+      const u = new URL(fetchUrl);
+      return u.pathname + u.search;
+    } catch {
+      return fetchUrl;
+    }
+  }
+
+  /**
+   * Idempotent GET: first page uses `updated_gte` (Unix); further pages use Hosthub `navigation.next` URL verbatim.
+   */
+  async listCalendarEventsPage(args: {
+    nextPageUrl: string | null;
+    updatedGte?: number | null;
+  }): Promise<HosthubClientResult<HosthubReservationPage>> {
+    let fetchUrl: string;
+    let pathForLog: string;
+
+    if (args.nextPageUrl) {
+      fetchUrl = this.resolveRequestUrl(args.nextPageUrl);
+      pathForLog = this.pathForLogFromUrl(fetchUrl);
+    } else {
+      const url = new URL(this.listReservationsPath, `${this.baseUrl}/`);
+      const gte = args.updatedGte;
+      if (gte != null && Number.isFinite(gte)) {
+        url.searchParams.set("updated_gte", String(Math.floor(gte)));
+      }
+      fetchUrl = url.toString();
+      pathForLog = this.listReservationsPath + (url.search || "");
+    }
+
+    return this.getJson(fetchUrl, pathForLog, parseHosthubListResponse);
   }
 
   private async getJson<T>(
@@ -137,7 +169,7 @@ export class HosthubClient {
           method: "GET",
           headers: {
             Accept: "application/json",
-            Authorization: `Bearer ${this.apiToken}`,
+            Authorization: this.apiToken,
             "User-Agent": STAY_OPS_SYNC_USER_AGENT,
           },
           signal: AbortSignal.timeout(this.timeoutMs),
