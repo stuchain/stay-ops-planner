@@ -30,6 +30,59 @@ describe("normalizeHosthubReservationRecord", () => {
       listingChannel: "airbnb",
     });
   });
+
+  it("prefers calendar event id over reservation_id", () => {
+    const row = normalizeHosthubReservationRecord({
+      id: "evt-hosthub",
+      reservation_id: "ch-999",
+      type: "Booking",
+      date_from: "2026-06-10",
+      date_to: "2026-06-14",
+      rental: { id: "rent-1", object: "Rental" },
+      source: { name: "Booking.com", channel_type_code: "booking.com" },
+    });
+    expect(row).toMatchObject({
+      reservationId: "evt-hosthub",
+      listingId: "rent-1",
+      checkIn: "2026-06-10",
+      checkOut: "2026-06-14",
+      listingChannel: "Booking.com",
+    });
+  });
+
+  it("returns null for Hold type", () => {
+    expect(
+      normalizeHosthubReservationRecord({
+        id: "h1",
+        type: "Hold",
+        date_from: "2026-01-01",
+        date_to: "2026-01-03",
+        rental: { id: "r1" },
+      }),
+    ).toBeNull();
+  });
+
+  it("maps is_visible false and cancelled_at to cancelled", () => {
+    const hidden = normalizeHosthubReservationRecord({
+      id: "b1",
+      type: "Booking",
+      date_from: "2026-02-01",
+      date_to: "2026-02-05",
+      rental: { id: "l1" },
+      is_visible: false,
+    });
+    expect(hidden?.status).toBe("cancelled");
+
+    const cancelledAt = normalizeHosthubReservationRecord({
+      id: "b2",
+      type: "Booking",
+      date_from: "2026-02-01",
+      date_to: "2026-02-05",
+      rental: { id: "l1" },
+      cancelled_at: "2026-01-15T10:00:00Z",
+    });
+    expect(cancelledAt?.status).toBe("cancelled");
+  });
 });
 
 describe("normalizeHosthubReservationPagePayload", () => {
@@ -48,6 +101,68 @@ describe("normalizeHosthubReservationPagePayload", () => {
     });
     expect(page?.data).toHaveLength(1);
     expect(page?.data[0]?.reservationId).toBe("a");
-    expect(page?.nextCursor).toBe("next");
+    expect(page?.nextPageUrl).toBeNull();
+    expect(page?.skipped).toBe(0);
+  });
+
+  it("reads navigation.next as nextPageUrl", () => {
+    const page = normalizeHosthubReservationPagePayload({
+      data: [],
+      navigation: {
+        next: "https://app.hosthub.com/api/2019-03-01/calendar-events?cursor_gt=x",
+        previous: null,
+      },
+    });
+    expect(page?.nextPageUrl).toBe(
+      "https://app.hosthub.com/api/2019-03-01/calendar-events?cursor_gt=x",
+    );
+    expect(page?.skipped).toBe(0);
+  });
+
+  it("counts skipped rows (e.g. Hold)", () => {
+    const page = normalizeHosthubReservationPagePayload({
+      data: [
+        {
+          id: "b1",
+          type: "Booking",
+          date_from: "2026-01-01",
+          date_to: "2026-01-03",
+          rental: { id: "l1" },
+        },
+        {
+          id: "h1",
+          type: "Hold",
+          date_from: "2026-02-01",
+          date_to: "2026-02-02",
+          rental: { id: "l1" },
+        },
+      ],
+    });
+    expect(page?.data).toHaveLength(1);
+    expect(page?.skipped).toBe(1);
+  });
+
+  it("computes maxUpdated from raw items", () => {
+    const page = normalizeHosthubReservationPagePayload({
+      data: [
+        {
+          id: "b1",
+          type: "Booking",
+          date_from: "2026-01-01",
+          date_to: "2026-01-03",
+          rental: { id: "l1" },
+          updated: 1700,
+        },
+        {
+          id: "b2",
+          type: "Booking",
+          date_from: "2026-02-01",
+          date_to: "2026-02-03",
+          rental: { id: "l1" },
+          updated: 1800,
+        },
+      ],
+    });
+    expect(page?.maxUpdated).toBe(1800);
   });
 });

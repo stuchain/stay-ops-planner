@@ -12,6 +12,7 @@ describe("mapHosthubListingChannel", () => {
   });
   it("maps booking variants", () => {
     expect(mapHosthubListingChannel("Booking.com")).toBe(Channel.booking);
+    expect(mapHosthubListingChannel("booking.com")).toBe(Channel.booking);
   });
   it("defaults unknown to direct", () => {
     expect(mapHosthubListingChannel(undefined)).toBe(Channel.direct);
@@ -57,6 +58,24 @@ describe("extractHosthubReservationDto", () => {
       listingId: "l-snake",
       checkIn: "2026-09-01",
       checkOut: "2026-09-04",
+    });
+  });
+
+  it("parses nested calendar_event (Hosthub webhook shape)", () => {
+    const cal = {
+      id: "cal-nested-1",
+      type: "Booking",
+      date_from: "2026-10-01",
+      date_to: "2026-10-05",
+      rental: { id: "l-nested" },
+      source: { name: "Airbnb" },
+    };
+    expect(extractHosthubReservationDto({ calendar_event: cal })).toMatchObject({
+      reservationId: "cal-nested-1",
+      listingId: "l-nested",
+      checkIn: "2026-10-01",
+      checkOut: "2026-10-05",
+      listingChannel: "Airbnb",
     });
   });
 });

@@ -11,7 +11,8 @@ const validPage = {
       checkOut: "2026-05-04",
     },
   ],
-  nextCursor: null,
+  nextPageUrl: null as string | null,
+  skipped: 0,
 };
 
 function client(fetchFn: typeof fetch) {
@@ -38,7 +39,7 @@ describe("HosthubClient", () => {
       new Response(JSON.stringify({ error: "nope" }), { status: 401, statusText: "Unauthorized" }),
     );
     const c = client(fetchFn);
-    const result = await c.listReservationsUpdatedSince({ cursor: null });
+    const result = await c.listCalendarEventsPage({ nextPageUrl: null });
     expect(fetchFn).toHaveBeenCalledTimes(1);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -54,7 +55,7 @@ describe("HosthubClient", () => {
         new Response(JSON.stringify(validPage), { status: 200, statusText: "OK" }),
       );
     const c = client(fetchFn);
-    const p = c.listReservationsUpdatedSince({ cursor: null });
+    const p = c.listCalendarEventsPage({ nextPageUrl: null });
     await vi.advanceTimersByTimeAsync(10_000);
     const result = await p;
     expect(fetchFn).toHaveBeenCalledTimes(2);
@@ -78,7 +79,7 @@ describe("HosthubClient", () => {
         new Response(JSON.stringify(validPage), { status: 200, statusText: "OK" }),
       );
     const c = client(fetchFn);
-    const p = c.listReservationsUpdatedSince({ cursor: null });
+    const p = c.listCalendarEventsPage({ nextPageUrl: null });
     await vi.advanceTimersByTimeAsync(1500);
     const result = await p;
     expect(fetchFn).toHaveBeenCalledTimes(2);
@@ -88,7 +89,7 @@ describe("HosthubClient", () => {
   it("returns HOSTHUB_PARSE_ERROR for invalid JSON", async () => {
     const fetchFn = vi.fn().mockResolvedValue(new Response("not-json", { status: 200 }));
     const c = client(fetchFn);
-    const result = await c.listReservationsUpdatedSince({ cursor: null });
+    const result = await c.listCalendarEventsPage({ nextPageUrl: null });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe("HOSTHUB_PARSE_ERROR");
@@ -100,24 +101,68 @@ describe("HosthubClient", () => {
       new Response(JSON.stringify({ data: "wrong" }), { status: 200 }),
     );
     const c = client(fetchFn);
-    const result = await c.listReservationsUpdatedSince({ cursor: null });
+    const result = await c.listCalendarEventsPage({ nextPageUrl: null });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe("HOSTHUB_PARSE_ERROR");
     }
   });
 
-  it("sends User-Agent and Bearer token", async () => {
+  it("sends User-Agent and raw API key (no Bearer prefix)", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(validPage), { status: 200 }),
     );
     const c = client(fetchFn);
-    await c.listReservationsUpdatedSince({ cursor: null });
+    await c.listCalendarEventsPage({ nextPageUrl: null });
     const init = fetchFn.mock.calls[0]?.[1] as RequestInit;
     expect(init.headers).toMatchObject({
-      Authorization: "Bearer test-token",
+      Authorization: "test-token",
     });
     expect((init.headers as Record<string, string>)["User-Agent"]).toContain("stay-ops-planner-sync");
+  });
+
+  it("first page uses /calendar-events and optional updated_gte", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(validPage), { status: 200 }),
+    );
+    const c = client(fetchFn);
+    await c.listCalendarEventsPage({ nextPageUrl: null, updatedGte: 1712345678 });
+    const url = String(fetchFn.mock.calls[0]?.[0]);
+    expect(url).toContain("/calendar-events");
+    expect(url).toContain("updated_gte=1712345678");
+  });
+
+  it("follows navigation.next URL verbatim on second request", async () => {
+    const nextUrl = "https://example.test/api/calendar-events?cursor_gt=abc";
+    const page1 = {
+      object: "CalendarEvent",
+      data: [],
+      navigation: { next: nextUrl, previous: null },
+    };
+    const page2 = {
+      data: [
+        {
+          id: "r1",
+          rental_id: "l1",
+          type: "Booking",
+          date_from: "2026-05-01",
+          date_to: "2026-05-04",
+        },
+      ],
+    };
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(page1), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(page2), { status: 200 }));
+    const c = client(fetchFn);
+    const first = await c.listCalendarEventsPage({ nextPageUrl: null });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+    expect(first.value.nextPageUrl).toBe(nextUrl);
+    await c.listCalendarEventsPage({ nextPageUrl: nextUrl });
+    expect(String(fetchFn.mock.calls[1]?.[0])).toBe(nextUrl);
   });
 
   it("accepts reservations[] with snake_case rows (Hosthub-style list payloads)", async () => {
@@ -131,11 +176,10 @@ describe("HosthubClient", () => {
           check_out: "2026-05-04",
         },
       ],
-      next_cursor: null,
     };
     const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify(altPage), { status: 200 }));
     const c = client(fetchFn);
-    const result = await c.listReservationsUpdatedSince({ cursor: null });
+    const result = await c.listCalendarEventsPage({ nextPageUrl: null });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.data).toHaveLength(1);
@@ -144,7 +188,7 @@ describe("HosthubClient", () => {
     }
   });
 
-  it("uses listReservationsPath for the request URL", async () => {
+  it("uses listReservationsPath for the first-page request URL", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(validPage), { status: 200 }),
     );
@@ -154,7 +198,7 @@ describe("HosthubClient", () => {
       fetchFn,
       listReservationsPath: "/bookings",
     });
-    await c.listReservationsUpdatedSince({ cursor: null });
+    await c.listCalendarEventsPage({ nextPageUrl: null });
     const url = String(fetchFn.mock.calls[0]?.[0]);
     expect(url).toContain("/bookings");
   });

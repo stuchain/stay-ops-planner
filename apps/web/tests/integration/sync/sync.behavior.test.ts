@@ -236,4 +236,52 @@ describe("sync webhook + queue — idempotent dedupe", () => {
 
     await worker.close();
   });
+
+  it("flat calendar event webhook upserts by Hosthub event id", async () => {
+    const connection = bullmqConnectionFromUrl(process.env.REDIS_URL!);
+
+    const worker = new Worker(SYNC_HOSTHUB_QUEUE_NAME, processSyncHosthubJob, {
+      connection,
+      concurrency: 1,
+    });
+
+    const waitOneJob = new Promise<void>((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error("worker timeout")), 15_000);
+      worker.on("completed", () => {
+        clearTimeout(t);
+        resolve();
+      });
+      worker.on("failed", (_job, err) => {
+        clearTimeout(t);
+        reject(err);
+      });
+    });
+
+    const body = JSON.stringify({
+      id: "evt-cal-flat",
+      type: "Booking",
+      date_from: "2026-09-10",
+      date_to: "2026-09-14",
+      rental: { id: "sync-test-l-cal" },
+      source: { name: "booking.com" },
+    });
+
+    const res = await handleHosthubWebhookPost(
+      new Request("http://local.test/api/sync/hosthub/webhook", {
+        method: "POST",
+        body,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    await waitOneJob;
+
+    const bookings = await prisma.booking.findMany({
+      where: { externalBookingId: "evt-cal-flat", channel: Channel.booking },
+    });
+    expect(bookings).toHaveLength(1);
+
+    await worker.close();
+  });
 });
