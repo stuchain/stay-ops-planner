@@ -10,6 +10,7 @@
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
-    "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs"
+    "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs",
+    "e2e:local": "node ./scripts/e2e-local.mjs"
   }
 }

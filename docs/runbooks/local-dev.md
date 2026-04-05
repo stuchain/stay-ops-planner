@@ -61,12 +61,28 @@ docker compose up -d postgres redis
 
 ## Playwright E2E (apps/web)
 
-Requires Postgres/Redis and a working Next app (same env as local dev: `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, etc.). Migrate and seed so a staff user exists.
+Requires Postgres/Redis and a staff user in the DB whose password matches what Playwright sends (`E2E_ADMIN_*`). If you run `pnpm --filter @stay-ops/web test:e2e` **without** seeding or **without** those env vars, login returns **401** and tests fail.
+
+### One command (recommended)
+
+From repo root, with Docker running:
+
+```bash
+pnpm e2e:local
+```
+
+This runs `docker compose up -d postgres redis`, waits for Postgres, `prisma migrate deploy`, `seed`, `seed:e2e`, then Playwright. Default `BOOTSTRAP_ADMIN_*` / `E2E_ADMIN_*` / `DATABASE_URL` match [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) (local disposable only). Override any of them in your environment if needed.
+
+Install Chromium once first: `pnpm --filter @stay-ops/web test:e2e:install`
+
+### Manual steps
 
 1. Install Chromium once: `pnpm --filter @stay-ops/web test:e2e:install`
-2. After normal seed, load Playwright fixtures (rooms **E2E-A** / **E2E-B**, bookings **E2E Unassigned** / **E2E Alpha** / **E2E Bravo**, overlap maintenance block, two todo cleaning tasks):  
+2. Start Postgres/Redis (`docker compose up -d postgres redis`) and migrate + seed + E2E fixtures:  
+   `pnpm --filter @stay-ops/db exec prisma migrate deploy`  
+   `pnpm --filter @stay-ops/db seed`  
    `pnpm --filter @stay-ops/db seed:e2e`
-3. Export credentials for login specs (must match bootstrap admin from step seed), for example:
+3. Export credentials for login specs (must match bootstrap admin from seed), for example:
    - `E2E_ADMIN_EMAIL`
    - `E2E_ADMIN_PASSWORD`
 4. From repo root: `pnpm --filter @stay-ops/web test:e2e`  
