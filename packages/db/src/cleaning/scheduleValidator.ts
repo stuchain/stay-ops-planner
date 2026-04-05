@@ -31,7 +31,7 @@ export async function validateCleaningSchedule(
   },
 ): Promise<void> {
   if (params.plannedEnd.getTime() <= params.plannedStart.getTime()) {
-    throw new CleaningWindowInvalidError("plannedEnd must be after plannedStart");
+    throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
   }
 
   const room = await tx.room.findUnique({
@@ -44,12 +44,12 @@ export async function validateCleaningSchedule(
 
   const booking = await tx.booking.findUnique({ where: { id: params.bookingId } });
   if (!booking) {
-    throw new CleaningWindowInvalidError("Booking not found");
+    throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
   }
 
   const checkoutStart = booking.checkoutDate.getTime();
   if (params.plannedStart.getTime() < checkoutStart) {
-    throw new CleaningWindowInvalidError("Cleaning must start on or after checkout date");
+    throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
   }
 
   const nextStay = await tx.assignment.findFirst({
@@ -64,7 +64,7 @@ export async function validateCleaningSchedule(
   if (nextStay) {
     const nextCheckin = nextStay.startDate.getTime();
     if (params.plannedEnd.getTime() > nextCheckin) {
-      throw new CleaningWindowInvalidError("Cleaning does not fit before next check-in");
+      throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
     }
   }
 
@@ -79,7 +79,7 @@ export async function validateCleaningSchedule(
     const b0 = b.startDate.getTime();
     const b1 = b.endDate.getTime();
     if (p0 < b1 && p1 > b0) {
-      throw new CleaningWindowInvalidError("Cleaning overlaps a maintenance block");
+      throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
     }
   }
 }

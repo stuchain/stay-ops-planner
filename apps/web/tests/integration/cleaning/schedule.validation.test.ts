@@ -124,7 +124,10 @@ describe("cleaning — schedule validation", () => {
           plannedEnd: new Date("2026-11-04T14:00:00.000Z"),
         }),
       ),
-    ).rejects.toBeInstanceOf(CleaningWindowInvalidError);
+    ).rejects.toMatchObject({
+      name: "CleaningWindowInvalidError",
+      message: CLEANING_WINDOW_INVALID_MESSAGE,
+    });
   });
 
   it("rejects window overlapping manual block", async () => {
@@ -165,7 +168,10 @@ describe("cleaning — schedule validation", () => {
           plannedEnd: new Date("2026-12-06T12:00:00.000Z"),
         }),
       ),
-    ).rejects.toBeInstanceOf(CleaningWindowInvalidError);
+    ).rejects.toMatchObject({
+      name: "CleaningWindowInvalidError",
+      message: CLEANING_WINDOW_INVALID_MESSAGE,
+    });
   });
 
   it("rejects schedule when room is inactive", async () => {

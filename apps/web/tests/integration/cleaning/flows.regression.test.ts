@@ -4,7 +4,7 @@
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import { PrismaClient, BookingStatus, Channel } from "@stay-ops/db";
+import { CLEANING_WINDOW_INVALID_MESSAGE, PrismaClient, BookingStatus, Channel } from "@stay-ops/db";
 import { applyCancellationSideEffects } from "@stay-ops/sync";
 import { CookieJar } from "../cookieJar";
 
@@ -233,8 +233,9 @@ describe("cleaning — regression flows", () => {
       { params: Promise.resolve({ id: task.id }) },
     );
     expect(res.status).toBe(409);
-    const json = (await res.json()) as { error: { code: string } };
+    const json = (await res.json()) as { error: { code: string; message: string } };
     expect(json.error.code).toBe("CLEANING_WINDOW_INVALID");
+    expect(json.error.message).toBe(CLEANING_WINDOW_INVALID_MESSAGE);
   });
 
   it("PATCH status returns 422 for todo to done", async () => {
