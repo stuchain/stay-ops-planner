@@ -1,4 +1,12 @@
-import { BookingStatus, Channel, findStayConflict, Prisma, PrismaClient } from "@stay-ops/db";
+import {
+  BookingStatus,
+  Channel,
+  ensureTurnoverCleaningTask,
+  findStayConflict,
+  Prisma,
+  PrismaClient,
+  TURNOVER_TASK_TYPE,
+} from "@stay-ops/db";
 import { AllocationError } from "./errors";
 import { throwIfStayConflict } from "./stayConflict";
 
@@ -127,6 +135,12 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
         payload: { bookingId: input.bookingId, roomId: input.roomId },
       });
 
+      await ensureTurnoverCleaningTask(tx, {
+        bookingId: input.bookingId,
+        roomId: created.roomId,
+        checkoutDate: booking.checkoutDate,
+      });
+
       return {
         assignment: {
           id: created.id,
@@ -199,6 +213,12 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
         payload: { roomId: input.roomId, version: updated.version },
       });
 
+      await ensureTurnoverCleaningTask(tx, {
+        bookingId: existing.bookingId,
+        roomId: updated.roomId,
+        checkoutDate: existing.booking.checkoutDate,
+      });
+
       return {
         assignment: {
           id: updated.id,
@@ -242,6 +262,10 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
           details: { currentVersion: existing.version, expectedVersion: input.expectedVersion },
         });
       }
+
+      await tx.cleaningTask.deleteMany({
+        where: { bookingId: existing.bookingId, taskType: TURNOVER_TASK_TYPE },
+      });
 
       await tx.assignment.delete({ where: { id: input.assignmentId } });
 

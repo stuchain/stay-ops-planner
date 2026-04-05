@@ -127,17 +127,26 @@ model ManualBlock {
 }
 
 model CleaningTask {
-  id        String   @id @default(cuid())
-  bookingId String   @map("booking_id")
-  roomId    String   @map("room_id")
-  status    String?
-  notes     String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  bookingId       String    @map("booking_id")
+  roomId          String    @map("room_id")
+  status          String    @default("todo")
+  notes           String?
+  /// turnover | service (Phase 5).
+  taskType        String    @default("turnover") @map("task_type")
+  /// Idempotency key; unique when set. Turnover uses a deterministic hash.
+  sourceEventId   String?   @unique @map("source_event_id")
+  plannedStart    DateTime? @map("planned_start")
+  plannedEnd      DateTime? @map("planned_end")
+  assigneeName    String?   @map("assignee_name")
+  durationMinutes Int?      @map("duration_minutes")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   room    Room    @relation(fields: [roomId], references: [id], onDelete: Restrict)
 
+  @@index([bookingId, taskType])
   @@map("cleaning_tasks")
 }
 

@@ -1,5 +1,5 @@
 import type { Prisma } from "@stay-ops/db";
-import { BookingStatus, PrismaClient } from "@stay-ops/db";
+import { BookingStatus, ensureTurnoverCleaningTask, PrismaClient } from "@stay-ops/db";
 import type { HosthubReservationDto } from "../hosthub/types.dto.js";
 import { applyCancellationSideEffects } from "../allocation/cancellation.js";
 import { revalidateAssignmentIfNeeded } from "../allocation/revalidateAssignment.js";
@@ -61,6 +61,22 @@ async function upsertListingAndBooking(
   });
 
   await revalidateAssignmentIfNeeded(tx, booking.id);
+
+  const afterRevalidate = await tx.booking.findUnique({
+    where: { id: booking.id },
+    include: { assignment: true },
+  });
+  if (
+    afterRevalidate &&
+    afterRevalidate.status !== BookingStatus.cancelled &&
+    afterRevalidate.assignment
+  ) {
+    await ensureTurnoverCleaningTask(tx, {
+      bookingId: afterRevalidate.id,
+      roomId: afterRevalidate.assignment.roomId,
+      checkoutDate: afterRevalidate.checkoutDate,
+    });
+  }
 
   if (booking.status === BookingStatus.cancelled) {
     await applyCancellationSideEffects(tx, booking.id);
