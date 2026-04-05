@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const devPort = process.env.PLAYWRIGHT_DEV_PORT ?? "3000";
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${devPort}`;
 
 /** Ensures `next dev` uses the same DB/Redis as migrate/seed; Next does not override vars already set in the process env. */
 const webServerEnv: Record<string, string> = {
@@ -31,9 +33,11 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_NO_SERVER
     ? undefined
     : {
-        command: "pnpm exec next dev -p 3000",
+        command: `pnpm exec next dev -p ${devPort}`,
         url: `${baseURL}/login`,
-        reuseExistingServer: !process.env.CI,
+        /** `pnpm e2e:local` sets PLAYWRIGHT_FORCE_OWN_SERVER=1 so we never attach to a random process on the port. */
+        reuseExistingServer:
+          process.env.PLAYWRIGHT_FORCE_OWN_SERVER === "1" ? false : !process.env.CI,
         timeout: 120_000,
         stdout: "pipe",
         stderr: "pipe",

@@ -29,15 +29,33 @@ const env = {
   E2E_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD ?? bootstrapPassword,
 };
 
+const win32 = process.platform === "win32";
+
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, {
     stdio: "inherit",
     cwd: root,
     env,
+    /** Windows: resolve `pnpm`/`npx` `.cmd` shims (spawnSync would otherwise ENOENT). */
+    shell: win32,
     ...opts,
   });
   if (r.error) throw r.error;
   if (r.status !== 0) process.exit(r.status ?? 1);
+}
+
+/**
+ * Dedicated port + own server: avoids binding to 3000 (often used by `pnpm dev`) and
+ * `reuseExistingServer` attaching to a process that then exits mid-run.
+ * Playwright reads PLAYWRIGHT_DEV_PORT / PLAYWRIGHT_BASE_URL / PLAYWRIGHT_FORCE_OWN_SERVER.
+ */
+function envForPlaywright() {
+  const e = { ...env };
+  delete e.CI;
+  e.PLAYWRIGHT_DEV_PORT = "3005";
+  e.PLAYWRIGHT_BASE_URL = "http://127.0.0.1:3005";
+  e.PLAYWRIGHT_FORCE_OWN_SERVER = "1";
+  return e;
 }
 
 async function waitForPostgres() {
@@ -62,12 +80,12 @@ async function main() {
   console.log("Postgres is ready.");
 
   console.log("Migrating and seeding (bootstrap admin + E2E fixtures)…");
-  run("npx", ["pnpm", "--filter", "@stay-ops/db", "exec", "prisma", "migrate", "deploy"]);
-  run("npx", ["pnpm", "--filter", "@stay-ops/db", "seed"]);
-  run("npx", ["pnpm", "--filter", "@stay-ops/db", "seed:e2e"]);
+  run("pnpm", ["--filter", "@stay-ops/db", "exec", "prisma", "migrate", "deploy"]);
+  run("pnpm", ["--filter", "@stay-ops/db", "seed"]);
+  run("pnpm", ["--filter", "@stay-ops/db", "seed:e2e"]);
 
   console.log("Running Playwright…");
-  run("npx", ["pnpm", "--filter", "@stay-ops/web", "test:e2e"]);
+  run("pnpm", ["--filter", "@stay-ops/web", "test:e2e"], { env: envForPlaywright() });
 }
 
 main().catch((e) => {

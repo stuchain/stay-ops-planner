@@ -71,7 +71,7 @@ From repo root, with Docker running:
 pnpm e2e:local
 ```
 
-This runs `docker compose up -d postgres redis`, waits for Postgres, `prisma migrate deploy`, `seed`, `seed:e2e`, then Playwright. Default `BOOTSTRAP_ADMIN_*` / `E2E_ADMIN_*` / `DATABASE_URL` match [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) (local disposable only). Override any of them in your environment if needed.
+This runs `docker compose up -d postgres redis`, waits for Postgres, `prisma migrate deploy`, `seed`, `seed:e2e`, then Playwright. It starts Next on **port 3005** (not 3000) so it does not fight `pnpm dev`. Default `BOOTSTRAP_ADMIN_*` / `E2E_ADMIN_*` / `DATABASE_URL` match [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) (local disposable only). Override any of them in your environment if needed.
 
 Install Chromium once first: `pnpm --filter @stay-ops/web test:e2e:install`
 
