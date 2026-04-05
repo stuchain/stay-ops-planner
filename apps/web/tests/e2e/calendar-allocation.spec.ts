@@ -34,30 +34,57 @@ test.describe("calendar allocation", () => {
     await assignE2EUnassignedToRoomA(page);
   });
 
-  test("server conflict shows toast after optimistic rollback", async ({ page }) => {
-    test.skip(
-      process.platform === "win32",
-      "Playwright + dnd-kit second-card conflict is unreliable on Windows headless; allocation conflicts are covered in apps/web/tests/integration.",
-    );
+  test("reassign into overlapping stay returns CONFLICT_ASSIGNMENT", async ({ page }) => {
     test.skip(
       test.info().project.name === "mobile-chromium",
-      "DnD assignment is disabled when isMobile; use quick-assign specs on mobile.",
+      "Same API behavior as desktop; mobile allocation UI is covered in mobile-quick-assign.spec.ts.",
     );
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await page.goto("/app/calendar");
     await expect(page.locator(".ops-month-title")).toBeVisible();
+    const monthYm = (await page.locator(".ops-month-title").textContent())?.trim() ?? "";
+    expect(monthYm).toMatch(/^\d{4}-\d{2}$/);
 
-    const laneA = page.getByTestId("ops-room-lane-E2E-A");
-    const laneADrop = laneA.locator(".ops-room-lane-body").first();
-    const bCard = page.locator(".ops-booking-card").filter({ hasText: "E2E Bravo" });
-    test.skip((await bCard.count()) < 1, "Run seed:e2e for conflict guests.");
-    test.skip((await laneA.count()) < 1, "E2E-A lane missing.");
+    test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "E2E-A lane missing (seed:e2e).");
 
     await assignE2EUnassignedToRoomA(page);
 
-    await bCard.scrollIntoViewIfNeeded();
-    await bCard.dragTo(laneADrop, { force: true });
-    await expect(page.locator(".ops-toast[role='alert']")).toBeVisible({ timeout: 15_000 });
+    /** Same PATCH the calendar uses on drop; Playwright dragTo does not reliably fire dnd-kit on CI. */
+    const result = await page.evaluate(async (ym: string) => {
+      const cal = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, {
+        credentials: "include",
+      });
+      if (!cal.ok) {
+        return { step: "calendar" as const, status: cal.status };
+      }
+      const body = (await cal.json()) as {
+        data?: {
+          rooms: { id: string; code: string | null }[];
+          items: { kind: string; guestName?: string; assignmentId?: string | null; assignmentVersion?: number | null }[];
+        };
+      };
+      const data = body.data;
+      if (!data) return { step: "calendar_json" as const };
+      const bravo = data.items.find((i) => i.kind === "booking" && i.guestName === "E2E Bravo");
+      const roomA = data.rooms.find((r) => r.code === "E2E-A");
+      if (!bravo?.assignmentId || bravo.assignmentVersion == null || !roomA) {
+        return { step: "fixtures" as const };
+      }
+      const res = await fetch(`/api/assignments/${encodeURIComponent(bravo.assignmentId)}/reassign`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ roomId: roomA.id, expectedVersion: bravo.assignmentVersion }),
+      });
+      const j = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
+      return { step: "reassign" as const, status: res.status, code: j?.error?.code ?? null };
+    }, monthYm);
+
+    expect(result).toEqual({
+      step: "reassign",
+      status: 409,
+      code: "CONFLICT_ASSIGNMENT",
+    });
   });
 });
