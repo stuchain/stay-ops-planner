@@ -25,12 +25,17 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@playwright/test": "^1.59.1",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "bullmq": "^5.34.5",
     "eslint": "^9.16.0",
     "eslint-config-next": "^15.1.6",
+    "jsdom": "^26.0.0",
     "typescript": "^5.7.2",
     "vitest": "^3.0.5"
   }

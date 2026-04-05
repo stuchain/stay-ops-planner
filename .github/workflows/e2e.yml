@@ -1,0 +1,84 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: stayops
+          POSTGRES_PASSWORD: stayops
+          POSTGRES_DB: stayops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stayops -d stayops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 8
+          --health-start-period 10s
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 8
+
+    env:
+      DATABASE_URL: postgresql://stayops:stayops@localhost:5432/stayops
+      REDIS_URL: redis://localhost:6379
+      SESSION_SECRET: ci-e2e-session-secret-at-least-32-chars-long
+      APP_TIMEZONE: Etc/UTC
+      BOOTSTRAP_ADMIN_EMAIL: e2e-admin@stayops.local
+      BOOTSTRAP_ADMIN_PASSWORD: E2E_Test_Password_12+
+      E2E_ADMIN_EMAIL: e2e-admin@stayops.local
+      E2E_ADMIN_PASSWORD: E2E_Test_Password_12+
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/sync build
+
+      - name: Migrate database
+        run: pnpm --filter @stay-ops/db exec prisma migrate deploy
+
+      - name: Seed admin + E2E fixtures
+        run: pnpm --filter @stay-ops/db seed && pnpm --filter @stay-ops/db seed:e2e
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @stay-ops/web exec playwright install chromium --with-deps
+
+      - name: Run Playwright
+        run: pnpm --filter @stay-ops/web test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-output
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/

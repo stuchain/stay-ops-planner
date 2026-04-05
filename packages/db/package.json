@@ -17,6 +17,7 @@
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
+    "seed:e2e": "tsx prisma/seed-e2e.ts",
     "build": "prisma generate && tsc",
     "lint": "eslint .",
     "test": "node -e \"process.exit(0)\""

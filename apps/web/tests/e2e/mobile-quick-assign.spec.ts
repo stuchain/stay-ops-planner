@@ -7,8 +7,8 @@ test.describe("mobile quick assign", () => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await page.goto("/app/calendar");
-    const quick = page.locator('[data-testid^="ops-assign-quick-"]').first();
-    test.skip((await quick.count()) < 1, "Need a booking card on a narrow viewport.");
+    const quick = page.locator('[data-testid^="ops-assign-quick-"]').filter({ hasText: "Assign" }).first();
+    test.skip((await quick.count()) < 1, "Need a booking card (run seed:e2e for E2E Unassigned).");
     await quick.click();
     await expect(page.getByRole("heading", { name: "Assign stay" })).toBeVisible();
   });

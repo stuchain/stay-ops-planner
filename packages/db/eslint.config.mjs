@@ -22,6 +22,7 @@ export default tseslint.config(
       "node_modules/**",
       "prisma/migrations/**",
       "prisma/seed.ts",
+      "prisma/seed-e2e.ts",
     ],
   },
 );

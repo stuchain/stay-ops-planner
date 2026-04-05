@@ -64,12 +64,15 @@ docker compose up -d postgres redis
 Requires Postgres/Redis and a working Next app (same env as local dev: `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, etc.). Migrate and seed so a staff user exists.
 
 1. Install Chromium once: `pnpm --filter @stay-ops/web test:e2e:install`
-2. Export credentials for login specs (match `pnpm --filter @stay-ops/db seed` output or your bootstrap user), for example:
+2. After normal seed, load Playwright fixtures (rooms **E2E-A** / **E2E-B**, bookings **E2E Unassigned** / **E2E Alpha** / **E2E Bravo**, overlap maintenance block, two todo cleaning tasks):  
+   `pnpm --filter @stay-ops/db seed:e2e`
+3. Export credentials for login specs (must match bootstrap admin from step seed), for example:
    - `E2E_ADMIN_EMAIL`
    - `E2E_ADMIN_PASSWORD`
-3. From repo root: `pnpm --filter @stay-ops/web test:e2e`  
+4. From repo root: `pnpm --filter @stay-ops/web test:e2e`  
    Playwright starts `next dev` on port 3000 by default. To use an already-running app: `PLAYWRIGHT_NO_SERVER=1` and `PLAYWRIGHT_BASE_URL=http://localhost:3000`.
-4. Optional flags for extra scenarios (tests skip if unset): `E2E_CONFLICT_SCENARIO=1`, `E2E_BLOCK_OVERLAP=1`.
+
+GitHub Actions runs the same flow (migrate → seed → seed:e2e → Playwright) in `.github/workflows/e2e.yml`.
 
 ## Troubleshooting
 

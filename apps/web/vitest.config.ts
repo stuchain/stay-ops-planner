@@ -4,20 +4,40 @@ import { defineConfig } from "vitest/config";
 
 const webRoot = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+const shared = {
   root: webRoot,
+  esbuild: { jsx: "automatic" as const },
   resolve: {
     alias: {
       "@": path.resolve(webRoot, "src"),
     },
     extensions: [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".json"],
   },
+};
+
+export default defineConfig({
+  ...shared,
   test: {
-    environment: "node",
-    include: ["tests/integration/**/*.test.ts"],
-    // Avoid Postgres deadlocks from concurrent TRUNCATE across files sharing one DB.
-    fileParallelism: false,
-    // BullMQ queue obliterate + worker hooks can exceed default 10s when Redis is cold.
-    hookTimeout: 30_000,
+    projects: [
+      {
+        ...shared,
+        test: {
+          name: "integration",
+          environment: "node",
+          include: ["tests/integration/**/*.test.ts"],
+          fileParallelism: false,
+          hookTimeout: 30_000,
+        },
+      },
+      {
+        ...shared,
+        test: {
+          name: "unit",
+          environment: "jsdom",
+          include: ["tests/unit/**/*.test.tsx"],
+          setupFiles: ["tests/unit/setup.ts"],
+        },
+      },
+    ],
   },
 });
