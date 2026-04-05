@@ -14,3 +14,8 @@ export {
   TURNOVER_MINUTES,
   TURNOVER_TASK_TYPE,
 } from "./cleaning/turnover.js";
+export {
+  createServiceCleaningTask,
+  SERVICE_MINUTES,
+  SERVICE_TASK_TYPE,
+} from "./cleaning/serviceTask.js";

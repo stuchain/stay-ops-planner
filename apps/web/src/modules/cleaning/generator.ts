@@ -1,2 +1,7 @@
 /** Turnover / service cleaning generation entry points (Phase 5). */
-export { ensureTurnoverCleaningTask, TURNOVER_TASK_TYPE } from "@stay-ops/db";
+export {
+  createServiceCleaningTask,
+  ensureTurnoverCleaningTask,
+  SERVICE_TASK_TYPE,
+  TURNOVER_TASK_TYPE,
+} from "@stay-ops/db";
