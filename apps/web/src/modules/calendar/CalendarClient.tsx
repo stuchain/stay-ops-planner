@@ -11,14 +11,17 @@ import {
 } from "@dnd-kit/core";
 import { useCallback, useEffect, useState } from "react";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
-import type { CalendarBlockItem, CalendarMonthPayload } from "./calendarTypes";
+import type { CalendarBlockItem, CalendarBookingItem, CalendarMonthPayload } from "./calendarTypes";
 import { MonthGrid } from "./MonthGrid";
+import { performBookingAssignmentMutation } from "./assignmentMutations";
+import { MobileAssignSheet } from "./MobileAssignSheet";
 import {
   applyOptimisticBookingMove,
-  formatAllocationError,
+  bookingItemToDragPayload,
   parseLaneDropTarget,
   type BookingDragPayload,
 } from "./optimisticMove";
+import { useIsNarrowViewport } from "./useIsNarrowViewport";
 
 function shiftMonth(ym: string, delta: number): string {
   const parts = ym.split("-");
@@ -44,6 +47,8 @@ export function CalendarClient() {
     null | { mode: "create" } | { mode: "edit"; block: CalendarBlockItem }
   >(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [mobileAssignBooking, setMobileAssignBooking] = useState<CalendarBookingItem | null>(null);
+  const isMobile = useIsNarrowViewport();
 
   const load = useCallback(async (ym: string) => {
     setLoading(true);
@@ -81,64 +86,15 @@ export function CalendarClient() {
     useSensor(KeyboardSensor),
   );
 
-  const onDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!data || !over) return;
-      const raw = active.data.current as BookingDragPayload | undefined;
-      if (!raw || raw.type !== "booking") return;
-      const target = parseLaneDropTarget(String(over.id));
-      if (target === null) return;
-      const toRoomId = target === "unassigned" ? null : target;
+  const completeAssignment = useCallback(
+    async (raw: BookingDragPayload, toRoomId: string | null) => {
+      if (!data) return;
       if (toRoomId === raw.fromRoomId) return;
-
       const snapshot = structuredClone(data);
       setData(applyOptimisticBookingMove(data, raw.bookingId, toRoomId));
       setFlash(null);
       try {
-        if (toRoomId === null) {
-          if (!raw.assignmentId || raw.assignmentVersion == null) {
-            throw new Error("Drag to unassigned requires an existing assignment.");
-          }
-          const res = await fetch(`/api/assignments/${encodeURIComponent(raw.assignmentId)}/unassign`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ expectedVersion: raw.assignmentVersion }),
-          });
-          const j = (await res.json().catch(() => null)) as {
-            error?: { code?: string; message?: string };
-          } | null;
-          if (!res.ok) {
-            throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
-          }
-        } else if (raw.assignmentId != null && raw.assignmentVersion != null) {
-          const res = await fetch(`/api/assignments/${encodeURIComponent(raw.assignmentId)}/reassign`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ roomId: toRoomId, expectedVersion: raw.assignmentVersion }),
-          });
-          const j = (await res.json().catch(() => null)) as {
-            error?: { code?: string; message?: string };
-          } | null;
-          if (!res.ok) {
-            throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
-          }
-        } else {
-          const res = await fetch("/api/assignments", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ bookingId: raw.bookingId, roomId: toRoomId }),
-          });
-          const j = (await res.json().catch(() => null)) as {
-            error?: { code?: string; message?: string };
-          } | null;
-          if (!res.ok) {
-            throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
-          }
-        }
+        await performBookingAssignmentMutation(raw, toRoomId);
         await load(month);
       } catch (e) {
         setData(snapshot);
@@ -146,6 +102,21 @@ export function CalendarClient() {
       }
     },
     [data, load, month],
+  );
+
+  const onDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!data || !over || isMobile) return;
+      const raw = active.data.current as BookingDragPayload | undefined;
+      if (!raw || raw.type !== "booking") return;
+      const target = parseLaneDropTarget(String(over.id));
+      if (target === null) return;
+      const toRoomId = target === "unassigned" ? null : target;
+      if (toRoomId === raw.fromRoomId) return;
+      await completeAssignment(raw, toRoomId);
+    },
+    [completeAssignment, data, isMobile],
   );
 
   const roomOptions: BlockRoomOption[] = (data?.rooms ?? []).map((r) => ({
@@ -170,7 +141,23 @@ export function CalendarClient() {
           onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
           onAddBlock={() => setBlockModal({ mode: "create" })}
           onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
+          isMobile={isMobile}
+          onQuickAssign={isMobile ? (b) => setMobileAssignBooking(b) : undefined}
         />
+        {data && (
+          <MobileAssignSheet
+            open={mobileAssignBooking != null}
+            booking={mobileAssignBooking}
+            rooms={data.rooms}
+            onClose={() => setMobileAssignBooking(null)}
+            onPickRoom={async (toRoomId) => {
+              if (!mobileAssignBooking) return;
+              const raw = bookingItemToDragPayload(mobileAssignBooking);
+              setMobileAssignBooking(null);
+              await completeAssignment(raw, toRoomId);
+            }}
+          />
+        )}
         {blockModal && data && (
           <BlockEditorModal
             open

@@ -5,9 +5,11 @@ import type { CalendarBookingItem } from "./calendarTypes";
 
 type Props = {
   item: CalendarBookingItem;
+  isMobile?: boolean;
+  onQuickAssign?: () => void;
 };
 
-export function BookingCard({ item }: Props) {
+export function BookingCard({ item, isMobile, onQuickAssign }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `booking-${item.id}`,
     data: {
@@ -33,12 +35,25 @@ export function BookingCard({ item }: Props) {
   return (
     <div
       ref={setNodeRef}
-      style={{ ...style, touchAction: "none" }}
+      style={{ ...style, touchAction: isMobile ? "manipulation" : "none" }}
       className={`ops-booking-card ${stateClass}`}
       data-testid={`ops-booking-card-${item.id}`}
-      {...listeners}
+      {...(isMobile ? {} : listeners)}
       {...attributes}
     >
+      {isMobile && onQuickAssign && (
+        <button
+          type="button"
+          className="ops-assign-quick"
+          data-testid={`ops-assign-quick-${item.id}`}
+          onClick={(ev) => {
+            ev.stopPropagation();
+            onQuickAssign();
+          }}
+        >
+          Assign…
+        </button>
+      )}
       <div className="ops-booking-card-title">{item.guestName}</div>
       <div className="ops-booking-card-dates">
         {item.startDate} → {item.endDate}

@@ -1,6 +1,11 @@
 "use client";
 
-import type { CalendarBlockItem, CalendarBookingItem, CalendarMonthPayload, CalendarRoom } from "./calendarTypes";
+import type {
+  CalendarBlockItem,
+  CalendarBookingItem,
+  CalendarMonthPayload,
+  CalendarRoom,
+} from "./calendarTypes";
 import { BookingCard } from "./BookingCard";
 import { BlockChip } from "./BlockChip";
 import { RoomLane } from "./RoomLane";
@@ -18,6 +23,8 @@ type Props = {
   onNextMonth: () => void;
   onAddBlock?: () => void;
   onEditBlock?: (item: CalendarBlockItem) => void;
+  isMobile?: boolean;
+  onQuickAssign?: (item: CalendarBookingItem) => void;
 };
 
 export function MonthGrid({
@@ -28,6 +35,8 @@ export function MonthGrid({
   onNextMonth,
   onAddBlock,
   onEditBlock,
+  isMobile,
+  onQuickAssign,
 }: Props) {
   if (loading && !data) {
     return <p className="ops-muted">Loading calendar…</p>;
@@ -78,7 +87,12 @@ export function MonthGrid({
 
       <RoomLane laneId="lane-unassigned" title="Unassigned" testIdSuffix="unassigned">
         {unassignedBookings.map((b) => (
-          <BookingCard key={b.id} item={b} />
+          <BookingCard
+            key={b.id}
+            item={b}
+            isMobile={isMobile}
+            onQuickAssign={onQuickAssign ? () => onQuickAssign(b) : undefined}
+          />
         ))}
         {unassignedBookings.length === 0 && <span className="ops-muted">No unassigned stays</span>}
       </RoomLane>
@@ -98,7 +112,12 @@ export function MonthGrid({
               <BlockChip key={blk.id} item={blk} onEdit={onEditBlock} />
             ))}
             {roomBookings.map((b) => (
-              <BookingCard key={b.id} item={b} />
+              <BookingCard
+                key={b.id}
+                item={b}
+                isMobile={isMobile}
+                onQuickAssign={onQuickAssign ? () => onQuickAssign(b) : undefined}
+              />
             ))}
             {roomBookings.length === 0 && roomBlocks.length === 0 && (
               <span className="ops-muted">No bookings</span>

@@ -1,4 +1,4 @@
-import type { CalendarMonthPayload } from "./calendarTypes";
+import type { CalendarBookingItem, CalendarMonthPayload } from "./calendarTypes";
 
 /** Apply a booking lane move locally (before server confirms). */
 export function applyOptimisticBookingMove(
@@ -32,6 +32,16 @@ export type BookingDragPayload = {
   assignmentVersion: number | null;
   fromRoomId: string | null;
 };
+
+export function bookingItemToDragPayload(item: CalendarBookingItem): BookingDragPayload {
+  return {
+    type: "booking",
+    bookingId: item.id,
+    assignmentId: item.assignmentId,
+    assignmentVersion: item.assignmentVersion,
+    fromRoomId: item.roomId,
+  };
+}
 
 export function parseLaneDropTarget(overId: string): "unassigned" | string | null {
   if (overId === "lane-unassigned") return "unassigned";

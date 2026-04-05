@@ -258,3 +258,86 @@ body {
   z-index: 60;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
+
+@media (max-width: 767px) {
+  .ops-btn {
+    min-height: 44px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+.ops-assign-quick {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #3366cc;
+  background: #eef4ff;
+  cursor: pointer;
+}
+
+.ops-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 55;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.ops-sheet {
+  width: 100%;
+  max-width: 32rem;
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+  padding: 0.5rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  max-height: 72vh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.ops-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #ccc;
+  margin: 0 auto 0.75rem;
+}
+
+.ops-sheet-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.ops-sheet-sub {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.ops-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ops-sheet-btn {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  cursor: pointer;
+  text-align: center;
+}
+
+.ops-sheet-btn-secondary {
+  background: #fff;
+  width: 100%;
+}
