@@ -70,5 +70,6 @@ export async function GET(request: NextRequest) {
         nights: b.nights,
       })),
     },
+    meta: { total: rows.length },
   });
 }

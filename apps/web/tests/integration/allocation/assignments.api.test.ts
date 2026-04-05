@@ -101,7 +101,11 @@ describe("api assignments + unassigned queue", () => {
       }),
     );
     expect(listRes.status).toBe(200);
-    const listJson = (await listRes.json()) as { data: { bookings: { id: string }[] } };
+    const listJson = (await listRes.json()) as {
+      data: { bookings: { id: string }[] };
+      meta: { total: number };
+    };
+    expect(listJson.meta.total).toBe(listJson.data.bookings.length);
     expect(listJson.data.bookings.some((b) => b.id === booking.id)).toBe(true);
 
     const assignRes = await POST_ASSIGN(
@@ -126,7 +130,11 @@ describe("api assignments + unassigned queue", () => {
         headers: { cookie: jar.getCookieHeader() },
       }),
     );
-    const listAfterJson = (await listAfter.json()) as { data: { bookings: { id: string }[] } };
+    const listAfterJson = (await listAfter.json()) as {
+      data: { bookings: { id: string }[] };
+      meta: { total: number };
+    };
+    expect(listAfterJson.meta.total).toBe(listAfterJson.data.bookings.length);
     expect(listAfterJson.data.bookings.some((b) => b.id === booking.id)).toBe(false);
 
     const reassignRes = await PATCH_REASSIGN(
