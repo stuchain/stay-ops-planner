@@ -154,7 +154,7 @@ describe("sync — revalidate assignment after date change", () => {
       where: { externalBookingId: resId, channel: Channel.airbnb },
     });
     const room = await prisma.room.create({ data: { code: "reval-R1" } });
-    await prisma.assignment.create({
+    const assignmentRow = await prisma.assignment.create({
       data: {
         bookingId: booking.id,
         roomId: room.id,
@@ -176,6 +176,15 @@ describe("sync — revalidate assignment after date change", () => {
     });
     expect(updated.status).toBe(BookingStatus.needs_reassignment);
     expect(updated.assignment).toBeNull();
+
+    const audit = await prisma.auditEvent.findFirst({
+      where: {
+        action: "assignment.cleared_on_sync_revalidation",
+        entityId: assignmentRow.id,
+      },
+    });
+    expect(audit).not.toBeNull();
+    expect(audit?.entityType).toBe("assignment");
   });
 });
 

@@ -42,9 +42,29 @@ export async function revalidateAssignmentIfNeeded(
     return;
   }
 
+  const assignmentId = assignment.id;
+  const payload: Prisma.InputJsonValue = {
+    bookingId,
+    assignmentId,
+    assignmentStart: assignment.startDate.toISOString().slice(0, 10),
+    assignmentEnd: assignment.endDate.toISOString().slice(0, 10),
+    bookingCheckin: booking.checkinDate.toISOString().slice(0, 10),
+    bookingCheckout: booking.checkoutDate.toISOString().slice(0, 10),
+  };
+
   await tx.assignment.deleteMany({ where: { bookingId } });
   await tx.booking.update({
     where: { id: bookingId },
     data: { status: BookingStatus.needs_reassignment },
+  });
+
+  await tx.auditEvent.create({
+    data: {
+      userId: null,
+      action: "assignment.cleared_on_sync_revalidation",
+      entityType: "assignment",
+      entityId: assignmentId,
+      payload,
+    },
   });
 }
