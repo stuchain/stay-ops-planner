@@ -205,4 +205,78 @@ describe("api assignments + unassigned queue", () => {
     const json = (await res.json()) as { error: { code: string } };
     expect(json.error.code).toBe("CONFLICT_ASSIGNMENT");
   });
+
+  it("returns 422 ROOM_INACTIVE when assigning to an inactive room", async () => {
+    const jar = await loginJar();
+    const room = await prisma.room.create({ data: { code: "IN1", isActive: false } });
+    const booking = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: "in-1",
+        status: BookingStatus.confirmed,
+        checkinDate: new Date("2026-08-01T00:00:00.000Z"),
+        checkoutDate: new Date("2026-08-05T00:00:00.000Z"),
+        nights: 4,
+      },
+    });
+
+    const res = await POST_ASSIGN(
+      new NextRequest("http://localhost/api/assignments", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: jar.getCookieHeader(),
+        },
+        body: JSON.stringify({ bookingId: booking.id, roomId: room.id }),
+      }),
+    );
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("ROOM_INACTIVE");
+  });
+
+  it("returns 422 ROOM_INACTIVE when reassigning to an inactive room", async () => {
+    const jar = await loginJar();
+    const roomActive = await prisma.room.create({ data: { code: "RA1", isActive: true } });
+    const roomInactive = await prisma.room.create({ data: { code: "RI1", isActive: false } });
+    const booking = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: "rin-1",
+        status: BookingStatus.confirmed,
+        checkinDate: new Date("2026-09-01T00:00:00.000Z"),
+        checkoutDate: new Date("2026-09-05T00:00:00.000Z"),
+        nights: 4,
+      },
+    });
+
+    const assignRes = await POST_ASSIGN(
+      new NextRequest("http://localhost/api/assignments", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: jar.getCookieHeader(),
+        },
+        body: JSON.stringify({ bookingId: booking.id, roomId: roomActive.id }),
+      }),
+    );
+    expect(assignRes.status).toBe(201);
+    const assignJson = (await assignRes.json()) as { data: { assignment: { id: string } } };
+    const assignmentId = assignJson.data.assignment.id;
+
+    const reassignRes = await PATCH_REASSIGN(
+      new NextRequest(`http://localhost/api/assignments/${assignmentId}/reassign`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          cookie: jar.getCookieHeader(),
+        },
+        body: JSON.stringify({ roomId: roomInactive.id, expectedVersion: 0 }),
+      }),
+      { params: Promise.resolve({ id: assignmentId }) },
+    );
+    expect(reassignRes.status).toBe(422);
+    const json = (await reassignRes.json()) as { error: { code: string } };
+    expect(json.error.code).toBe("ROOM_INACTIVE");
+  });
 });

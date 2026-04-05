@@ -4,7 +4,8 @@ export type AllocationErrorCode =
   | "BOOKING_ALREADY_ASSIGNED"
   | "ASSIGNMENT_NOT_FOUND"
   | "CONFLICT_ASSIGNMENT"
-  | "CONFLICT_BLOCK";
+  | "CONFLICT_BLOCK"
+  | "ROOM_INACTIVE";
 
 export class AllocationError extends Error {
   public readonly code: AllocationErrorCode;

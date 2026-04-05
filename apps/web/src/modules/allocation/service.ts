@@ -25,6 +25,29 @@ function assertAssignable(status: BookingStatus): void {
   }
 }
 
+async function assertRoomActiveForAllocation(tx: Prisma.TransactionClient, roomId: string): Promise<void> {
+  const room = await tx.room.findUnique({
+    where: { id: roomId },
+    select: { isActive: true },
+  });
+  if (!room) {
+    throw new AllocationError({
+      code: "BOOKING_NOT_ASSIGNABLE",
+      status: 422,
+      message: "Room not found",
+      details: { roomId },
+    });
+  }
+  if (!room.isActive) {
+    throw new AllocationError({
+      code: "ROOM_INACTIVE",
+      status: 422,
+      message: "Room is not active",
+      details: { roomId },
+    });
+  }
+}
+
 export type AssignInput = {
   bookingId: string;
   roomId: string;
@@ -107,6 +130,8 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
         });
       }
 
+      await assertRoomActiveForAllocation(tx, input.roomId);
+
       throwIfStayConflict(
         await findStayConflict(tx, {
           roomId: input.roomId,
@@ -186,6 +211,8 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
       }
 
       assertAssignable(existing.booking.status);
+
+      await assertRoomActiveForAllocation(tx, input.roomId);
 
       throwIfStayConflict(
         await findStayConflict(tx, {
