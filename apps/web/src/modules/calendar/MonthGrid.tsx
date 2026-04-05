@@ -25,6 +25,7 @@ type Props = {
   onEditBlock?: (item: CalendarBlockItem) => void;
   isMobile?: boolean;
   onQuickAssign?: (item: CalendarBookingItem) => void;
+  onOpenUnassigned?: () => void;
 };
 
 export function MonthGrid({
@@ -37,6 +38,7 @@ export function MonthGrid({
   onEditBlock,
   isMobile,
   onQuickAssign,
+  onOpenUnassigned,
 }: Props) {
   if (loading && !data) {
     return <p className="ops-muted">Loading calendar…</p>;
@@ -71,6 +73,11 @@ export function MonthGrid({
         <button type="button" className="ops-btn" onClick={onNextMonth}>
           Next
         </button>
+        {onOpenUnassigned && (
+          <button type="button" className="ops-btn" onClick={onOpenUnassigned}>
+            Unassigned queue
+          </button>
+        )}
         {onAddBlock && (
           <button type="button" className="ops-btn ops-btn-primary" onClick={onAddBlock}>
             Add block

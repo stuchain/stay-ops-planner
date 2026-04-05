@@ -10,6 +10,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { useCallback, useEffect, useState } from "react";
+import { UnassignedDrawer } from "@/modules/bookings/UnassignedDrawer";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
 import type { CalendarBlockItem, CalendarBookingItem, CalendarMonthPayload } from "./calendarTypes";
 import { MonthGrid } from "./MonthGrid";
@@ -48,6 +49,7 @@ export function CalendarClient() {
   >(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [mobileAssignBooking, setMobileAssignBooking] = useState<CalendarBookingItem | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
   const isMobile = useIsNarrowViewport();
 
   const load = useCallback(async (ym: string) => {
@@ -143,7 +145,17 @@ export function CalendarClient() {
           onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
           isMobile={isMobile}
           onQuickAssign={isMobile ? (b) => setMobileAssignBooking(b) : undefined}
+          onOpenUnassigned={data ? () => setQueueOpen(true) : undefined}
         />
+        {data && (
+          <UnassignedDrawer
+            open={queueOpen}
+            month={month}
+            rooms={data.rooms}
+            onClose={() => setQueueOpen(false)}
+            onAssigned={() => void load(month)}
+          />
+        )}
         {data && (
           <MobileAssignSheet
             open={mobileAssignBooking != null}

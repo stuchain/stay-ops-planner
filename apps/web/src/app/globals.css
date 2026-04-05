@@ -341,3 +341,82 @@ body {
   background: #fff;
   width: 100%;
 }
+
+.ops-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 52;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ops-drawer {
+  width: min(22rem, 100vw);
+  max-width: 100%;
+  height: 100%;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ops-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ops-drawer-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.ops-drawer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ops-drawer-row {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ops-drawer-dates {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.ops-drawer-meta {
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.ops-drawer-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.ops-drawer-row-actions .ops-input {
+  flex: 1;
+  min-width: 6rem;
+}
+
+.ops-drawer-row-err {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+}
