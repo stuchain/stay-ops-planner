@@ -19,3 +19,7 @@ export {
   SERVICE_MINUTES,
   SERVICE_TASK_TYPE,
 } from "./cleaning/serviceTask.js";
+export {
+  CleaningWindowInvalidError,
+  validateCleaningSchedule,
+} from "./cleaning/scheduleValidator.js";
