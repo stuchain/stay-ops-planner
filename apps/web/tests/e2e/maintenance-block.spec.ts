@@ -1,0 +1,29 @@
+import { expect, test } from "@playwright/test";
+import { e2eCredentials, loginAsStaff } from "./helpers";
+
+test.describe("maintenance blocks", () => {
+  test("open add block modal and cancel", async ({ page }) => {
+    test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
+    await loginAsStaff(page);
+    await page.goto("/app/calendar");
+    await page.getByRole("button", { name: "Add block" }).click();
+    await expect(page.getByRole("heading", { name: "Add maintenance block" })).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("heading", { name: "Add maintenance block" })).not.toBeVisible();
+  });
+
+  test("overlap error when creating invalid block", async ({ page }) => {
+    test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
+    test.skip(
+      process.env.E2E_BLOCK_OVERLAP !== "1",
+      "Set E2E_BLOCK_OVERLAP=1 and seed data so the submitted range overlaps an existing block.",
+    );
+    await loginAsStaff(page);
+    await page.goto("/app/calendar");
+    await page.getByRole("button", { name: "Add block" }).click();
+    await page.getByLabel("Start date").fill("2026-07-10");
+    await page.getByLabel("End date").fill("2026-07-12");
+    await page.getByRole("button", { name: "Create" }).click();
+    await expect(page.getByText(/already booked|blocked|maintenance/i)).toBeVisible({ timeout: 5000 });
+  });
+});

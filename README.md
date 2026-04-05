@@ -91,6 +91,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 ### Tests
 - **Unit / package tests**: `packages/shared`, `packages/sync` (Vitest).
 - **Web integration tests**: `apps/web/tests/integration/` (Vitest; `apps/web/vitest.config.ts` aligns `@/` and hook timeouts). They hit real Postgres and Redis — start `docker compose` before `pnpm --filter @stay-ops/web test`.
+- **Browser E2E (Playwright)**: `apps/web/tests/e2e/` — desktop Chromium and mobile viewport (390×844). One-time browsers: `pnpm --filter @stay-ops/web test:e2e:install`. Run: `pnpm --filter @stay-ops/web test:e2e` (starts Next on port 3000 unless you set `PLAYWRIGHT_NO_SERVER=1` and `PLAYWRIGHT_BASE_URL`). Set `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` to match your seeded staff user so login flows run; optional `E2E_CONFLICT_SCENARIO=1` and `E2E_BLOCK_OVERLAP=1` enable stricter allocation/block specs when your seed supports them. See [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
 - Coverage includes auth, allocation (including races and inactive rooms), blocks, cleaning flows, DB constraints, and sync webhook behavior.
 
 ### How to verify
