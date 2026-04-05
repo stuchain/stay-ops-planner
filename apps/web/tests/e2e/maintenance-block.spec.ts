@@ -25,6 +25,8 @@ test.describe("maintenance blocks", () => {
     await page.getByLabel("Start date").fill(`${ym}-10`);
     await page.getByLabel("End date").fill(`${ym}-12`);
     await page.getByRole("button", { name: "Create" }).click();
-    await expect(page.getByText(/already booked|blocked|maintenance/i)).toBeVisible({ timeout: 8000 });
+    await expect(
+      page.getByRole("dialog").locator(".ops-modal-form .ops-error"),
+    ).toBeVisible({ timeout: 8000 });
   });
 });
