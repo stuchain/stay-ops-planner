@@ -14,6 +14,7 @@ export function BookingCard({ item }: Props) {
       type: "booking" as const,
       bookingId: item.id,
       assignmentId: item.assignmentId,
+      assignmentVersion: item.assignmentVersion,
       fromRoomId: item.roomId,
     },
   });

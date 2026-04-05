@@ -12,6 +12,8 @@ export type CalendarBookingItem = {
   guestName: string;
   status: BookingStatus;
   assignmentId: string | null;
+  /** Present when assigned; required for reassign/unassign mutations. */
+  assignmentVersion: number | null;
   flags: string[];
 };
 
@@ -132,6 +134,7 @@ export async function getCalendarMonthAggregate(args: {
       guestName: guestNameFromRaw(b.rawPayload),
       status: b.status,
       assignmentId: a?.id ?? null,
+      assignmentVersion: a?.version ?? null,
       flags,
     };
   });

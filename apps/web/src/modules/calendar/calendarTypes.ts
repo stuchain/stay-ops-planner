@@ -14,6 +14,7 @@ export type CalendarBookingItem = {
   guestName: string;
   status: string;
   assignmentId: string | null;
+  assignmentVersion: number | null;
   flags: string[];
 };
 

@@ -13,6 +13,12 @@ import { useCallback, useEffect, useState } from "react";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
 import type { CalendarBlockItem, CalendarMonthPayload } from "./calendarTypes";
 import { MonthGrid } from "./MonthGrid";
+import {
+  applyOptimisticBookingMove,
+  formatAllocationError,
+  parseLaneDropTarget,
+  type BookingDragPayload,
+} from "./optimisticMove";
 
 function shiftMonth(ym: string, delta: number): string {
   const parts = ym.split("-");
@@ -37,6 +43,7 @@ export function CalendarClient() {
   const [blockModal, setBlockModal] = useState<
     null | { mode: "create" } | { mode: "edit"; block: CalendarBlockItem }
   >(null);
+  const [flash, setFlash] = useState<string | null>(null);
 
   const load = useCallback(async (ym: string) => {
     setLoading(true);
@@ -63,15 +70,83 @@ export function CalendarClient() {
     void load(month);
   }, [month, load]);
 
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 5200);
+    return () => clearTimeout(t);
+  }, [flash]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
 
-  const onDragEnd = useCallback((_event: DragEndEvent) => {
-    void _event;
-    // Assignment persistence in commit 6.4
-  }, []);
+  const onDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!data || !over) return;
+      const raw = active.data.current as BookingDragPayload | undefined;
+      if (!raw || raw.type !== "booking") return;
+      const target = parseLaneDropTarget(String(over.id));
+      if (target === null) return;
+      const toRoomId = target === "unassigned" ? null : target;
+      if (toRoomId === raw.fromRoomId) return;
+
+      const snapshot = structuredClone(data);
+      setData(applyOptimisticBookingMove(data, raw.bookingId, toRoomId));
+      setFlash(null);
+      try {
+        if (toRoomId === null) {
+          if (!raw.assignmentId || raw.assignmentVersion == null) {
+            throw new Error("Drag to unassigned requires an existing assignment.");
+          }
+          const res = await fetch(`/api/assignments/${encodeURIComponent(raw.assignmentId)}/unassign`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ expectedVersion: raw.assignmentVersion }),
+          });
+          const j = (await res.json().catch(() => null)) as {
+            error?: { code?: string; message?: string };
+          } | null;
+          if (!res.ok) {
+            throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
+          }
+        } else if (raw.assignmentId != null && raw.assignmentVersion != null) {
+          const res = await fetch(`/api/assignments/${encodeURIComponent(raw.assignmentId)}/reassign`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ roomId: toRoomId, expectedVersion: raw.assignmentVersion }),
+          });
+          const j = (await res.json().catch(() => null)) as {
+            error?: { code?: string; message?: string };
+          } | null;
+          if (!res.ok) {
+            throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
+          }
+        } else {
+          const res = await fetch("/api/assignments", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ bookingId: raw.bookingId, roomId: toRoomId }),
+          });
+          const j = (await res.json().catch(() => null)) as {
+            error?: { code?: string; message?: string };
+          } | null;
+          if (!res.ok) {
+            throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
+          }
+        }
+        await load(month);
+      } catch (e) {
+        setData(snapshot);
+        setFlash(e instanceof Error ? e.message : "Request failed");
+      }
+    },
+    [data, load, month],
+  );
 
   const roomOptions: BlockRoomOption[] = (data?.rooms ?? []).map((r) => ({
     id: r.id,
@@ -82,6 +157,11 @@ export function CalendarClient() {
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
       <main className="ops-calendar-main">
         <h1>Calendar</h1>
+        {flash && (
+          <div className="ops-toast" role="alert">
+            {flash}
+          </div>
+        )}
         <MonthGrid
           data={data}
           loading={loading}
