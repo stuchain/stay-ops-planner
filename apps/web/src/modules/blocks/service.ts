@@ -101,3 +101,18 @@ export async function deleteManualBlock(blockId: string): Promise<void> {
     throw e;
   }
 }
+
+/** Phase 4 traceability name: delegates to the same transaction helpers as the free functions. */
+export class ManualBlockService {
+  static create(input: CreateManualBlockInput) {
+    return createManualBlock(input);
+  }
+
+  static update(blockId: string, patch: UpdateManualBlockInput) {
+    return updateManualBlock(blockId, patch);
+  }
+
+  static delete(blockId: string) {
+    return deleteManualBlock(blockId);
+  }
+}

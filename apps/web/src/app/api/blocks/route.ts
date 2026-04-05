@@ -4,7 +4,7 @@ import { z } from "zod";
 import { AllocationError, allocationErrorEnvelope } from "../../../../modules/allocation/errors";
 import { requireAdminSession } from "../../../../modules/auth/guard";
 import { AuthError, jsonError } from "../../../../modules/auth/errors";
-import { createManualBlock } from "../../../../modules/blocks/service";
+import { ManualBlockService } from "../../../../modules/blocks/service";
 
 const DateOnly = z
   .string()
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const block = await createManualBlock({
+    const block = await ManualBlockService.create({
       roomId: parsed.data.roomId,
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,

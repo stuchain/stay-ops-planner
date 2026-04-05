@@ -7,8 +7,7 @@ import { requireAdminSession } from "../../../../../modules/auth/guard";
 import {
   BlockNotFoundError,
   InvalidBlockRangeError,
-  deleteManualBlock,
-  updateManualBlock,
+  ManualBlockService,
 } from "../../../../../modules/blocks/service";
 
 const DateOnly = z
@@ -68,7 +67,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
 
   try {
-    const block = await updateManualBlock(id, {
+    const block = await ManualBlockService.update(id, {
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,
       reason: parsed.data.reason,
@@ -103,7 +102,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   const { id } = await ctx.params;
 
   try {
-    await deleteManualBlock(id);
+    await ManualBlockService.delete(id);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (err instanceof BlockNotFoundError) {
