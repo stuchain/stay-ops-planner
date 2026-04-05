@@ -52,4 +52,16 @@ describe("CleaningBoard", () => {
     expect(screen.getByLabelText(/Day \(planned start\)/i)).toBeInTheDocument();
     expect(screen.getByTestId("ops-cleaning-start-ct1")).toBeInTheDocument();
   });
+
+  it("shows empty state when API returns no tasks", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: { tasks: [] } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ) as typeof fetch;
+    render(<CleaningBoard />);
+    await waitFor(() => expect(screen.queryByText(/Loading tasks/i)).not.toBeInTheDocument());
+    expect(screen.getByText(/No tasks match filters/i)).toBeInTheDocument();
+  });
 });
