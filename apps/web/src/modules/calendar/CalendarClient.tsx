@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   DndContext,
   KeyboardSensor,
@@ -129,7 +130,12 @@ export function CalendarClient() {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
       <main className="ops-calendar-main">
-        <h1>Calendar</h1>
+        <header className="ops-calendar-header">
+          <h1>Calendar</h1>
+          <Link className="ops-btn" href="/app/cleaning">
+            Cleaning
+          </Link>
+        </header>
         {flash && (
           <div className="ops-toast" role="alert">
             {flash}
