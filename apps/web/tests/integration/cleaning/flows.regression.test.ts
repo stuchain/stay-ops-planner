@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { CLEANING_WINDOW_INVALID_MESSAGE, PrismaClient, BookingStatus, Channel } from "@stay-ops/db";
 import { applyCancellationSideEffects } from "@stay-ops/sync";
 import { CookieJar } from "../cookieJar";
+import { makeAssignment, makeBooking, makeRoom } from "../helpers/cleaningFixtures";
 
 const email = "cleaning-flows@example.com";
 const password = "password1234";
@@ -79,16 +80,12 @@ describe("cleaning — regression flows", () => {
   }
 
   it("cancellation cancels todo but leaves done tasks unchanged", async () => {
-    const room = await prisma.room.create({ data: { code: "CF-R" } });
-    const booking = await prisma.booking.create({
-      data: {
-        channel: Channel.direct,
-        externalBookingId: "cf-1",
-        status: BookingStatus.confirmed,
-        checkinDate: new Date("2026-01-01T00:00:00.000Z"),
-        checkoutDate: new Date("2026-01-05T00:00:00.000Z"),
-        nights: 4,
-      },
+    const room = await makeRoom(prisma, "CF-R");
+    const booking = await makeBooking(prisma, {
+      externalBookingId: "cf-1",
+      checkinDate: new Date("2026-01-01T00:00:00.000Z"),
+      checkoutDate: new Date("2026-01-05T00:00:00.000Z"),
+      nights: 4,
     });
     const todoTask = await prisma.cleaningTask.create({
       data: {
@@ -132,24 +129,18 @@ describe("cleaning — regression flows", () => {
 
   it("PATCH schedule succeeds for a valid window", async () => {
     const jar = await loginJar();
-    const room = await prisma.room.create({ data: { code: "CF-OK" } });
-    const booking = await prisma.booking.create({
-      data: {
-        channel: Channel.direct,
-        externalBookingId: "cf-ok1",
-        status: BookingStatus.confirmed,
-        checkinDate: new Date("2026-04-01T00:00:00.000Z"),
-        checkoutDate: new Date("2026-04-05T00:00:00.000Z"),
-        nights: 4,
-      },
+    const room = await makeRoom(prisma, "CF-OK");
+    const booking = await makeBooking(prisma, {
+      externalBookingId: "cf-ok1",
+      checkinDate: new Date("2026-04-01T00:00:00.000Z"),
+      checkoutDate: new Date("2026-04-05T00:00:00.000Z"),
+      nights: 4,
     });
-    await prisma.assignment.create({
-      data: {
-        bookingId: booking.id,
-        roomId: room.id,
-        startDate: booking.checkinDate,
-        endDate: booking.checkoutDate,
-      },
+    await makeAssignment(prisma, {
+      bookingId: booking.id,
+      roomId: room.id,
+      startDate: booking.checkinDate,
+      endDate: booking.checkoutDate,
     });
     const task = await prisma.cleaningTask.create({
       data: {
