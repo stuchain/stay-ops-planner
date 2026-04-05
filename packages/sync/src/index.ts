@@ -44,6 +44,10 @@ export { mapHosthubBookingStatus } from "./pipeline/bookingStatus.js";
 export { parseDateOnlyUtc, nightsBetweenCheckinCheckout } from "./pipeline/dates.js";
 export { revalidateAssignmentIfNeeded } from "./allocation/revalidateAssignment.js";
 export {
+  applyCancellationSideEffects,
+  CLEANING_PENDING_STATUSES,
+} from "./allocation/cancellation.js";
+export {
   emptySyncRunStats,
   startSyncRun,
   finalizeSyncRun,

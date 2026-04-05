@@ -1,6 +1,7 @@
 import type { Prisma } from "@stay-ops/db";
-import { PrismaClient } from "@stay-ops/db";
+import { BookingStatus, PrismaClient } from "@stay-ops/db";
 import type { HosthubReservationDto } from "../hosthub/types.dto.js";
+import { applyCancellationSideEffects } from "../allocation/cancellation.js";
 import { revalidateAssignmentIfNeeded } from "../allocation/revalidateAssignment.js";
 import { mapHosthubBookingStatus } from "./bookingStatus.js";
 import { mapHosthubListingChannel } from "./mapChannel.js";
@@ -60,6 +61,10 @@ async function upsertListingAndBooking(
   });
 
   await revalidateAssignmentIfNeeded(tx, booking.id);
+
+  if (booking.status === BookingStatus.cancelled) {
+    await applyCancellationSideEffects(tx, booking.id);
+  }
 }
 
 /**

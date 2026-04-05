@@ -72,6 +72,58 @@ describe("sync pipeline — booking upsert and cancellation", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.status).toBe(BookingStatus.cancelled);
   });
+
+  it("cancellation removes assignment and cancels pending cleaning tasks", async () => {
+    const dto = { ...baseReservation, reservationId: "sync-cancel-cascade-1" };
+    const raw = { ...dto };
+    await applyHosthubReservation(prisma, dto, raw);
+
+    const booking = await prisma.booking.findFirstOrThrow({
+      where: { externalBookingId: "sync-cancel-cascade-1", channel: Channel.airbnb },
+    });
+    const room = await prisma.room.create({ data: { code: "cancel-cascade-R1" } });
+    await prisma.assignment.create({
+      data: {
+        bookingId: booking.id,
+        roomId: room.id,
+        startDate: booking.checkinDate,
+        endDate: booking.checkoutDate,
+      },
+    });
+    const task = await prisma.cleaningTask.create({
+      data: {
+        bookingId: booking.id,
+        roomId: room.id,
+        status: "todo",
+      },
+    });
+
+    await applyHosthubReservation(
+      prisma,
+      { ...dto, status: "cancelled" },
+      { ...raw, status: "cancelled" },
+    );
+
+    const after = await prisma.booking.findFirstOrThrow({
+      where: { id: booking.id },
+      include: { assignment: true },
+    });
+    expect(after.status).toBe(BookingStatus.cancelled);
+    expect(after.assignment).toBeNull();
+
+    const updatedTask = await prisma.cleaningTask.findUniqueOrThrow({ where: { id: task.id } });
+    expect(updatedTask.status).toBe("cancelled");
+
+    const audits = await prisma.auditEvent.findMany({
+      where: {
+        OR: [
+          { entityId: task.id, action: "cleaning_task.cancelled_on_booking_cancel" },
+          { action: "assignment.released_on_cancel" },
+        ],
+      },
+    });
+    expect(audits.length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe("sync — revalidate assignment after date change", () => {
