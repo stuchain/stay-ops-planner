@@ -74,6 +74,59 @@ describe("sync pipeline — booking upsert and cancellation", () => {
   });
 });
 
+describe("sync — revalidate assignment after date change", () => {
+  beforeAll(async () => {
+    await prisma.$connect();
+  });
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+  beforeEach(async () => {
+    await truncateSyncDomain();
+  });
+
+  it("marks needs_reassignment and removes assignment when stay dates drift", async () => {
+    const resId = "reval-b1";
+    const listId = "reval-l1";
+    const raw1 = {
+      reservationId: resId,
+      listingId: listId,
+      status: "confirmed" as const,
+      checkIn: "2026-10-01",
+      checkOut: "2026-10-05",
+      listingChannel: "airbnb",
+    };
+    await applyHosthubReservation(prisma, raw1, raw1);
+
+    const booking = await prisma.booking.findFirstOrThrow({
+      where: { externalBookingId: resId, channel: Channel.airbnb },
+    });
+    const room = await prisma.room.create({ data: { code: "reval-R1" } });
+    await prisma.assignment.create({
+      data: {
+        bookingId: booking.id,
+        roomId: room.id,
+        startDate: booking.checkinDate,
+        endDate: booking.checkoutDate,
+      },
+    });
+
+    const raw2 = {
+      ...raw1,
+      checkIn: "2026-10-02",
+      checkOut: "2026-10-06",
+    };
+    await applyHosthubReservation(prisma, raw2, raw2);
+
+    const updated = await prisma.booking.findFirstOrThrow({
+      where: { id: booking.id },
+      include: { assignment: true },
+    });
+    expect(updated.status).toBe(BookingStatus.needs_reassignment);
+    expect(updated.assignment).toBeNull();
+  });
+});
+
 describe("sync inbound job — malformed payload records import_errors", () => {
   beforeAll(async () => {
     await prisma.$connect();
