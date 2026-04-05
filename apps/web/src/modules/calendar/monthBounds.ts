@@ -12,7 +12,10 @@ function calendarKey(utcMs: number, timeZone: string): number {
     day: "2-digit",
   });
   const s = fmt.format(d);
-  const [y, m, day] = s.split("-").map((x) => parseInt(x, 10));
+  const parts = s.split("-").map((x) => parseInt(x, 10));
+  const y = parts[0] ?? 0;
+  const m = parts[1] ?? 0;
+  const day = parts[2] ?? 0;
   return y * 10_000 + m * 100 + day;
 }
 
@@ -30,7 +33,7 @@ function startOfLocalCalendarDay(year: number, month: number, day: number, timeZ
 
 export function parseYearMonthParam(yearMonth: string): { year: number; month: number } | null {
   const m = /^(\d{4})-(\d{2})$/.exec(yearMonth.trim());
-  if (!m) return null;
+  if (!m?.[1] || !m[2]) return null;
   const year = parseInt(m[1], 10);
   const month = parseInt(m[2], 10);
   if (month < 1 || month > 12) return null;

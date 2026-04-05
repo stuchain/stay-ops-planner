@@ -10,6 +10,7 @@
     "test": "node ../../packages/sync/node_modules/typescript/lib/tsc.js -p ../../packages/sync/tsconfig.json && vitest run"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@stay-ops/db": "workspace:*",
     "@stay-ops/shared": "workspace:*",
     "@stay-ops/sync": "workspace:*",
@@ -27,7 +28,7 @@
     "bullmq": "^5.34.5",
     "eslint": "^9.16.0",
     "eslint-config-next": "^15.1.6",
-    "vitest": "^3.0.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
   }
 }
