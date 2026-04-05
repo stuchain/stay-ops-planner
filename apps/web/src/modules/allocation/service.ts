@@ -1,4 +1,4 @@
-import { BookingStatus, findStayConflict, Prisma, PrismaClient } from "@stay-ops/db";
+import { BookingStatus, Channel, findStayConflict, Prisma, PrismaClient } from "@stay-ops/db";
 import { AllocationError } from "./errors";
 import { throwIfStayConflict } from "./stayConflict";
 
@@ -257,5 +257,45 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+}
+
+/** Bookings with no room assignment overlapping `[from, to)` (half-open on dates). */
+export type UnassignedListParams = {
+  from: Date;
+  to: Date;
+  channel?: Channel;
+  status?: BookingStatus;
+};
+
+export async function listUnassignedBookings(params: UnassignedListParams) {
+  const overlap = {
+    checkinDate: { lt: params.to },
+    checkoutDate: { gt: params.from },
+  };
+
+  const statusFilter = params.status
+    ? { status: params.status }
+    : { status: { not: BookingStatus.cancelled } };
+
+  const channelFilter = params.channel ? { channel: params.channel } : {};
+
+  return prisma.booking.findMany({
+    where: {
+      ...overlap,
+      ...statusFilter,
+      ...channelFilter,
+      assignment: null,
+    },
+    orderBy: [{ checkinDate: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      channel: true,
+      externalBookingId: true,
+      status: true,
+      checkinDate: true,
+      checkoutDate: true,
+      nights: true,
+    },
+  });
 }
 
