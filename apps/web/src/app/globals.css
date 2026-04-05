@@ -196,3 +196,50 @@ body {
 .ops-block-reason {
   color: #555;
 }
+
+.ops-btn-small {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.ops-btn-danger {
+  border-color: #b00020;
+  color: #b00020;
+  background: #fff;
+}
+
+.ops-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.ops-modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.25rem;
+  max-width: 26rem;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.ops-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.ops-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}

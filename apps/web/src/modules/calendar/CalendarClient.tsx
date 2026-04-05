@@ -10,7 +10,8 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { useCallback, useEffect, useState } from "react";
-import type { CalendarMonthPayload } from "./calendarTypes";
+import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
+import type { CalendarBlockItem, CalendarMonthPayload } from "./calendarTypes";
 import { MonthGrid } from "./MonthGrid";
 
 function shiftMonth(ym: string, delta: number): string {
@@ -33,6 +34,9 @@ export function CalendarClient() {
   const [data, setData] = useState<CalendarMonthPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blockModal, setBlockModal] = useState<
+    null | { mode: "create" } | { mode: "edit"; block: CalendarBlockItem }
+  >(null);
 
   const load = useCallback(async (ym: string) => {
     setLoading(true);
@@ -69,6 +73,11 @@ export function CalendarClient() {
     // Assignment persistence in commit 6.4
   }, []);
 
+  const roomOptions: BlockRoomOption[] = (data?.rooms ?? []).map((r) => ({
+    id: r.id,
+    label: r.code ? `${r.code}${r.name ? ` — ${r.name}` : ""}` : r.name || r.id,
+  }));
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
       <main className="ops-calendar-main">
@@ -79,7 +88,20 @@ export function CalendarClient() {
           error={error}
           onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
           onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
+          onAddBlock={() => setBlockModal({ mode: "create" })}
+          onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
         />
+        {blockModal && data && (
+          <BlockEditorModal
+            open
+            mode={blockModal.mode}
+            block={blockModal.mode === "edit" ? blockModal.block : null}
+            rooms={roomOptions}
+            defaultMonth={data.month}
+            onClose={() => setBlockModal(null)}
+            onSaved={() => void load(month)}
+          />
+        )}
       </main>
     </DndContext>
   );

@@ -16,9 +16,19 @@ type Props = {
   error: string | null;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  onAddBlock?: () => void;
+  onEditBlock?: (item: CalendarBlockItem) => void;
 };
 
-export function MonthGrid({ data, loading, error, onPrevMonth, onNextMonth }: Props) {
+export function MonthGrid({
+  data,
+  loading,
+  error,
+  onPrevMonth,
+  onNextMonth,
+  onAddBlock,
+  onEditBlock,
+}: Props) {
   if (loading && !data) {
     return <p className="ops-muted">Loading calendar…</p>;
   }
@@ -52,6 +62,11 @@ export function MonthGrid({ data, loading, error, onPrevMonth, onNextMonth }: Pr
         <button type="button" className="ops-btn" onClick={onNextMonth}>
           Next
         </button>
+        {onAddBlock && (
+          <button type="button" className="ops-btn ops-btn-primary" onClick={onAddBlock}>
+            Add block
+          </button>
+        )}
         <span className="ops-muted ops-tz">{data.timezone}</span>
       </div>
 
@@ -80,7 +95,7 @@ export function MonthGrid({ data, loading, error, onPrevMonth, onNextMonth }: Pr
             testIdSuffix={laneTestIdSuffix(room)}
           >
             {roomBlocks.map((blk) => (
-              <BlockChip key={blk.id} item={blk} />
+              <BlockChip key={blk.id} item={blk} onEdit={onEditBlock} />
             ))}
             {roomBookings.map((b) => (
               <BookingCard key={b.id} item={b} />
