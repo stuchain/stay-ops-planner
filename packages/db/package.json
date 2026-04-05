@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
+    "@types/node": "^22.19.17",
     "eslint": "^9.16.0",
     "prisma": "^6.3.1",
     "tsx": "^4.19.2",
