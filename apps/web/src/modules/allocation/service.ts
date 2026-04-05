@@ -79,6 +79,56 @@ export type AssignmentCommandResult = {
   auditRef: string;
 };
 
+/**
+ * Concurrent assigns can lose the race at the DB layer (exclusion constraint, serializable abort)
+ * before application-level conflict checks observe the other transaction. Map those to domain errors.
+ */
+function mapAssignmentWriteConflict(err: unknown): never {
+  if (err instanceof AllocationError) {
+    throw err;
+  }
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2034") {
+      throw new AllocationError({
+        code: "CONFLICT_ASSIGNMENT",
+        status: 409,
+        message: "Room overlap detected",
+        details: { reason: "transaction_conflict" },
+      });
+    }
+    if (err.code === "P2002") {
+      const target = err.meta?.target;
+      const t = Array.isArray(target) ? target.join(",") : String(target ?? "");
+      if (t.includes("booking_id") || t.includes("bookingId")) {
+        throw new AllocationError({
+          code: "BOOKING_ALREADY_ASSIGNED",
+          status: 409,
+          message: "Booking already has an assignment; use reassign",
+          details: {},
+        });
+      }
+      throw new AllocationError({
+        code: "CONFLICT_ASSIGNMENT",
+        status: 409,
+        message: "Room overlap detected",
+        details: { reason: "unique_constraint", target: t },
+      });
+    }
+  }
+  if (err instanceof Prisma.PrismaClientUnknownRequestError) {
+    const m = err.message;
+    if (m.includes("assignments_room_stay_excl") || m.includes("23P01")) {
+      throw new AllocationError({
+        code: "CONFLICT_ASSIGNMENT",
+        status: 409,
+        message: "Room overlap detected",
+        details: { reason: "exclusion_constraint" },
+      });
+    }
+  }
+  throw err;
+}
+
 async function appendAudit(
   tx: Prisma.TransactionClient,
   args: { userId: string; action: string; entityType: string; entityId: string; payload?: Prisma.InputJsonValue },
@@ -101,8 +151,9 @@ async function appendAudit(
  * while overlapping stays are blocked by assertNoOverlap and DB exclusion.
  */
 export async function assignBookingToRoom(input: AssignInput): Promise<AssignmentCommandResult> {
-  return prisma.$transaction(
-    async (tx) => {
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
       await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${input.bookingId} FOR UPDATE`;
 
       const booking = await tx.booking.findUnique({
@@ -180,11 +231,15 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+  } catch (err) {
+    mapAssignmentWriteConflict(err);
+  }
 }
 
 export async function reassignRoom(input: ReassignInput): Promise<AssignmentCommandResult> {
-  return prisma.$transaction(
-    async (tx) => {
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
       const existing = await tx.assignment.findUnique({
         where: { id: input.assignmentId },
         include: { booking: true },
@@ -260,6 +315,9 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+  } catch (err) {
+    mapAssignmentWriteConflict(err);
+  }
 }
 
 export async function unassignBooking(input: UnassignInput): Promise<{ auditRef: string }> {

@@ -43,7 +43,7 @@ describe("allocation — race and cancellation", () => {
   });
 
   it("parallel overlapping assigns: one succeeds, one CONFLICT_ASSIGNMENT", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `race-${s}@example.com`, passwordHash: "x" },
@@ -100,7 +100,7 @@ describe("allocation — race and cancellation", () => {
   });
 
   it("parallel assign same booking to two rooms: one BOOKING_ALREADY_ASSIGNED", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `race2-${s}@example.com`, passwordHash: "x" },
@@ -144,7 +144,9 @@ describe("allocation — race and cancellation", () => {
     expect(rejected).toHaveLength(1);
     const reason = (rejected[0] as PromiseRejectedResult).reason;
     expect(reason).toBeInstanceOf(AllocationError);
-    expect((reason as AllocationError).code).toBe("BOOKING_ALREADY_ASSIGNED");
+    const code = (reason as AllocationError).code;
+    // Loser may be BOOKING_ALREADY_ASSIGNED (app check) or CONFLICT_ASSIGNMENT (serializable / write conflict).
+    expect(["BOOKING_ALREADY_ASSIGNED", "CONFLICT_ASSIGNMENT"]).toContain(code);
   });
 
   it("applyCancellationSideEffects removes assignment and cancels pending cleaning", async () => {
