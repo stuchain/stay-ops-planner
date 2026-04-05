@@ -57,6 +57,14 @@ export async function ensureTurnoverCleaningTask(
     return;
   }
 
+  const room = await tx.room.findUnique({
+    where: { id: params.roomId },
+    select: { isActive: true },
+  });
+  if (!room?.isActive) {
+    return;
+  }
+
   const { plannedStart, plannedEnd } = computeTurnoverPlannedWindowUTC(params.checkoutDate);
   const sourceEventId = turnoverSourceEventId(params.bookingId, params.checkoutDate, params.roomId);
 

@@ -20,6 +20,7 @@ export {
   SERVICE_TASK_TYPE,
 } from "./cleaning/serviceTask.js";
 export {
+  CLEANING_WINDOW_INVALID_MESSAGE,
   CleaningWindowInvalidError,
   validateCleaningSchedule,
 } from "./cleaning/scheduleValidator.js";

@@ -2,7 +2,14 @@
  * Cleaning schedule window validation (Phase 5.4).
  */
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
-import { PrismaClient, BookingStatus, Channel, CleaningWindowInvalidError, validateCleaningSchedule } from "@stay-ops/db";
+import {
+  PrismaClient,
+  BookingStatus,
+  Channel,
+  CLEANING_WINDOW_INVALID_MESSAGE,
+  CleaningWindowInvalidError,
+  validateCleaningSchedule,
+} from "@stay-ops/db";
 
 process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops";
 
@@ -159,5 +166,41 @@ describe("cleaning — schedule validation", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(CleaningWindowInvalidError);
+  });
+
+  it("rejects schedule when room is inactive", async () => {
+    const room = await prisma.room.create({ data: { code: "SV-IN", isActive: false } });
+    const b1 = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: "sv-in-b1",
+        status: BookingStatus.confirmed,
+        checkinDate: new Date("2026-07-01T00:00:00.000Z"),
+        checkoutDate: new Date("2026-07-05T00:00:00.000Z"),
+        nights: 4,
+      },
+    });
+    await prisma.assignment.create({
+      data: {
+        bookingId: b1.id,
+        roomId: room.id,
+        startDate: b1.checkinDate,
+        endDate: b1.checkoutDate,
+      },
+    });
+
+    await expect(
+      prisma.$transaction((tx) =>
+        validateCleaningSchedule(tx, {
+          roomId: room.id,
+          bookingId: b1.id,
+          plannedStart: new Date("2026-07-05T10:00:00.000Z"),
+          plannedEnd: new Date("2026-07-05T12:00:00.000Z"),
+        }),
+      ),
+    ).rejects.toMatchObject({
+      name: "CleaningWindowInvalidError",
+      message: CLEANING_WINDOW_INVALID_MESSAGE,
+    });
   });
 });

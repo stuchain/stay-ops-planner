@@ -90,4 +90,41 @@ describe("cleaning — turnover generation", () => {
     expect(again).toHaveLength(1);
     expect(again[0]!.id).toBe(t.id);
   });
+
+  it("does not create turnover when room is inactive (direct DB assignment)", async () => {
+    const { ensureTurnoverCleaningTask } = await import("@stay-ops/db");
+    const s = suffix();
+    const room = await prisma.room.create({ data: { code: `CLN-IN-${s}`, isActive: false } });
+    const booking = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: `bk-in-${s}`,
+        status: BookingStatus.confirmed,
+        checkinDate: new Date("2026-06-01T00:00:00.000Z"),
+        checkoutDate: new Date("2026-06-04T00:00:00.000Z"),
+        nights: 3,
+      },
+    });
+    await prisma.assignment.create({
+      data: {
+        bookingId: booking.id,
+        roomId: room.id,
+        startDate: booking.checkinDate,
+        endDate: booking.checkoutDate,
+      },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await ensureTurnoverCleaningTask(tx, {
+        bookingId: booking.id,
+        roomId: room.id,
+        checkoutDate: booking.checkoutDate,
+      });
+    });
+
+    const tasks = await prisma.cleaningTask.findMany({
+      where: { bookingId: booking.id, taskType: "turnover" },
+    });
+    expect(tasks).toHaveLength(0);
+  });
 });
