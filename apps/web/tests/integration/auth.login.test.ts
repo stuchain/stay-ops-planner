@@ -24,8 +24,8 @@ describe("auth.login", () => {
       create: { email, passwordHash, isActive: true },
     });
 
-    const loginModule = await import("../../src/app/api/auth/login/route");
-    const meModule = await import("../../src/app/api/auth/me/route");
+    const loginModule = await import("../../src/app/api/auth/login/route.ts");
+    const meModule = await import("../../src/app/api/auth/me/route.ts");
     POST_LOGIN = loginModule.POST;
     GET_ME = meModule.GET;
   });
@@ -58,7 +58,7 @@ describe("auth.login", () => {
     );
 
     expect(meRes.status).toBe(200);
-    const json = (await meRes.json()) as any;
+    const json = (await meRes.json()) as { data: { user: { email: string } } };
     expect(json.data.user.email).toBe(email);
   });
 });

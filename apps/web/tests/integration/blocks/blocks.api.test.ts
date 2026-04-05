@@ -38,9 +38,9 @@ describe("api /api/blocks", () => {
   beforeAll(async () => {
     await prisma.$connect();
 
-    POST_LOGIN = (await import("../../src/app/api/auth/login/route")).POST;
-    POST_BLOCKS = (await import("../../src/app/api/blocks/route")).POST;
-    const idRoute = await import("../../src/app/api/blocks/[id]/route");
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
+    POST_BLOCKS = (await import("../../../src/app/api/blocks/route.ts")).POST;
+    const idRoute = await import("../../../src/app/api/blocks/[id]/route.ts");
     PATCH_BLOCK = idRoute.PATCH;
     DELETE_BLOCK = idRoute.DELETE;
   });

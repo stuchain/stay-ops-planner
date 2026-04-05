@@ -28,12 +28,12 @@ describe("auth.middleware", () => {
       create: { email, passwordHash, isActive: true },
     });
 
-    const middlewareModule = await import("../../src/middleware");
+    const middlewareModule = await import("../../src/middleware.ts");
     middlewareFn = middlewareModule.middleware;
 
-    const loginModule = await import("../../src/app/api/auth/login/route");
+    const loginModule = await import("../../src/app/api/auth/login/route.ts");
     const logoutModule = await import(
-      "../../src/app/api/auth/logout/route"
+      "../../src/app/api/auth/logout/route.ts"
     );
     POST_LOGIN = loginModule.POST;
     POST_LOGOUT = logoutModule.POST;
@@ -48,7 +48,7 @@ describe("auth.middleware", () => {
     const res = middlewareFn(req);
     expect(res.status).toBe(401);
 
-    const json = (await res.json()) as any;
+    const json = (await res.json()) as { error: { code: string; message: string } };
     expect(json.error.code).toBe("UNAUTHORIZED");
     expect(json.error.message).toBe("Authentication required");
   });

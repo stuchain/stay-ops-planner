@@ -36,7 +36,7 @@ describe("cleaning — state machine", () => {
   });
 
   it("allows todo -> in_progress -> done and writes audits", async () => {
-    const { transitionCleaningTaskStatus } = await import("../../../src/modules/cleaning/state-machine");
+    const { transitionCleaningTaskStatus } = await import("../../../src/modules/cleaning/state-machine.ts");
     const room = await prisma.room.create({ data: { code: "SM1" } });
     const booking = await prisma.booking.create({
       data: {
@@ -85,7 +85,7 @@ describe("cleaning — state machine", () => {
   });
 
   it("rejects todo -> done", async () => {
-    const { transitionCleaningTaskStatus } = await import("../../../src/modules/cleaning/state-machine");
+    const { transitionCleaningTaskStatus } = await import("../../../src/modules/cleaning/state-machine.ts");
     const room = await prisma.room.create({ data: { code: "SM2" } });
     const booking = await prisma.booking.create({
       data: {

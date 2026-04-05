@@ -26,8 +26,8 @@ describe("auth.session", () => {
       create: { email, passwordHash, isActive: true },
     });
 
-    const loginModule = await import("../../src/app/api/auth/login/route");
-    const meModule = await import("../../src/app/api/auth/me/route");
+    const loginModule = await import("../../src/app/api/auth/login/route.ts");
+    const meModule = await import("../../src/app/api/auth/me/route.ts");
     const logoutModule = await import(
       "../../src/app/api/auth/logout/route"
     );
@@ -80,7 +80,7 @@ describe("auth.session", () => {
       }),
     );
     expect(meRes2.status).toBe(401);
-    const json = (await meRes2.json()) as any;
+    const json = (await meRes2.json()) as { error: { code: string } };
     expect(json.error.code).toBe("UNAUTHORIZED");
   });
 });
