@@ -31,7 +31,8 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 ## Current Repo Status
 
 ### Runtime/tooling baseline
-- Next.js App Router app
+- Next.js App Router app (`apps/web`)
+- TypeScript path alias in the web app: `@/*` → `apps/web/src/*` (see `apps/web/tsconfig.json`)
 - Environment validation in `packages/shared/src/env.ts`
 - Prisma schema/migrations + seed harness in `packages/db/prisma/*`
 - Local data stack via `docker-compose.yml` (Postgres + Redis)
@@ -56,11 +57,51 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
   - `packages/db/prisma/seed.ts` supports idempotent admin upsert via `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`
 - Recovery documentation: `docs/runbooks/auth-recovery.md`
 
+### Allocation (room assignment)
+- **API** (admin session required)
+  - `POST /api/assignments` — assign an unassigned booking to a room
+  - `PATCH /api/assignments/[id]/reassign` — move an assignment to another room
+  - `POST /api/assignments/[id]/unassign` — return a booking to the unassigned queue
+  - `GET /api/bookings/unassigned` — list bookings not yet assigned to a room (optional `meta.total`)
+- **Domain logic** lives under `apps/web/src/modules/allocation/` (service + error types). Database overlap and uniqueness are enforced in Postgres; concurrent writes map to stable API errors such as `CONFLICT_ASSIGNMENT` and `BOOKING_ALREADY_ASSIGNED`.
+- **Inactive rooms**: `Room.isActive` is honored; assigning or reassigning to an inactive room returns `ROOM_INACTIVE` (see [docs/phases/phase-04-allocation.md](docs/phases/phase-04-allocation.md)).
+
+### Manual blocks
+- **API** (admin session required)
+  - `POST /api/blocks` — create a manual block on a room for a date range
+  - `PATCH /api/blocks/[id]` / `DELETE /api/blocks/[id]` — update or remove a block
+- **Service**: `apps/web/src/modules/blocks/service.ts` (facade over shared calendar rules). Overlaps with assignments or other blocks surface as `CONFLICT_ASSIGNMENT` / `CONFLICT_BLOCK` as appropriate.
+
+### Cleaning tasks
+- **API** (admin session required)
+  - `GET /api/cleaning/tasks` / `POST /api/cleaning/tasks` — list and create service cleaning tasks
+  - `PATCH /api/cleaning/tasks/[id]/schedule` — adjust planned window (validates against booking turnover rules)
+  - `PATCH /api/cleaning/tasks/[id]/status` — status transitions (`in_progress`, `done`)
+- **Engine** modules under `apps/web/src/modules/cleaning/` (scheduling, state machine, turnover generation). Spec and invariants: [docs/phases/phase-05-cleaning-engine.md](docs/phases/phase-05-cleaning-engine.md).
+
+### Sync (Hosthub)
+- `POST /api/sync/hosthub/webhook` — ingest webhook events (signature/HMAC when configured)
+- `GET /api/sync/runs` — list recent sync run records (authenticated)
+- Client and pipeline: `packages/sync`; vendor notes: [docs/vendor/hosthub-api.md](docs/vendor/hosthub-api.md), phase outline [docs/phases/phase-03-hosthub-sync.md](docs/phases/phase-03-hosthub-sync.md).
+
+### API errors (conventions)
+- JSON error shape: `{ error: { code, message, details? } }` (see [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md)).
+- Route handlers compose `jsonError` / module-specific envelopes so auth, validation, and domain codes stay consistent.
+
+### Tests
+- **Unit / package tests**: `packages/shared`, `packages/sync` (Vitest).
+- **Web integration tests**: `apps/web/tests/integration/` (Vitest; `apps/web/vitest.config.ts` aligns `@/` and hook timeouts). They hit real Postgres and Redis — start `docker compose` before `pnpm --filter @stay-ops/web test`.
+- Coverage includes auth, allocation (including races and inactive rooms), blocks, cleaning flows, DB constraints, and sync webhook behavior.
+
 ### How to verify
-- Start local services: `docker compose up --build`
+- Start local services: `docker compose up -d` (or `docker compose up --build` the first time)
+- Copy env: `.env.example` → `.env` / `apps/web/.env.local` as needed (never commit secrets)
 - Apply DB + bootstrap admin: `pnpm --filter @stay-ops/db migrate:deploy` then `pnpm --filter @stay-ops/db seed`
 - Run the app: `pnpm --filter @stay-ops/web dev`
-- Run integration tests: `pnpm --filter @stay-ops/web test` (see `apps/web/tests/integration/`)
+- Run the full check from repo root: `pnpm lint`, `pnpm build`, `pnpm test`
+
+### Roadmap / deeper spec
+- Phased execution and acceptance criteria: [docs/phases/README.md](docs/phases/README.md) and individual phase files (calendar UX, suggestions, production readiness, etc. are specified there even when not yet built in code).
 
 ## Security note
 
