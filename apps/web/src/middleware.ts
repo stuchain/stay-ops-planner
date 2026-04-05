@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jsonError } from "./modules/auth/errors";
-import { clearSessionCookie } from "./modules/auth/session";
-import { getSessionContextFromRequest } from "./modules/auth/guard";
+import { jsonError } from "@/modules/auth/errors";
+import { clearSessionCookie } from "@/modules/auth/session";
+import { getSessionContextFromRequest } from "@/modules/auth/guard";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

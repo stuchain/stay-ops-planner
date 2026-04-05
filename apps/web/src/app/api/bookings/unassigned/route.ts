@@ -2,9 +2,9 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { BookingStatus, Channel } from "@stay-ops/db";
-import { listUnassignedBookings } from "../../../../modules/allocation/service";
-import { AuthError, jsonError } from "../../../../modules/auth/errors";
-import { requireAdminSession } from "../../../../modules/auth/guard";
+import { listUnassignedBookings } from "@/modules/allocation/service";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { requireAdminSession } from "@/modules/auth/guard";
 
 const DateOnly = z
   .string()

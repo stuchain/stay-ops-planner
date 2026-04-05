@@ -13,6 +13,7 @@ export class CleaningTaskNotFoundError extends Error {
   readonly status = 404;
 
   constructor(taskId: string) {
+    void taskId;
     super("Cleaning task not found");
     this.name = "CleaningTaskNotFoundError";
   }

@@ -2,13 +2,10 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
-import {
-  cleaningErrorEnvelope,
-  CleaningTaskNotFoundError,
-} from "../../../../../../modules/cleaning/errors";
-import { updateCleaningTaskSchedule } from "../../../../../../modules/cleaning/taskSchedule";
-import { AuthError, jsonError } from "../../../../../../modules/auth/errors";
-import { requireAdminSession } from "../../../../../../modules/auth/guard";
+import { CleaningTaskNotFoundError } from "@/modules/cleaning/errors";
+import { updateCleaningTaskSchedule } from "@/modules/cleaning/taskSchedule";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { requireAdminSession } from "@/modules/auth/guard";
 
 const PatchBodySchema = z
   .object({

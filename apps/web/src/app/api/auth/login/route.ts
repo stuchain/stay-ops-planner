@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { LoginBodySchema, loginWithEmailPassword } from "../../../../modules/auth/service";
-import { AuthError, jsonError } from "../../../../modules/auth/errors";
-import { setSessionCookie } from "../../../../modules/auth/session";
+import { LoginBodySchema, loginWithEmailPassword } from "@/modules/auth/service";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { setSessionCookie } from "@/modules/auth/session";
 
 export async function POST(request: Request) {
   let body: unknown;

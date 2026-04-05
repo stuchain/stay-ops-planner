@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AllocationError, allocationErrorEnvelope } from "../../../../../modules/allocation/errors";
-import { reassignRoom } from "../../../../../modules/allocation/service";
-import { AuthError, jsonError } from "../../../../../modules/auth/errors";
-import { requireAdminSession } from "../../../../../modules/auth/guard";
+import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
+import { reassignRoom } from "@/modules/allocation/service";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { requireAdminSession } from "@/modules/auth/guard";
 
 const PatchBodySchema = z.object({
   roomId: z.string().min(1),

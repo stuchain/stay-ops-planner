@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@stay-ops/db";
-import { AuthError, jsonError } from "../../../../modules/auth/errors";
-import { requireSession } from "../../../../modules/auth/guard";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { requireSession } from "@/modules/auth/guard";
 
 const prisma = new PrismaClient();
 

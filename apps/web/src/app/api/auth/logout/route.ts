@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { AuthError, jsonError } from "../../../../modules/auth/errors";
-import { assertLogoutTokenPresent } from "../../../../modules/auth/service";
-import { clearSessionCookie, readCookieValue, SESSION_COOKIE_NAME } from "../../../../modules/auth/session";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { assertLogoutTokenPresent } from "@/modules/auth/service";
+import { clearSessionCookie, readCookieValue, SESSION_COOKIE_NAME } from "@/modules/auth/session";
 
 export async function POST(request: Request) {
   const cookieHeader = request.headers.get("cookie");

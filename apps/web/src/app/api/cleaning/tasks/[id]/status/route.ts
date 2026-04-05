@@ -5,10 +5,10 @@ import {
   cleaningErrorEnvelope,
   CleaningTaskNotFoundError,
   InvalidStateTransitionError,
-} from "../../../../../../modules/cleaning/errors";
-import { transitionCleaningTaskStatus } from "../../../../../../modules/cleaning/state-machine";
-import { AuthError, jsonError } from "../../../../../../modules/auth/errors";
-import { requireAdminSession } from "../../../../../../modules/auth/guard";
+} from "@/modules/cleaning/errors";
+import { transitionCleaningTaskStatus } from "@/modules/cleaning/state-machine";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { requireAdminSession } from "@/modules/auth/guard";
 
 const PatchBodySchema = z
   .object({

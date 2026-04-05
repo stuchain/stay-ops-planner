@@ -2,13 +2,13 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
-import { CleaningBookingNotFoundError } from "../../../../modules/cleaning/errors";
+import { CleaningBookingNotFoundError } from "@/modules/cleaning/errors";
 import {
   createServiceCleaningTaskForApi,
   listCleaningTasks,
-} from "../../../../modules/cleaning/taskSchedule";
-import { AuthError, jsonError } from "../../../../modules/auth/errors";
-import { requireAdminSession } from "../../../../modules/auth/guard";
+} from "@/modules/cleaning/taskSchedule";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { requireAdminSession } from "@/modules/auth/guard";
 
 const QuerySchema = z
   .object({

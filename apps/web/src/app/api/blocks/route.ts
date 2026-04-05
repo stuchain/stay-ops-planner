@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AllocationError, allocationErrorEnvelope } from "../../../../modules/allocation/errors";
-import { requireAdminSession } from "../../../../modules/auth/guard";
-import { AuthError, jsonError } from "../../../../modules/auth/errors";
-import { ManualBlockService } from "../../../../modules/blocks/service";
+import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
+import { requireAdminSession } from "@/modules/auth/guard";
+import { AuthError, jsonError } from "@/modules/auth/errors";
+import { ManualBlockService } from "@/modules/blocks/service";
 
 const DateOnly = z
   .string()
