@@ -1,4 +1,10 @@
-import { assertNoOverlap, BookingStatus, Prisma, PrismaClient } from "@stay-ops/db";
+import {
+  BookingStatus,
+  findStayConflict,
+  Prisma,
+  PrismaClient,
+  type StayConflict,
+} from "@stay-ops/db";
 import { AllocationError } from "./errors";
 
 const prisma = new PrismaClient();
@@ -46,6 +52,27 @@ export type AssignmentCommandResult = {
   };
   auditRef: string;
 };
+
+function toDateOnlyIso(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function throwIfStayConflict(conflict: StayConflict | null): void {
+  if (!conflict) return;
+  const isAssignment = conflict.kind === "assignment";
+  throw new AllocationError({
+    code: isAssignment ? "CONFLICT_ASSIGNMENT" : "CONFLICT_BLOCK",
+    status: 409,
+    message: isAssignment ? "Room overlap detected" : "Overlaps an existing maintenance block",
+    details: {
+      conflictType: isAssignment ? "assignment" : "maintenance_block",
+      conflictId: conflict.id,
+      roomId: conflict.roomId,
+      startDate: toDateOnlyIso(conflict.startDate),
+      endDate: toDateOnlyIso(conflict.endDate),
+    },
+  });
+}
 
 async function appendAudit(
   tx: Prisma.TransactionClient,
@@ -98,11 +125,13 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
         });
       }
 
-      await assertNoOverlap(tx, {
-        roomId: input.roomId,
-        start: booking.checkinDate,
-        end: booking.checkoutDate,
-      });
+      throwIfStayConflict(
+        await findStayConflict(tx, {
+          roomId: input.roomId,
+          start: booking.checkinDate,
+          end: booking.checkoutDate,
+        }),
+      );
 
       const created = await tx.assignment.create({
         data: {
@@ -170,12 +199,14 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
 
       assertAssignable(existing.booking.status);
 
-      await assertNoOverlap(tx, {
-        roomId: input.roomId,
-        start: existing.startDate,
-        end: existing.endDate,
-        excludeAssignmentId: existing.id,
-      });
+      throwIfStayConflict(
+        await findStayConflict(tx, {
+          roomId: input.roomId,
+          start: existing.startDate,
+          end: existing.endDate,
+          excludeAssignmentId: existing.id,
+        }),
+      );
 
       const updated = await tx.assignment.update({
         where: { id: input.assignmentId },

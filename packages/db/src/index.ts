@@ -1,2 +1,9 @@
 export { PrismaClient, Prisma, BookingStatus, Channel } from "@prisma/client";
-export { assertNoOverlap, OverlapConflictError, type AssertNoOverlapParams } from "./overlap.js";
+export {
+  assertNoOverlap,
+  findStayConflict,
+  OverlapConflictError,
+  type AssertNoOverlapParams,
+  type StayConflict,
+  type StayConflictKind,
+} from "./overlap.js";
