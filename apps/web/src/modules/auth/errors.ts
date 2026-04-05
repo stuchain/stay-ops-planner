@@ -30,14 +30,13 @@ export class AuthError extends Error {
   }
 }
 
-export function jsonError(code: AuthErrorCode, message: string, details?: unknown) {
-  const envelope: ApiErrorEnvelope = {
+export function jsonError(code: string, message: string, details?: unknown): ApiErrorEnvelope {
+  return {
     error: {
       code,
       message,
       details: details ?? undefined,
     },
   };
-  return envelope;
 }
 
