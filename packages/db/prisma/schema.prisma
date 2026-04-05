@@ -135,7 +135,7 @@ model CleaningTask {
   notes           String?
   /// turnover | service (Phase 5).
   taskType        String    @default("turnover") @map("task_type")
-  /// Idempotency key; unique when set. Turnover uses a deterministic hash.
+  /// Idempotency key; unique when set. Turnover uses SHA-256(bookingId|checkoutDay|roomId|turnover).
   sourceEventId   String?   @unique @map("source_event_id")
   plannedStart    DateTime? @map("planned_start")
   plannedEnd      DateTime? @map("planned_end")

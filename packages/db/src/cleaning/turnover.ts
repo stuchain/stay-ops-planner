@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { BookingStatus, Prisma } from "@prisma/client";
 
 export const TURNOVER_TASK_TYPE = "turnover";
@@ -33,10 +34,13 @@ export function computeTurnoverPlannedWindowUTC(
   return { plannedStart, plannedEnd };
 }
 
-/** Deterministic idempotency key for turnover rows (spec: hash-like stable id). */
+/**
+ * Stable SHA-256 idempotency key for turnover rows (Phase 5: hash of booking + checkout day + room + turnover).
+ */
 export function turnoverSourceEventId(bookingId: string, checkoutDate: Date, roomId: string): string {
   const day = checkoutDate.toISOString().slice(0, 10);
-  return `tov:${bookingId}:${day}:${roomId}`;
+  const payload = `${bookingId}|${day}|${roomId}|turnover`;
+  return createHash("sha256").update(payload, "utf8").digest("hex");
 }
 
 /**

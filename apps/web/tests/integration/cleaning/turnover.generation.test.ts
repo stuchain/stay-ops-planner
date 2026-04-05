@@ -2,8 +2,7 @@
  * Turnover cleaning generation at assign (Phase 5.1).
  */
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
-import { PrismaClient, BookingStatus, Channel } from "@stay-ops/db";
-import { TURNOVER_MINUTES } from "@stay-ops/db";
+import { PrismaClient, BookingStatus, Channel, TURNOVER_MINUTES, turnoverSourceEventId } from "@stay-ops/db";
 
 process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops";
 
@@ -69,6 +68,8 @@ describe("cleaning — turnover generation", () => {
     expect(tasks).toHaveLength(1);
     const t = tasks[0]!;
     expect(t.roomId).toBe(room.id);
+    expect(t.sourceEventId).toBe(turnoverSourceEventId(booking.id, booking.checkoutDate, room.id));
+    expect(t.sourceEventId).toMatch(/^[a-f0-9]{64}$/);
     expect(t.durationMinutes).toBe(TURNOVER_MINUTES);
     expect(t.plannedStart).toBeDefined();
     expect(t.plannedEnd).toBeDefined();
