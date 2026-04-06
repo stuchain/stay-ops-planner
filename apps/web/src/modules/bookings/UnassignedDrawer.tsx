@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { performBookingAssignmentMutation } from "@/modules/calendar/assignmentMutations";
+import {
+  applyBookingSuggestionMutation,
+  performBookingAssignmentMutation,
+} from "@/modules/calendar/assignmentMutations";
 import { bookingItemToDragPayload } from "@/modules/calendar/optimisticMove";
 import type { CalendarBookingItem, CalendarRoom } from "@/modules/calendar/calendarTypes";
+import { SUGGESTION_REASON_CODE_LABELS, type SuggestionReasonCode } from "@/modules/suggestions/types";
 
 type UnassignedRow = {
   id: string;
@@ -12,6 +16,17 @@ type UnassignedRow = {
   checkinDate: string;
   checkoutDate: string;
   nights: number;
+};
+
+type SuggestionItem = {
+  roomId: string;
+  score: number;
+  reasonCodes: SuggestionReasonCode[];
+  breakdown: {
+    availability: number;
+    cleaningFit: number;
+    tieBreaker: number;
+  };
 };
 
 function monthRangeForUnassignedApi(ym: string): { from: string; to: string } {
@@ -52,6 +67,7 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
   const [roomPick, setRoomPick] = useState<Record<string, string>>({});
   const [rowError, setRowError] = useState<Record<string, string>>({});
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<string, SuggestionItem[]>>({});
 
   const loadRows = useCallback(async () => {
     const { from, to } = monthRangeForUnassignedApi(month);
@@ -70,6 +86,7 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
         throw new Error(j?.error?.message ?? `HTTP ${res.status}`);
       }
       setRows(j?.data?.bookings ?? []);
+      setSuggestions({});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
       setRows([]);
@@ -78,10 +95,30 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
     }
   }, [month]);
 
+  const loadSuggestions = useCallback(async (bookingId: string) => {
+    try {
+      const res = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/suggestions`, {
+        credentials: "include",
+      });
+      const j = (await res.json().catch(() => null)) as {
+        data?: SuggestionItem[];
+      } | null;
+      if (!res.ok) return;
+      setSuggestions((prev) => ({ ...prev, [bookingId]: j?.data ?? [] }));
+    } catch {
+      setSuggestions((prev) => ({ ...prev, [bookingId]: [] }));
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     void loadRows();
   }, [open, loadRows]);
+
+  useEffect(() => {
+    if (!open || rows.length === 0) return;
+    void Promise.all(rows.map((row) => loadSuggestions(row.id)));
+  }, [open, rows, loadSuggestions]);
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
@@ -129,6 +166,21 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
     }
   }
 
+  async function applySuggestion(row: UnassignedRow, roomId: string) {
+    setRowError((r) => ({ ...r, [row.id]: "" }));
+    setPendingId(row.id);
+    try {
+      await applyBookingSuggestionMutation(row.id, roomId, 0);
+      onAssigned();
+      await loadRows();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Apply suggestion failed";
+      setRowError((r) => ({ ...r, [row.id]: msg }));
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   if (!open) return null;
 
   return (
@@ -170,6 +222,31 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
                   {b.channel} · {b.externalBookingId}
                 </div>
                 {rowError[b.id] && <p className="ops-error ops-drawer-row-err">{rowError[b.id]}</p>}
+                <div className="ops-suggestion-list" aria-label={`Suggestions for booking ${b.id}`}>
+                  {(suggestions[b.id] ?? []).slice(0, 3).map((s) => (
+                    <div key={`${b.id}-${s.roomId}`} className="ops-suggestion-card">
+                      <div className="ops-suggestion-score">Score {s.score}</div>
+                      <div className="ops-suggestion-reasons">
+                        {s.reasonCodes.slice(0, 2).map((code) => (
+                          <span key={code} className="ops-suggestion-reason">
+                            {SUGGESTION_REASON_CODE_LABELS[code]}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="ops-btn ops-btn-small"
+                        disabled={pendingId === b.id}
+                        onClick={() => void applySuggestion(b, s.roomId)}
+                      >
+                        {pendingId === b.id ? "Applying…" : "Apply suggestion"}
+                      </button>
+                    </div>
+                  ))}
+                  {(suggestions[b.id] ?? []).length === 0 && (
+                    <p className="ops-muted">No ranked suggestions available yet.</p>
+                  )}
+                </div>
               </div>
               <div className="ops-drawer-row-actions">
                 <select

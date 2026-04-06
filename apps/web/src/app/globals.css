@@ -434,6 +434,38 @@ body {
   font-size: 0.8rem;
 }
 
+.ops-suggestion-list {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ops-suggestion-card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ops-suggestion-score {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ops-suggestion-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ops-suggestion-reason {
+  font-size: 0.75rem;
+  color: #444;
+}
+
 .ops-cleaning-main {
   max-width: 960px;
 }

@@ -54,3 +54,25 @@ export async function performBookingAssignmentMutation(
     throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
   }
 }
+
+export async function applyBookingSuggestionMutation(
+  bookingId: string,
+  roomId: string,
+  expectedVersion?: number,
+): Promise<void> {
+  const res = await fetch(
+    `/api/bookings/${encodeURIComponent(bookingId)}/suggestions/${encodeURIComponent(roomId)}/apply`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(expectedVersion == null ? {} : { expectedVersion }),
+    },
+  );
+  const j = (await res.json().catch(() => null)) as {
+    error?: { code?: string; message?: string };
+  } | null;
+  if (!res.ok) {
+    throw new Error(formatAllocationError(j?.error?.code, j?.error?.message ?? res.statusText));
+  }
+}
