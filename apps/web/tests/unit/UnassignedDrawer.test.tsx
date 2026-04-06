@@ -17,7 +17,12 @@ describe("UnassignedDrawer", () => {
 
   beforeEach(() => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
       if (url.includes("/api/bookings/unassigned")) {
         return new Response(
           JSON.stringify({
@@ -112,7 +117,7 @@ describe("UnassignedDrawer", () => {
     );
 
     await waitFor(() => expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument());
-    expect(screen.getByText(/Score 90/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Score 90/)).toBeInTheDocument());
     expect(screen.getByText(/Room is free for the full booking window/i)).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: /Apply suggestion/i })[0]!);
