@@ -99,6 +99,11 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 ### Production deployment reference
 - Target stack: Vercel + Neon + Upstash.
 - Deployment runbook: [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
+- Incident runbooks:
+  - [docs/runbooks/runbook-sync-failure.md](docs/runbooks/runbook-sync-failure.md)
+  - [docs/runbooks/runbook-conflict-resolution.md](docs/runbooks/runbook-conflict-resolution.md)
+  - [docs/runbooks/runbook-db-restore.md](docs/runbooks/runbook-db-restore.md)
+  - [docs/runbooks/runbook-deploy-rollback.md](docs/runbooks/runbook-deploy-rollback.md)
 
 ### How to verify
 - Start local services: `docker compose up -d` (or `docker compose up --build` the first time)
