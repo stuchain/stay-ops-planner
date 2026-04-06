@@ -203,9 +203,15 @@ model AuditEvent {
   entityType String   @map("entity_type")
   entityId   String   @map("entity_id")
   payload    Json?
+  beforeJson Json?    @map("before_json")
+  afterJson  Json?    @map("after_json")
+  metaJson   Json?    @map("meta_json")
   createdAt  DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([entityType, createdAt])
+  @@index([entityId, createdAt])
+  @@index([userId, createdAt])
   @@map("audit_events")
 }

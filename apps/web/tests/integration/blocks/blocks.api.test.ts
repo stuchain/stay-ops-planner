@@ -138,6 +138,20 @@ describe("api /api/blocks", () => {
 
     const row = await prisma.manualBlock.findUnique({ where: { id: created.data.id } });
     expect(row).toBeNull();
+
+    const audits = await prisma.auditEvent.findMany({
+      where: { entityId: created.data.id, entityType: "manual_block" },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(audits).toHaveLength(3);
+    expect(audits[0]?.action).toBe("manual_block.create");
+    expect(audits[0]?.beforeJson).toBeNull();
+    expect((audits[0]?.afterJson as { reason?: string } | null)?.reason).toBe("hvac");
+    expect(audits[1]?.action).toBe("manual_block.update");
+    expect((audits[1]?.beforeJson as { reason?: string } | null)?.reason).toBe("hvac");
+    expect((audits[1]?.afterJson as { reason?: string } | null)?.reason).toBe("paint");
+    expect(audits[2]?.action).toBe("manual_block.delete");
+    expect(audits[2]?.afterJson).toBeNull();
   });
 
   it("rejects create overlapping an assignment (CONFLICT_ASSIGNMENT)", async () => {

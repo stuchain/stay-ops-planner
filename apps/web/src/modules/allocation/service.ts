@@ -9,6 +9,7 @@ import {
 } from "@stay-ops/db";
 import { AllocationError } from "./errors";
 import { throwIfStayConflict } from "./stayConflict";
+import { writeAuditSnapshot } from "@/modules/audit/writer";
 
 const prisma = new PrismaClient();
 
@@ -129,23 +130,6 @@ function mapAssignmentWriteConflict(err: unknown): never {
   throw err;
 }
 
-async function appendAudit(
-  tx: Prisma.TransactionClient,
-  args: { userId: string; action: string; entityType: string; entityId: string; payload?: Prisma.InputJsonValue },
-): Promise<string> {
-  const row = await tx.auditEvent.create({
-    data: {
-      userId: args.userId,
-      action: args.action,
-      entityType: args.entityType,
-      entityId: args.entityId,
-      payload: args.payload ?? Prisma.JsonNull,
-    },
-    select: { id: true },
-  });
-  return row.id;
-}
-
 /**
  * Serializable isolation + row locks on booking prevent lost updates on assignment.version
  * while overlapping stays are blocked by assertNoOverlap and DB exclusion.
@@ -203,12 +187,20 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
         },
       });
 
-      const auditRef = await appendAudit(tx, {
-        userId: input.actorUserId,
+      const auditRef = await writeAuditSnapshot(tx, {
+        actorUserId: input.actorUserId,
         action: "assignment.assign",
         entityType: "assignment",
         entityId: created.id,
-        payload: { bookingId: input.bookingId, roomId: input.roomId },
+        before: null,
+        after: {
+          bookingId: created.bookingId,
+          roomId: created.roomId,
+          startDate: created.startDate.toISOString().slice(0, 10),
+          endDate: created.endDate.toISOString().slice(0, 10),
+          version: created.version,
+        },
+        meta: { bookingId: input.bookingId },
       });
 
       await ensureTurnoverCleaningTask(tx, {
@@ -287,12 +279,20 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
         },
       });
 
-      const auditRef = await appendAudit(tx, {
-        userId: input.actorUserId,
+      const auditRef = await writeAuditSnapshot(tx, {
+        actorUserId: input.actorUserId,
         action: "assignment.reassign",
         entityType: "assignment",
         entityId: updated.id,
-        payload: { roomId: input.roomId, version: updated.version },
+        before: {
+          roomId: existing.roomId,
+          version: existing.version,
+        },
+        after: {
+          roomId: updated.roomId,
+          version: updated.version,
+        },
+        meta: { bookingId: existing.bookingId },
       });
 
       await ensureTurnoverCleaningTask(tx, {
@@ -354,12 +354,20 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
 
       await tx.assignment.delete({ where: { id: input.assignmentId } });
 
-      const auditRef = await appendAudit(tx, {
-        userId: input.actorUserId,
+      const auditRef = await writeAuditSnapshot(tx, {
+        actorUserId: input.actorUserId,
         action: "assignment.unassign",
         entityType: "assignment",
         entityId: input.assignmentId,
-        payload: { bookingId: existing.bookingId },
+        before: {
+          bookingId: existing.bookingId,
+          roomId: existing.roomId,
+          startDate: existing.startDate.toISOString().slice(0, 10),
+          endDate: existing.endDate.toISOString().slice(0, 10),
+          version: existing.version,
+        },
+        after: null,
+        meta: { bookingId: existing.bookingId },
       });
 
       return { auditRef };

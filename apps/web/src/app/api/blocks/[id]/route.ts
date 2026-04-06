@@ -40,8 +40,9 @@ function blockToDto(block: {
 }
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let sessionUserId = "";
   try {
-    requireAdminSession(request);
+    sessionUserId = requireAdminSession(request).userId;
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
@@ -71,6 +72,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,
       reason: parsed.data.reason,
+      actorUserId: sessionUserId,
     });
     return NextResponse.json({ data: blockToDto(block) }, { status: 200 });
   } catch (err) {
@@ -90,8 +92,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 }
 
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let sessionUserId = "";
   try {
-    requireAdminSession(request);
+    sessionUserId = requireAdminSession(request).userId;
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
@@ -102,7 +105,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   const { id } = await ctx.params;
 
   try {
-    await ManualBlockService.delete(id);
+    await ManualBlockService.delete(id, sessionUserId);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (err instanceof BlockNotFoundError) {

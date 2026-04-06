@@ -80,8 +80,13 @@ describe("cleaning — state machine", () => {
 
     const audits = await prisma.auditEvent.findMany({
       where: { entityId: task.id, action: "cleaning_task.status_changed" },
+      orderBy: { createdAt: "asc" },
     });
     expect(audits.length).toBe(2);
+    expect((audits[0]?.beforeJson as { status?: string } | null)?.status).toBe("todo");
+    expect((audits[0]?.afterJson as { status?: string } | null)?.status).toBe("in_progress");
+    expect((audits[1]?.beforeJson as { status?: string } | null)?.status).toBe("in_progress");
+    expect((audits[1]?.afterJson as { status?: string } | null)?.status).toBe("done");
   });
 
   it("rejects todo -> done", async () => {

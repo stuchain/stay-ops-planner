@@ -1,5 +1,6 @@
 import { findStayConflict, PrismaClient } from "@stay-ops/db";
 import { throwIfStayConflict } from "../allocation/stayConflict";
+import { writeAuditSnapshot } from "@/modules/audit/writer";
 
 const prisma = new PrismaClient();
 
@@ -28,12 +29,14 @@ export type CreateManualBlockInput = {
   startDate: Date;
   endDate: Date;
   reason?: string | null;
+  actorUserId?: string;
 };
 
 export type UpdateManualBlockInput = {
   startDate?: Date;
   endDate?: Date;
   reason?: string | null;
+  actorUserId?: string;
 };
 
 export async function createManualBlock(input: CreateManualBlockInput) {
@@ -45,7 +48,7 @@ export async function createManualBlock(input: CreateManualBlockInput) {
         end: input.endDate,
       }),
     );
-    return tx.manualBlock.create({
+    const created = await tx.manualBlock.create({
       data: {
         roomId: input.roomId,
         startDate: input.startDate,
@@ -53,6 +56,20 @@ export async function createManualBlock(input: CreateManualBlockInput) {
         reason: input.reason ?? null,
       },
     });
+    await writeAuditSnapshot(tx, {
+      actorUserId: input.actorUserId,
+      action: "manual_block.create",
+      entityType: "manual_block",
+      entityId: created.id,
+      before: null,
+      after: {
+        roomId: created.roomId,
+        startDate: created.startDate.toISOString().slice(0, 10),
+        endDate: created.endDate.toISOString().slice(0, 10),
+        reason: created.reason,
+      },
+    });
+    return created;
   });
 }
 
@@ -79,7 +96,7 @@ export async function updateManualBlock(blockId: string, patch: UpdateManualBloc
       }),
     );
 
-    return tx.manualBlock.update({
+    const updated = await tx.manualBlock.update({
       where: { id: blockId },
       data: {
         ...(patch.startDate !== undefined ? { startDate: patch.startDate } : {}),
@@ -87,19 +104,49 @@ export async function updateManualBlock(blockId: string, patch: UpdateManualBloc
         ...(patch.reason !== undefined ? { reason: patch.reason } : {}),
       },
     });
+    await writeAuditSnapshot(tx, {
+      actorUserId: patch.actorUserId,
+      action: "manual_block.update",
+      entityType: "manual_block",
+      entityId: blockId,
+      before: {
+        roomId: existing.roomId,
+        startDate: existing.startDate.toISOString().slice(0, 10),
+        endDate: existing.endDate.toISOString().slice(0, 10),
+        reason: existing.reason,
+      },
+      after: {
+        roomId: updated.roomId,
+        startDate: updated.startDate.toISOString().slice(0, 10),
+        endDate: updated.endDate.toISOString().slice(0, 10),
+        reason: updated.reason,
+      },
+    });
+    return updated;
   });
 }
 
-export async function deleteManualBlock(blockId: string): Promise<void> {
-  try {
-    await prisma.manualBlock.delete({ where: { id: blockId } });
-  } catch (e) {
-    const err = e as { code?: string };
-    if (err.code === "P2025") {
+export async function deleteManualBlock(blockId: string, actorUserId?: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.manualBlock.findUnique({ where: { id: blockId } });
+    if (!existing) {
       throw new BlockNotFoundError(blockId);
     }
-    throw e;
-  }
+    await tx.manualBlock.delete({ where: { id: blockId } });
+    await writeAuditSnapshot(tx, {
+      actorUserId,
+      action: "manual_block.delete",
+      entityType: "manual_block",
+      entityId: blockId,
+      before: {
+        roomId: existing.roomId,
+        startDate: existing.startDate.toISOString().slice(0, 10),
+        endDate: existing.endDate.toISOString().slice(0, 10),
+        reason: existing.reason,
+      },
+      after: null,
+    });
+  });
 }
 
 /** Phase 4 traceability name: delegates to the same transaction helpers as the free functions. */
@@ -112,7 +159,7 @@ export class ManualBlockService {
     return updateManualBlock(blockId, patch);
   }
 
-  static delete(blockId: string) {
-    return deleteManualBlock(blockId);
+  static delete(blockId: string, actorUserId?: string) {
+    return deleteManualBlock(blockId, actorUserId);
   }
 }

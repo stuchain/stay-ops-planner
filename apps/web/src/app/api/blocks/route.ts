@@ -24,8 +24,9 @@ const PostBodySchema = z
   });
 
 export async function POST(request: NextRequest) {
+  let sessionUserId = "";
   try {
-    requireAdminSession(request);
+    sessionUserId = requireAdminSession(request).userId;
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,
       reason: parsed.data.reason,
+      actorUserId: sessionUserId,
     });
     return NextResponse.json(
       {

@@ -79,6 +79,8 @@ describe("allocation service — commands", () => {
     });
     expect(audits).toHaveLength(1);
     expect(audits[0]?.id).toBe(result.auditRef);
+    expect(audits[0]?.beforeJson).toBeNull();
+    expect((audits[0]?.afterJson as { roomId?: string } | null)?.roomId).toBe(room.id);
   });
 
   it("reassign increments version when expectedVersion matches", async () => {

@@ -1,5 +1,6 @@
-import { Prisma, PrismaClient } from "@stay-ops/db";
+import { PrismaClient } from "@stay-ops/db";
 import { CleaningTaskNotFoundError, InvalidStateTransitionError } from "./errors";
+import { writeAuditSnapshot } from "@/modules/audit/writer";
 
 const prisma = new PrismaClient();
 
@@ -43,14 +44,13 @@ export async function transitionCleaningTaskStatus(params: {
       data: { status: params.toStatus },
     });
 
-    await tx.auditEvent.create({
-      data: {
-        userId: params.actorUserId,
-        action: "cleaning_task.status_changed",
-        entityType: "cleaning_task",
-        entityId: params.taskId,
-        payload: { from, to: params.toStatus } as Prisma.InputJsonValue,
-      },
+    await writeAuditSnapshot(tx, {
+      actorUserId: params.actorUserId,
+      action: "cleaning_task.status_changed",
+      entityType: "cleaning_task",
+      entityId: params.taskId,
+      before: { status: from },
+      after: { status: params.toStatus },
     });
   });
 }
