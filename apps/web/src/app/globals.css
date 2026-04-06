@@ -466,6 +466,16 @@ body {
   color: #444;
 }
 
+.ops-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+  background: #f7f7f7;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
 .ops-cleaning-main {
   max-width: 960px;
 }
