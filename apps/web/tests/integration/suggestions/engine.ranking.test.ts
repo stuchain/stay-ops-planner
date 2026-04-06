@@ -97,7 +97,10 @@ describe("suggestion engine ranking determinism", () => {
 
     expect(first).toEqual(second);
     expect(first.map((row) => row.roomId)).toEqual([roomA.id, roomC.id, roomB.id]);
-    expect(first.map((row) => row.score)).toEqual([100, 40, 3.33]);
+    expect(first.map((row) => row.score)).toEqual([90, 60, 30]);
+    expect(first[0]?.breakdown).toEqual({ availability: 60, cleaningFit: 30, tieBreaker: 0 });
+    expect(first[0]?.reasonCodes).toContain("ROOM_AVAILABLE");
+    expect(first[0]?.reasonCodes).toContain("CLEANING_WINDOW_FITS");
   });
 
   it("uses deterministic tie-break ordering when score ties", async () => {

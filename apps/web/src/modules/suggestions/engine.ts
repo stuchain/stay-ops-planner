@@ -1,4 +1,5 @@
 import { BookingStatus, PrismaClient, TURNOVER_MINUTES } from "@stay-ops/db";
+import type { SuggestionReasonCode, SuggestionScoreBreakdown } from "./types";
 
 export const SUGGESTION_ENGINE_VERSION = 1;
 
@@ -33,6 +34,8 @@ type RoomTimelineSnapshot = {
 export type RankedSuggestion = {
   roomId: string;
   score: number;
+  reasonCodes: SuggestionReasonCode[];
+  breakdown: SuggestionScoreBreakdown;
 };
 
 function sortRoomsDeterministically(rooms: RoomCandidate[]): RoomCandidate[] {
@@ -75,10 +78,8 @@ function hasCleaningFit(timeline: RoomTimelineSnapshot, ctx: SuggestionContext):
   return gapMinutes >= TURNOVER_MINUTES;
 }
 
-function tieBreakerBonus(index: number, total: number): number {
-  if (total <= 1) return TIE_BREAKER_WEIGHT;
-  const fraction = (total - index) / total;
-  return Number((fraction * TIE_BREAKER_WEIGHT).toFixed(2));
+function tieBreakerBonus(): number {
+  return 0;
 }
 
 function scoreRoom(
@@ -86,11 +87,29 @@ function scoreRoom(
   ctx: SuggestionContext,
   index: number,
   total: number,
-): number {
-  const availability = hasAvailabilityConflict(timeline, ctx) ? 0 : AVAILABILITY_WEIGHT;
-  const cleaningFit = hasCleaningFit(timeline, ctx) ? CLEANING_FIT_WEIGHT : 0;
-  const tieBreaker = tieBreakerBonus(index, total);
-  return Number((availability + cleaningFit + tieBreaker).toFixed(2));
+): { score: number; reasonCodes: SuggestionReasonCode[]; breakdown: SuggestionScoreBreakdown } {
+  const roomIsAvailable = !hasAvailabilityConflict(timeline, ctx);
+  const cleaningWindowFits = hasCleaningFit(timeline, ctx);
+  const availability = roomIsAvailable ? AVAILABILITY_WEIGHT : 0;
+  const cleaningFit = cleaningWindowFits ? CLEANING_FIT_WEIGHT : 0;
+  const tieBreaker = tieBreakerBonus();
+  const score = Number((availability + cleaningFit + tieBreaker).toFixed(2));
+  const reasonCodes: SuggestionReasonCode[] = [
+    roomIsAvailable ? "ROOM_AVAILABLE" : "ROOM_BLOCKED",
+    cleaningWindowFits ? "CLEANING_WINDOW_FITS" : "CLEANING_DOES_NOT_FIT",
+  ];
+  if (index === 0 && total > 1) {
+    reasonCodes.push("TIE_BREAK_ROOM_CODE");
+  }
+  return {
+    score,
+    reasonCodes,
+    breakdown: {
+      availability,
+      cleaningFit,
+      tieBreaker,
+    },
+  };
 }
 
 async function loadContext(bookingId: string): Promise<SuggestionContext | null> {
@@ -147,9 +166,14 @@ export async function rankBookingSuggestions(bookingId: string): Promise<RankedS
 
   const snapshots = await loadRoomSnapshots();
   return snapshots
-    .map((snapshot, index) => ({
-      roomId: snapshot.roomId,
-      score: scoreRoom(snapshot, ctx, index, snapshots.length),
-    }))
+    .map((snapshot, index) => {
+      const scored = scoreRoom(snapshot, ctx, index, snapshots.length);
+      return {
+        roomId: snapshot.roomId,
+        score: scored.score,
+        reasonCodes: scored.reasonCodes,
+        breakdown: scored.breakdown,
+      };
+    })
     .sort((a, b) => b.score - a.score || a.roomId.localeCompare(b.roomId));
 }
