@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "roomId": "room-a4",
+      "score": 30,
+      "reasonCodes": ["ROOM_BLOCKED", "CLEANING_WINDOW_FITS", "TIE_BREAK_ROOM_CODE"],
+      "breakdown": { "availability": 0, "cleaningFit": 30, "tieBreaker": 0 }
+    },
+    {
+      "roomId": "room-b4",
+      "score": 30,
+      "reasonCodes": ["ROOM_BLOCKED", "CLEANING_WINDOW_FITS"],
+      "breakdown": { "availability": 0, "cleaningFit": 30, "tieBreaker": 0 }
+    }
+  ]
+}

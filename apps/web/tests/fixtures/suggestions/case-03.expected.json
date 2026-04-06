@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "roomId": "room-c3",
+      "score": 90,
+      "reasonCodes": ["ROOM_AVAILABLE", "CLEANING_WINDOW_FITS"],
+      "breakdown": { "availability": 60, "cleaningFit": 30, "tieBreaker": 0 }
+    },
+    {
+      "roomId": "room-a3",
+      "score": 60,
+      "reasonCodes": ["ROOM_AVAILABLE", "CLEANING_DOES_NOT_FIT", "TIE_BREAK_ROOM_CODE"],
+      "breakdown": { "availability": 60, "cleaningFit": 0, "tieBreaker": 0 }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "booking": {
+    "id": "booking-case-03",
+    "checkinDate": "2026-11-20",
+    "checkoutDate": "2026-11-22"
+  },
+  "rooms": [
+    { "id": "room-a3", "code": "A3" },
+    { "id": "room-c3", "code": "C3" }
+  ],
+  "assignments": [
+    {
+      "roomId": "room-a3",
+      "startDate": "2026-11-18",
+      "endDate": "2026-11-20"
+    }
+  ],
+  "blocks": []
+}
