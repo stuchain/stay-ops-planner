@@ -11,6 +11,9 @@
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
     "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs",
-    "e2e:local": "node ./scripts/e2e-local.mjs"
+    "e2e:local": "node ./scripts/e2e-local.mjs",
+    "backup:pg": "node ./scripts/backup-postgres.mjs",
+    "backup:prune": "node ./scripts/backup-prune.mjs",
+    "backup:verify-restore": "node ./scripts/restore-verify-postgres.mjs"
   }
 }
