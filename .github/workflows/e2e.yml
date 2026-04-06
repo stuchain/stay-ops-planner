@@ -71,7 +71,12 @@ jobs:
         run: pnpm --filter @stay-ops/web exec playwright install chromium --with-deps
 
       - name: Run Playwright
-        run: pnpm --filter @stay-ops/web test:e2e
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pnpm --filter @stay-ops/web test:e2e -- --grep "@smoke"
+          else
+            pnpm --filter @stay-ops/web test:e2e
+          fi
 
       - uses: actions/upload-artifact@v4
         if: failure()

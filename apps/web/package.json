@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "node ../../packages/sync/node_modules/typescript/lib/tsc.js -p ../../packages/sync/tsconfig.json && vitest run --no-file-parallelism",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep \"@smoke\"",
     "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {
