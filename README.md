@@ -82,6 +82,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 ### Sync (Hosthub)
 - `POST /api/sync/hosthub/webhook` — ingest webhook events (signature/HMAC when configured)
 - `GET /api/sync/runs` — list recent sync run records (authenticated)
+- `GET /api/health` — deployment health probe (DB connectivity + process uptime)
 - Client and pipeline: `packages/sync`; vendor notes: [docs/vendor/hosthub-api.md](docs/vendor/hosthub-api.md), phase outline [docs/phases/phase-03-hosthub-sync.md](docs/phases/phase-03-hosthub-sync.md).
 
 ### API errors (conventions)
@@ -94,6 +95,10 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 - **Web component tests (Phase 6 UI)**: `apps/web/tests/unit/` (Vitest + Testing Library + jsdom) — calendar cards/lanes/grid, block modal, unassigned drawer, cleaning board. Run with `pnpm --filter @stay-ops/web test` (same command as integration).
 - **Browser E2E (Playwright)**: `apps/web/tests/e2e/` — desktop Chromium and mobile viewport (390×844). **Easiest local run:** `pnpm e2e:local` (Docker Postgres/Redis → migrate → seed → `seed:e2e` → Playwright on **port 3005** so it does not clash with `pnpm dev` on 3000; same disposable test admin as CI). Otherwise install browsers once (`pnpm --filter @stay-ops/web test:e2e:install`), seed the DB, set `E2E_ADMIN_*` to match `BOOTSTRAP_ADMIN_*`, then `pnpm --filter @stay-ops/web test:e2e`. Skipping seed or env vars causes login **401**. CI: [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml). See [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
 - Coverage includes auth, allocation (including races and inactive rooms), blocks, cleaning flows, DB constraints, and sync webhook behavior.
+
+### Production deployment reference
+- Target stack: Vercel + Neon + Upstash.
+- Deployment runbook: [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
 
 ### How to verify
 - Start local services: `docker compose up -d` (or `docker compose up --build` the first time)
