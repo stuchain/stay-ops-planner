@@ -24,6 +24,21 @@ async function wipeE2eBookings() {
 }
 
 async function wipeE2eBlocksAndRooms() {
+  // When rerunning E2E locally, previous test runs may have created tasks/assignments
+  // that reference the E2E rooms. Clean those up before deleting rooms.
+  const roomIds = (
+    await prisma.room.findMany({
+      where: { code: { in: ["E2E-A", "E2E-B"] } },
+      select: { id: true },
+    })
+  ).map((r) => r.id);
+
+  if (roomIds.length > 0) {
+    await prisma.cleaningTask.deleteMany({ where: { roomId: { in: roomIds } } });
+    await prisma.assignment.deleteMany({ where: { roomId: { in: roomIds } } });
+    await prisma.manualBlock.deleteMany({ where: { roomId: { in: roomIds } } });
+  }
+
   await prisma.manualBlock.deleteMany({
     where: { reason: "e2e-seed-overlap-block" },
   });

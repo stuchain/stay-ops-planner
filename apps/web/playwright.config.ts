@@ -33,7 +33,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_NO_SERVER
     ? undefined
     : {
-        command: `pnpm exec next dev -p ${devPort}`,
+        command: `corepack pnpm exec next dev -p ${devPort}`,
         url: `${baseURL}/login`,
         /** `pnpm e2e:local` sets PLAYWRIGHT_FORCE_OWN_SERVER=1 so we never attach to a random process on the port. */
         reuseExistingServer:
