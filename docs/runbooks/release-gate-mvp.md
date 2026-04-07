@@ -60,6 +60,9 @@ Run these probes in staging immediately before production release.
   - `PATCH /api/assignments/[id]/reassign` with valid target room -> expect success response.
 - Sync visibility flow:
   - `GET /api/sync/runs` with admin session -> expect `200` and recent run list shape.
+- Admin configuration flow:
+  - `GET /api/admin/config/templates` and `GET /api/admin/config/thresholds` with admin session -> expect `200`.
+  - Save one threshold from `/app/admin/configuration` and verify persisted payload is returned after reload.
 
 ### Escalation and stop conditions
 - Any probe failure is an immediate no-go.

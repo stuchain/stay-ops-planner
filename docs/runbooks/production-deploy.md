@@ -46,6 +46,7 @@
 - Apply strict gate policy in `docs/runbooks/release-gate-mvp.md`.
 - Capture execution evidence in the dated release evidence file (current cycle: `docs/runbooks/release-evidence-mvp-2026-04-07.md`).
 - Do not proceed with production release unless all gate criteria are satisfied and sign-offs are complete.
+- If admin configuration is part of release scope, execute `docs/runbooks/admin-configuration.md` post-deploy checks.
 
 ## Startup checks
 - Ensure `SESSION_SECRET`, `DATABASE_URL`, and `REDIS_URL` are present.

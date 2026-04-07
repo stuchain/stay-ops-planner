@@ -13,7 +13,7 @@ Record actual execution results for required commands.
 | `pnpm lint` | 2026-04-07 | 2026-04-07 | Passed | Root command now executes via `corepack`; lint returns 0 errors (web warnings remain non-blocking). |
 | `pnpm build` | 2026-04-07 | 2026-04-07 | Passed with warnings | Executed as `corepack pnpm build`; workspace build succeeds, web build reports non-blocking warnings. |
 | `pnpm test` | 2026-04-07 | 2026-04-07 | Passed | Executed as `corepack pnpm test`; all workspace tests pass, including health integration suite. |
-| `pnpm --filter @stay-ops/web test:e2e` or `pnpm e2e:local` | 2026-04-07 | 2026-04-07 | Passed (`pnpm e2e:local`) | CI-like path passes on dedicated port (`3005`) with Docker + migrate + seed + seed:e2e + Playwright. |
+| `pnpm --filter @stay-ops/web test:e2e` or `pnpm e2e:local` | 2026-04-07 | 2026-04-07 | Passed (`pnpm e2e:local`) | Re-run after admin configuration implementation: 20 passed, 4 skipped in CI-like local pipeline on port `3005`. |
 
 ## Readiness Probe Results
 Run in staging for final go/no-go decision.
@@ -26,6 +26,7 @@ Run in staging for final go/no-go decision.
 | `POST /api/auth/login` + `GET /api/auth/me` | success/session identity | Verified in integration and E2E | Auth integration tests and `e2e:local` run pass. |
 | `POST /api/assignments` + `PATCH /api/assignments/[id]/reassign` | success | Verified in integration and E2E | Assignment integration tests and smoke flow in `e2e:local` pass. |
 | `GET /api/sync/runs` | `200` with run list shape | Verified in E2E smoke | Covered in `smoke-ops-gate` within `e2e:local`. |
+| `GET /api/admin/config/templates` + `GET /api/admin/config/thresholds` | `200` with data list | Verified in integration and E2E | Admin config API integration suite passes and admin E2E smoke persists threshold updates. |
 
 ## Rollback Verification
 - [x] Rollback steps reviewed against `docs/runbooks/production-deploy.md`.
@@ -39,6 +40,7 @@ Run in staging for final go/no-go decision.
 | RR-001 | Accepted (non-blocking for MVP) | Engineering | 2026-04-21 | Worker package has no dedicated tests; mitigated by integration/E2E + runtime probes, follow-up required. |
 | RR-002 | Mitigated | Engineering | 2026-04-21 | Seed race fixed with advisory lock; local CI-like E2E gate now passes. |
 | RR-003 | Accepted (known limitation) | Product + Engineering | 2026-04-21 | Timezone placeholder remains documented and tracked for post-MVP hardening. |
+| RR-004 | Mitigated | Engineering | 2026-04-21 | Admin configuration UI/API added with integration + unit + E2E coverage and protected auth routes. |
 
 ## Sign-Off
 | Role | Name | Decision | Timestamp (UTC) | Notes |
