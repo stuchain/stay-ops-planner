@@ -38,7 +38,7 @@ export type RankedSuggestion = {
   breakdown: SuggestionScoreBreakdown;
 };
 
-function sortRoomsDeterministically(rooms: RoomCandidate[]): RoomCandidate[] {
+function sortRoomsDeterministically<T extends RoomCandidate>(rooms: T[]): T[] {
   return rooms.slice().sort((a, b) => {
     const aCode = (a.code ?? "").toLowerCase();
     const bCode = (b.code ?? "").toLowerCase();
