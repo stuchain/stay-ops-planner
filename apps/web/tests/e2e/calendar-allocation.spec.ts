@@ -15,11 +15,11 @@ async function selectE2ERoomA(select: Locator): Promise<void> {
 }
 
 async function assignE2EUnassignedToRoomA(page: Page): Promise<void> {
-  const row = page.locator(".ops-drawer-row").filter({ hasText: "E2E Unassigned" }).first();
+  const row = page.locator(".ops-needs-card").filter({ hasText: "E2E Unassigned" }).first();
   await expect(row).toBeVisible({ timeout: 15_000 });
   const roomSelect = row.getByLabel(/Apartment for booking/);
   await selectE2ERoomA(roomSelect);
-  await row.getByRole("button", { name: "Assign apartment" }).click();
+  await row.getByRole("button", { name: "Assign" }).click();
   await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
     timeout: 20_000,
   });
@@ -49,7 +49,7 @@ test.describe("calendar allocation", () => {
     await loginAsStaff(page);
     await page.goto("/app/calendar");
     await expect(page.locator(".ops-month-title")).toBeVisible();
-    const monthYm = (await page.locator(".ops-month-title").textContent())?.trim() ?? "";
+    const monthYm = await page.getByLabel("Select month").inputValue();
     expect(monthYm).toMatch(/^\d{4}-\d{2}$/);
 
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "E2E-A lane missing (seed:e2e).");

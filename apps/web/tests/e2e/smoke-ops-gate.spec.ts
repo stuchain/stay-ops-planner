@@ -92,7 +92,7 @@ test.describe("ops gate smoke @smoke", () => {
     await expect(page.getByRole("heading", { name: "Bookings" })).toBeVisible();
 
     // Assignment workflow from unassigned panel.
-    const row = page.locator(".ops-drawer-row").filter({ hasText: "E2E Unassigned" }).first();
+    const row = page.locator(".ops-needs-card").filter({ hasText: "E2E Unassigned" }).first();
     await expect(row).toBeVisible({ timeout: 15_000 });
     const roomSelect = row.getByLabel(/Apartment for booking/);
     const targetValue = await roomSelect.locator("option").evaluateAll((options) => {
@@ -104,13 +104,13 @@ test.describe("ops gate smoke @smoke", () => {
     });
     expect(targetValue, "E2E room A option missing from assignment dropdown").toBeTruthy();
     await roomSelect.selectOption(targetValue as string);
-    await row.getByRole("button", { name: "Assign apartment" }).click();
+    await row.getByRole("button", { name: "Assign" }).click();
     await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
       timeout: 20_000,
     });
 
     // Conflict rejection smoke via reassign API path.
-    const monthYm = (await page.locator(".ops-month-title").textContent())?.trim() ?? "";
+    const monthYm = await page.getByLabel("Select month").inputValue();
     const conflict = await page.evaluate(async (ym: string) => {
       const cal = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, { credentials: "include" });
       if (!cal.ok) return { ok: false, status: cal.status };
