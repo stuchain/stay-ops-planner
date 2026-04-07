@@ -72,6 +72,18 @@ export type UnassignInput = {
   auditMeta?: Record<string, unknown>;
 };
 
+async function resolveActorUserId(
+  tx: Prisma.TransactionClient,
+  actorUserId: string | null | undefined,
+): Promise<string | null> {
+  if (!actorUserId) return null;
+  const exists = await tx.user.findUnique({
+    where: { id: actorUserId },
+    select: { id: true },
+  });
+  return exists?.id ?? null;
+}
+
 export type AssignmentCommandResult = {
   assignment: {
     id: string;
@@ -143,6 +155,7 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
     return await prisma.$transaction(
       async (tx) => {
       await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${input.bookingId} FOR UPDATE`;
+      const actorUserId = await resolveActorUserId(tx, input.actorUserId);
 
       const booking = await tx.booking.findUnique({
         where: { id: input.bookingId },
@@ -186,13 +199,13 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
           startDate: booking.checkinDate,
           endDate: booking.checkoutDate,
           version: 0,
-          createdById: input.actorUserId,
-          updatedById: input.actorUserId,
+          createdById: actorUserId,
+          updatedById: actorUserId,
         },
       });
 
       const auditRef = await writeAuditSnapshot(tx, {
-        actorUserId: input.actorUserId,
+        actorUserId,
         action: "assignment.assign",
         entityType: "assignment",
         entityId: created.id,
@@ -251,6 +264,7 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
       }
 
       await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${existing.bookingId} FOR UPDATE`;
+      const actorUserId = await resolveActorUserId(tx, input.actorUserId);
 
       if (existing.version !== input.expectedVersion) {
         throw new AllocationError({
@@ -279,12 +293,12 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
         data: {
           roomId: input.roomId,
           version: { increment: 1 },
-          updatedById: input.actorUserId,
+          updatedById: actorUserId,
         },
       });
 
       const auditRef = await writeAuditSnapshot(tx, {
-        actorUserId: input.actorUserId,
+        actorUserId,
         action: "assignment.reassign",
         entityType: "assignment",
         entityId: updated.id,
@@ -342,6 +356,7 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
       }
 
       await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${existing.bookingId} FOR UPDATE`;
+      const actorUserId = await resolveActorUserId(tx, input.actorUserId);
 
       if (existing.version !== input.expectedVersion) {
         throw new AllocationError({
@@ -359,7 +374,7 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
       await tx.assignment.delete({ where: { id: input.assignmentId } });
 
       const auditRef = await writeAuditSnapshot(tx, {
-        actorUserId: input.actorUserId,
+        actorUserId,
         action: "assignment.unassign",
         entityType: "assignment",
         entityId: input.assignmentId,
