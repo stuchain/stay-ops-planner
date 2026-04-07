@@ -95,9 +95,15 @@ test.describe("ops gate smoke @smoke", () => {
     const row = page.locator(".ops-drawer-row").filter({ hasText: "E2E Unassigned" }).first();
     await expect(row).toBeVisible({ timeout: 15_000 });
     const roomSelect = row.getByLabel(/Apartment for booking/);
-    await roomSelect.selectOption({ value: "E2E-A" }).catch(async () => {
-      await roomSelect.selectOption({ label: "E2E Room A" });
+    const targetValue = await roomSelect.locator("option").evaluateAll((options) => {
+      const match = options.find((option) => {
+        const text = `${option.textContent ?? ""} ${(option as HTMLOptionElement).label ?? ""}`;
+        return text.includes("E2E Room A") || text.includes("E2E-A");
+      }) as HTMLOptionElement | undefined;
+      return match?.value ?? null;
     });
+    expect(targetValue, "E2E room A option missing from assignment dropdown").toBeTruthy();
+    await roomSelect.selectOption(targetValue as string);
     await row.getByRole("button", { name: "Assign apartment" }).click();
     await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
       timeout: 20_000,

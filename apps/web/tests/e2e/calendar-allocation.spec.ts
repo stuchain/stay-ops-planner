@@ -1,14 +1,24 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 /** Desktop path: dnd-kit + Playwright `dragTo` is flaky on Windows headless; queue uses the same mutation as drag. */
+async function selectE2ERoomA(select: Locator): Promise<void> {
+  const targetValue = await select.locator("option").evaluateAll((options) => {
+    const match = options.find((option) => {
+      const text = `${option.textContent ?? ""} ${(option as HTMLOptionElement).label ?? ""}`;
+      return text.includes("E2E Room A") || text.includes("E2E-A");
+    }) as HTMLOptionElement | undefined;
+    return match?.value ?? null;
+  });
+  expect(targetValue, "E2E room A option missing from assignment dropdown").toBeTruthy();
+  await select.selectOption(targetValue as string);
+}
+
 async function assignE2EUnassignedToRoomA(page: Page): Promise<void> {
   const row = page.locator(".ops-drawer-row").filter({ hasText: "E2E Unassigned" }).first();
   await expect(row).toBeVisible({ timeout: 15_000 });
   const roomSelect = row.getByLabel(/Apartment for booking/);
-  await roomSelect.selectOption({ value: "E2E-A" }).catch(async () => {
-    await roomSelect.selectOption({ label: "E2E Room A" });
-  });
+  await selectE2ERoomA(roomSelect);
   await row.getByRole("button", { name: "Assign apartment" }).click();
   await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
     timeout: 20_000,
