@@ -1,6 +1,5 @@
 import { getReadinessResponse } from "@/modules/health/readiness";
 
-/** Backward-compatible alias: same as `GET /api/health/ready` (readiness / DB check). */
 export async function GET() {
   return getReadinessResponse();
 }

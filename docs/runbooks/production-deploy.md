@@ -21,8 +21,9 @@
 2. Run migrations:
    - `pnpm --filter @stay-ops/db migrate:deploy`
 3. Deploy web app on Vercel.
-4. Verify health endpoint:
-   - `GET /api/health`
+4. Verify health endpoints:
+   - Liveness (no DB): `GET /api/health/live`
+   - Readiness (DB): `GET /api/health/ready` (alias: `GET /api/health`)
 5. Verify readiness checks:
    - login endpoint,
    - calendar month endpoint,
