@@ -1,6 +1,4 @@
 "use client";
-
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
 type TaskRow = {
@@ -154,9 +152,6 @@ export function CleaningBoard() {
     <main className="ops-cleaning-main" data-testid="ops-cleaning-board">
       <header className="ops-cleaning-header">
         <h1>Cleaning board</h1>
-        <Link className="ops-btn" href="/app/calendar">
-          Calendar
-        </Link>
       </header>
       {flash && (
         <div className="ops-toast" role="alert">
