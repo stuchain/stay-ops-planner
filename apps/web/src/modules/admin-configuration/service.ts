@@ -51,6 +51,34 @@ export type UpsertThresholdInput = {
   auditMeta?: Record<string, unknown>;
 };
 
+export type UpdateAlertTemplateByIdInput = {
+  title?: string | null;
+  body?: string;
+  enabled?: boolean;
+  metaJson?: Record<string, unknown> | null;
+  actorUserId?: string;
+  auditMeta?: Record<string, unknown>;
+};
+
+export type UpdateThresholdByIdInput = {
+  numericValue?: number | null;
+  stringValue?: string | null;
+  unit?: string | null;
+  notes?: string | null;
+  enabled?: boolean;
+  actorUserId?: string;
+  auditMeta?: Record<string, unknown>;
+};
+
+export class AdminConfigNotFoundError extends Error {
+  readonly code = "NOT_FOUND" as const;
+  readonly status = 404;
+  constructor(public readonly entity: "alert_template" | "threshold", public readonly id: string) {
+    super(`${entity} not found`);
+    this.name = "AdminConfigNotFoundError";
+  }
+}
+
 export async function listAlertTemplates(): Promise<AdminAlertTemplateRecord[]> {
   return prisma.alertTemplateConfig.findMany({
     orderBy: [{ eventType: "asc" }, { channel: "asc" }, { templateVersion: "desc" }],
@@ -193,5 +221,103 @@ export async function upsertOperationalThreshold(input: UpsertThresholdInput): P
   return {
     ...result,
     numericValue: result.numericValue?.toString() ?? null,
+  };
+}
+
+export async function updateAlertTemplateById(
+  id: string,
+  patch: UpdateAlertTemplateByIdInput,
+): Promise<AdminAlertTemplateRecord> {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.alertTemplateConfig.findUnique({ where: { id } });
+    if (!existing) throw new AdminConfigNotFoundError("alert_template", id);
+
+    const saved = await tx.alertTemplateConfig.update({
+      where: { id },
+      data: {
+        ...(patch.title !== undefined ? { title: patch.title } : {}),
+        ...(patch.body !== undefined ? { body: patch.body } : {}),
+        ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+        ...(patch.metaJson !== undefined ? { metaJson: patch.metaJson } : {}),
+      },
+    });
+
+    await writeAuditSnapshot(tx, {
+      actorUserId: patch.actorUserId,
+      action: "admin_config.alert_template.update",
+      entityType: "alert_template_config",
+      entityId: saved.id,
+      before: {
+        eventType: existing.eventType,
+        channel: existing.channel,
+        templateVersion: existing.templateVersion,
+        title: existing.title,
+        body: existing.body,
+        enabled: existing.enabled,
+        metaJson: existing.metaJson,
+      },
+      after: {
+        eventType: saved.eventType,
+        channel: saved.channel,
+        templateVersion: saved.templateVersion,
+        title: saved.title,
+        body: saved.body,
+        enabled: saved.enabled,
+        metaJson: saved.metaJson,
+      },
+      meta: { ...(patch.auditMeta ?? {}) },
+    });
+    return saved;
+  });
+}
+
+export async function updateOperationalThresholdById(
+  id: string,
+  patch: UpdateThresholdByIdInput,
+): Promise<AdminThresholdRecord> {
+  const saved = await prisma.$transaction(async (tx) => {
+    const existing = await tx.operationalThresholdConfig.findUnique({ where: { id } });
+    if (!existing) throw new AdminConfigNotFoundError("threshold", id);
+
+    const updated = await tx.operationalThresholdConfig.update({
+      where: { id },
+      data: {
+        ...(patch.numericValue !== undefined ? { numericValue: patch.numericValue } : {}),
+        ...(patch.stringValue !== undefined ? { stringValue: patch.stringValue } : {}),
+        ...(patch.unit !== undefined ? { unit: patch.unit } : {}),
+        ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
+        ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+      },
+    });
+
+    await writeAuditSnapshot(tx, {
+      actorUserId: patch.actorUserId,
+      action: "admin_config.threshold.update",
+      entityType: "operational_threshold_config",
+      entityId: updated.id,
+      before: {
+        key: existing.key,
+        numericValue: existing.numericValue?.toString() ?? null,
+        stringValue: existing.stringValue,
+        unit: existing.unit,
+        notes: existing.notes,
+        enabled: existing.enabled,
+      },
+      after: {
+        key: updated.key,
+        numericValue: updated.numericValue?.toString() ?? null,
+        stringValue: updated.stringValue,
+        unit: updated.unit,
+        notes: updated.notes,
+        enabled: updated.enabled,
+      },
+      meta: { ...(patch.auditMeta ?? {}) },
+    });
+    return updated;
+  });
+
+  return {
+    ...saved,
+    numericValue: saved.numericValue?.toString() ?? null,
   };
 }
