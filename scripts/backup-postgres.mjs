@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { mkdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -34,6 +35,11 @@ pgDump.on("close", (code) => {
 
 out.on("finish", () => {
   const size = statSync(outPath).size;
+  const hash = createHash("sha256").update(readFileSync(outPath)).digest("hex");
+  const shaPath = `${outPath}.sha256`;
+  writeFileSync(shaPath, `${hash}  ${fileName}\n`, "utf8");
   console.log(`Backup created: ${outPath}`);
   console.log(`Bytes: ${size}`);
+  console.log(`SHA256: ${hash}`);
+  console.log(`Checksum file: ${shaPath}`);
 });

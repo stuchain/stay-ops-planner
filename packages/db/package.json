@@ -18,6 +18,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
+    "retention:prune": "node ./scripts/retention-prune.mjs",
     "build": "prisma generate && tsc",
     "lint": "eslint .",
     "test": "node -e \"process.exit(0)\""

@@ -21,15 +21,21 @@
   - `BACKUP_RETENTION_DAYS=365`
 
 ## Weekly restore verification (non-prod DB)
-1. Pick latest artifact in `backups/postgres/`.
+1. Pick latest artifact in `backups/postgres/` (and matching `backup-*.sql.gz.sha256` if present).
 2. Set restore target:
    - `RESTORE_DATABASE_URL=<staging_or_temp_db_url>`
 3. Run:
    - `pnpm backup:verify-restore -- backups/postgres/backup-YYYY-MM-DD-HHmm.sql.gz`
 4. Confirm output contains:
+   - `SHA256 checksum verified.` (when `.sha256` sidecar exists)
    - `Restore verification succeeded.`
    - `healthcheck = 1`
    - bookings row count.
+
+## Appendix A retention (12 months)
+
+- Schedule: `pnpm retention:prune` monthly (or use `RETENTION_MONTHS` override).
+- Prunes `audit_events` and `sync_runs` older than the cutoff.
 
 ## Monthly DR drill checklist
 - Restore latest backup to isolated non-production database.

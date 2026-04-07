@@ -30,3 +30,6 @@
 - Action: reverted to release `<id>`.
 - Validation: health + smoke checks passed/failed.
 - Next update: <time>.
+
+## On-call
+- Use the same primary/secondary rotation documented for sync incidents (see [runbook-sync-failure.md](runbook-sync-failure.md)).

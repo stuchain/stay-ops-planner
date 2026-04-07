@@ -33,3 +33,7 @@
 - Impact: Booking updates delayed.
 - Mitigation in progress: worker restart and manual reconcile.
 - Next update: <time + 30m>.
+
+## On-call
+- Primary / secondary rotation: document the current roster in your team wiki or PagerDuty schedule and link it here.
+- Escalation: page secondary if no acknowledgment within 15 minutes for SEV-1.
