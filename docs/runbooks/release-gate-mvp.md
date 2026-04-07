@@ -76,9 +76,9 @@ Run these probes in staging immediately before production release.
 ### Current risk register (must be reviewed per release)
 | Risk ID | Severity | Area | Description | Owner | Due date | Release status |
 |---|---|---|---|---|---|---|
-| RR-001 | High | Worker runtime | Worker bootstrap/shutdown path lacks direct test coverage. | _TBD_ | _TBD_ | Blocked until owned and dispositioned |
-| RR-002 | Medium | E2E reliability | E2E suites can be skipped when env/seed preconditions drift. | _TBD_ | _TBD_ | Blocked until ownership + guardrails |
-| RR-003 | Medium | Timezone correctness | Cleaning turnover logic includes placeholder timezone behavior. | _TBD_ | _TBD_ | Blocked until ownership + decision |
+| RR-001 | High | Worker runtime | Worker bootstrap/shutdown path lacks direct test coverage. | Engineering | 2026-04-21 | Accepted (non-blocking for MVP; follow-up required) |
+| RR-002 | Medium | E2E reliability | E2E suites can be skipped when env/seed preconditions drift. | Engineering | 2026-04-21 | Mitigated (seed lock + dedicated-port local gate) |
+| RR-003 | Medium | Timezone correctness | Cleaning turnover logic includes placeholder timezone behavior. | Product + Engineering | 2026-04-21 | Accepted known limitation for post-MVP hardening |
 
 ### Verification requirements
 - Cross-check risk entries against current test inventory under `apps/web/tests` and workspace package tests.

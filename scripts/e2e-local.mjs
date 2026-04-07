@@ -80,12 +80,12 @@ async function main() {
   console.log("Postgres is ready.");
 
   console.log("Migrating and seeding (bootstrap admin + E2E fixtures)…");
-  run("pnpm", ["--filter", "@stay-ops/db", "exec", "prisma", "migrate", "deploy"]);
-  run("pnpm", ["--filter", "@stay-ops/db", "seed"]);
-  run("pnpm", ["--filter", "@stay-ops/db", "seed:e2e"]);
+  run("corepack", ["pnpm", "--filter", "@stay-ops/db", "exec", "prisma", "migrate", "deploy"]);
+  run("corepack", ["pnpm", "--filter", "@stay-ops/db", "seed"]);
+  run("corepack", ["pnpm", "--filter", "@stay-ops/db", "seed:e2e"]);
 
   console.log("Running Playwright…");
-  run("pnpm", ["--filter", "@stay-ops/web", "test:e2e"], { env: envForPlaywright() });
+  run("corepack", ["pnpm", "--filter", "@stay-ops/web", "test:e2e"], { env: envForPlaywright() });
 }
 
 main().catch((e) => {
