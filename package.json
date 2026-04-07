@@ -6,15 +6,15 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/audit build && pnpm --filter @stay-ops/sync build && pnpm --filter @stay-ops/web dev",
-    "build": "pnpm -r run build",
-    "lint": "pnpm -r run lint",
-    "test": "pnpm -r run test",
+    "dev": "corepack pnpm --filter @stay-ops/shared build && corepack pnpm --filter @stay-ops/db build && corepack pnpm --filter @stay-ops/audit build && corepack pnpm --filter @stay-ops/sync build && corepack pnpm --filter @stay-ops/web dev",
+    "build": "corepack pnpm -r run build",
+    "lint": "corepack pnpm -r run lint",
+    "test": "corepack pnpm -r run test",
     "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs",
     "e2e:local": "node ./scripts/e2e-local.mjs",
     "backup:pg": "node ./scripts/backup-postgres.mjs",
     "backup:prune": "node ./scripts/backup-prune.mjs",
     "backup:verify-restore": "node ./scripts/restore-verify-postgres.mjs",
-    "retention:prune": "pnpm --filter @stay-ops/db run retention:prune"
+    "retention:prune": "corepack pnpm --filter @stay-ops/db run retention:prune"
   }
 }
