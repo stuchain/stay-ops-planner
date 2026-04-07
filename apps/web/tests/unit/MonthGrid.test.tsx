@@ -48,7 +48,7 @@ describe("MonthGrid", () => {
         />,
       ),
     );
-    expect(screen.getByRole("heading", { name: "2026-07" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "July 2026" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "More unassigned bookings" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Block dates" })).toBeInTheDocument();
     expect(screen.getByTestId("ops-room-lane-unassigned")).toBeInTheDocument();

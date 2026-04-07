@@ -10,7 +10,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { UnassignedDrawer } from "@/modules/bookings/UnassignedDrawer";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
 import type { CalendarBlockItem, CalendarBookingItem, CalendarMonthPayload } from "./calendarTypes";
@@ -41,6 +41,7 @@ function defaultMonthYm(): string {
 }
 
 const CALENDAR_MONTH_STORAGE_KEY = "ops.calendar.month";
+const CALENDAR_DISPLAY_MONTHS_STORAGE_KEY = "ops.calendar.displayMonths";
 
 export function CalendarClient() {
   const [month, setMonth] = useState(() => {
@@ -48,7 +49,14 @@ export function CalendarClient() {
     const stored = window.localStorage.getItem(CALENDAR_MONTH_STORAGE_KEY);
     return stored && /^\d{4}-\d{2}$/.test(stored) ? stored : defaultMonthYm();
   });
-  const [data, setData] = useState<CalendarMonthPayload | null>(null);
+  const [displayMonths, setDisplayMonths] = useState<1 | 2 | 3>(() => {
+    if (typeof window === "undefined") return 1;
+    const stored = window.localStorage.getItem(CALENDAR_DISPLAY_MONTHS_STORAGE_KEY);
+    if (stored === "2") return 2;
+    if (stored === "3") return 3;
+    return 1;
+  });
+  const [dataByMonth, setDataByMonth] = useState<Record<string, CalendarMonthPayload>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blockModal, setBlockModal] = useState<
@@ -70,21 +78,33 @@ export function CalendarClient() {
     }>;
   } | null>(null);
   const [roomPick, setRoomPick] = useState<Record<string, string>>({});
+  const visibleMonths = useMemo(
+    () => Array.from({ length: displayMonths }, (_, idx) => shiftMonth(month, idx)),
+    [month, displayMonths],
+  );
+  const baseData = dataByMonth[month] ?? null;
 
-  const load = useCallback(async (ym: string) => {
+  const load = useCallback(async (baseYm: string, monthCount: 1 | 2 | 3) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, {
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-        throw new Error(j?.error?.message ?? `HTTP ${res.status}`);
-      }
-      const json = (await res.json()) as { data: CalendarMonthPayload };
-      setData(json.data);
-      const overviewRes = await fetch(`/api/bookings/overview?month=${encodeURIComponent(ym)}`, {
+      const months = Array.from({ length: monthCount }, (_, idx) => shiftMonth(baseYm, idx));
+      const monthPayloads = await Promise.all(
+        months.map(async (ym) => {
+          const res = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, {
+            credentials: "include",
+          });
+          if (!res.ok) {
+            const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+            throw new Error(j?.error?.message ?? `HTTP ${res.status}`);
+          }
+          const json = (await res.json()) as { data: CalendarMonthPayload };
+          return [ym, json.data] as const;
+        }),
+      );
+      setDataByMonth(Object.fromEntries(monthPayloads));
+
+      const overviewRes = await fetch(`/api/bookings/overview?month=${encodeURIComponent(baseYm)}`, {
         credentials: "include",
       });
       if (overviewRes.ok) {
@@ -109,7 +129,7 @@ export function CalendarClient() {
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
-      setData(null);
+      setDataByMonth({});
       setOverview(null);
     } finally {
       setLoading(false);
@@ -117,13 +137,18 @@ export function CalendarClient() {
   }, []);
 
   useEffect(() => {
-    void load(month);
-  }, [month, load]);
+    void load(month, displayMonths);
+  }, [month, displayMonths, load]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, month);
   }, [month]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(CALENDAR_DISPLAY_MONTHS_STORAGE_KEY, String(displayMonths));
+  }, [displayMonths]);
 
   useEffect(() => {
     if (!flash) return;
@@ -138,38 +163,48 @@ export function CalendarClient() {
 
   const completeAssignment = useCallback(
     async (raw: BookingDragPayload, toRoomId: string | null) => {
-      if (!data) return;
       if (toRoomId === raw.fromRoomId) return;
-      const snapshot = structuredClone(data);
-      setData(applyOptimisticBookingMove(data, raw.bookingId, toRoomId));
+      const ownerMonth = visibleMonths.find((ym) =>
+        (dataByMonth[ym]?.items ?? []).some((i) => i.kind === "booking" && i.id === raw.bookingId),
+      );
+      if (!ownerMonth) return;
+      const ownerData = dataByMonth[ownerMonth];
+      if (!ownerData) return;
+      const snapshot = structuredClone(ownerData);
+      setDataByMonth((prev) => ({
+        ...prev,
+        [ownerMonth]: applyOptimisticBookingMove(ownerData, raw.bookingId, toRoomId),
+      }));
       setFlash(null);
       try {
         await performBookingAssignmentMutation(raw, toRoomId);
-        await load(month);
+        await load(month, displayMonths);
       } catch (e) {
-        setData(snapshot);
+        setDataByMonth((prev) => ({ ...prev, [ownerMonth]: snapshot }));
         setFlash(e instanceof Error ? e.message : "Request failed");
       }
     },
-    [data, load, month],
+    [dataByMonth, displayMonths, load, month, visibleMonths],
   );
 
   const onDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!data || !over || isMobile) return;
+      if (!over || isMobile) return;
       const raw = active.data.current as BookingDragPayload | undefined;
       if (!raw || raw.type !== "booking") return;
-      const target = parseLaneDropTarget(String(over.id));
+      const overId = String(over.id);
+      const targetId = overId.includes(":") ? overId.slice(overId.indexOf(":") + 1) : overId;
+      const target = parseLaneDropTarget(targetId);
       if (target === null) return;
       const toRoomId = target === "unassigned" ? null : target;
       if (toRoomId === raw.fromRoomId) return;
       await completeAssignment(raw, toRoomId);
     },
-    [completeAssignment, data, isMobile],
+    [completeAssignment, isMobile],
   );
 
-  const roomOptions: BlockRoomOption[] = (data?.rooms ?? []).map((r) => ({
+  const roomOptions: BlockRoomOption[] = (baseData?.rooms ?? []).map((r) => ({
     id: r.id,
     label: r.code ? `${r.code}${r.name ? ` — ${r.name}` : ""}` : r.name || r.id,
   }));
@@ -195,7 +230,7 @@ export function CalendarClient() {
         roomId,
       );
       setFlash("Booking assigned successfully.");
-      await load(month);
+      await load(month, displayMonths);
     } catch (e) {
       setFlash(e instanceof Error ? e.message : "Failed to assign booking.");
     } finally {
@@ -212,6 +247,51 @@ export function CalendarClient() {
             Cleaning tasks
           </Link>
         </header>
+        <section className="ops-calendar-controls" aria-label="Calendar controls">
+          <button type="button" className="ops-btn" onClick={() => setMonth(defaultMonthYm())}>
+            Today
+          </button>
+          <button type="button" className="ops-btn" onClick={() => setMonth((m) => shiftMonth(m, -1))}>
+            ◀
+          </button>
+          <button type="button" className="ops-btn" onClick={() => setMonth((m) => shiftMonth(m, 1))}>
+            ▶
+          </button>
+          <input
+            type="month"
+            className="ops-input"
+            aria-label="Select month"
+            value={month}
+            onChange={(ev) => setMonth(ev.target.value)}
+          />
+          <label className="ops-label ops-inline-label">
+            <span>Display</span>
+            <select
+              className="ops-input"
+              value={displayMonths}
+              onChange={(ev) => setDisplayMonths(Number(ev.target.value) as 1 | 2 | 3)}
+              aria-label="Display month count"
+            >
+              <option value={1}>1 month</option>
+              <option value={2}>2 months</option>
+              <option value={3}>3 months</option>
+            </select>
+          </label>
+          <button type="button" className="ops-btn" onClick={() => setFlash("Filters are coming soon.")}>
+            Filters
+          </button>
+          <button type="button" className="ops-btn" disabled={!baseData} onClick={() => setQueueOpen(true)}>
+            Unassigned list
+          </button>
+          <button
+            type="button"
+            className="ops-btn ops-btn-primary"
+            disabled={!baseData}
+            onClick={() => setBlockModal({ mode: "create" })}
+          >
+            Block dates
+          </button>
+        </section>
         {!loading && !error && overview && (
           <section className="ops-markers" aria-label="Needs assignment">
             <h2>Needs assignment</h2>
@@ -266,33 +346,40 @@ export function CalendarClient() {
             {flash}
           </div>
         )}
-        <MonthGrid
-          data={data}
-          loading={loading}
-          error={error}
-          onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
-          onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
-          onCurrentMonth={() => setMonth(defaultMonthYm())}
-          onAddBlock={() => setBlockModal({ mode: "create" })}
-          onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
-          isMobile={isMobile}
-          onQuickAssign={isMobile ? (b) => setMobileAssignBooking(b) : undefined}
-          onOpenUnassigned={data ? () => setQueueOpen(true) : undefined}
-        />
-        {data && (
+        <section className={`ops-multi-month-grid ops-multi-month-${displayMonths}`}>
+          {visibleMonths.map((ym) => (
+            <MonthGrid
+              key={ym}
+              data={dataByMonth[ym] ?? null}
+              loading={loading}
+              error={error}
+              onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
+              onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
+              onCurrentMonth={() => setMonth(defaultMonthYm())}
+              onAddBlock={() => setBlockModal({ mode: "create" })}
+              onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
+              isMobile={isMobile}
+              onQuickAssign={isMobile ? (b) => setMobileAssignBooking(b) : undefined}
+              onOpenUnassigned={baseData ? () => setQueueOpen(true) : undefined}
+              laneScope={ym}
+              showNavigation={false}
+            />
+          ))}
+        </section>
+        {baseData && (
           <UnassignedDrawer
             open={queueOpen}
             month={month}
-            rooms={data.rooms}
+            rooms={baseData.rooms}
             onClose={() => setQueueOpen(false)}
-            onAssigned={() => void load(month)}
+            onAssigned={() => void load(month, displayMonths)}
           />
         )}
-        {data && (
+        {baseData && (
           <MobileAssignSheet
             open={mobileAssignBooking != null}
             booking={mobileAssignBooking}
-            rooms={data.rooms}
+            rooms={baseData.rooms}
             onClose={() => setMobileAssignBooking(null)}
             onPickRoom={async (toRoomId) => {
               if (!mobileAssignBooking) return;
@@ -302,15 +389,15 @@ export function CalendarClient() {
             }}
           />
         )}
-        {blockModal && data && (
+        {blockModal && baseData && (
           <BlockEditorModal
             open
             mode={blockModal.mode}
             block={blockModal.mode === "edit" ? blockModal.block : null}
             rooms={roomOptions}
-            defaultMonth={data.month}
+            defaultMonth={baseData.month}
             onClose={() => setBlockModal(null)}
-            onSaved={() => void load(month)}
+            onSaved={() => void load(month, displayMonths)}
           />
         )}
       </main>

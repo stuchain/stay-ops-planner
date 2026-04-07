@@ -29,6 +29,8 @@ type Props = {
   isMobile?: boolean;
   onQuickAssign?: (item: CalendarBookingItem) => void;
   onOpenUnassigned?: () => void;
+  laneScope?: string;
+  showNavigation?: boolean;
 };
 
 function dayOfMonthIso(iso: string): number {
@@ -160,6 +162,8 @@ export function MonthGrid({
   isMobile,
   onQuickAssign,
   onOpenUnassigned,
+  laneScope,
+  showNavigation = true,
 }: Props) {
   const { active } = useDndContext();
   if (loading && !data) {
@@ -234,27 +238,45 @@ export function MonthGrid({
     blocksByRoom.set(blk.roomId, list);
   }
 
+  function scopedLaneId(id: string): string {
+    return laneScope ? `${laneScope}:${id}` : id;
+  }
+
+  function formatMonthTitle(ym: string): string {
+    const [yRaw, mRaw] = ym.split("-");
+    const y = Number(yRaw);
+    const m = Number(mRaw);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return ym;
+    return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(
+      new Date(Date.UTC(y, m - 1, 1)),
+    );
+  }
+
   return (
     <div className="ops-month-grid">
       <div className="ops-month-toolbar">
-        <button type="button" className="ops-btn" onClick={onPrevMonth}>
-          Previous
-        </button>
-        <h2 className="ops-month-title">{data.month}</h2>
-        <button type="button" className="ops-btn" onClick={onNextMonth}>
-          Next
-        </button>
-        {onCurrentMonth && (
+        {showNavigation && (
+          <button type="button" className="ops-btn" onClick={onPrevMonth}>
+            Previous
+          </button>
+        )}
+        <h2 className="ops-month-title">{formatMonthTitle(data.month)}</h2>
+        {showNavigation && (
+          <button type="button" className="ops-btn" onClick={onNextMonth}>
+            Next
+          </button>
+        )}
+        {showNavigation && onCurrentMonth && (
           <button type="button" className="ops-btn" onClick={onCurrentMonth}>
             Today
           </button>
         )}
-        {onOpenUnassigned && (
+        {showNavigation && onOpenUnassigned && (
           <button type="button" className="ops-btn" onClick={onOpenUnassigned}>
             More unassigned bookings
           </button>
         )}
-        {onAddBlock && (
+        {showNavigation && onAddBlock && (
           <button type="button" className="ops-btn ops-btn-primary" onClick={onAddBlock}>
             Block dates
           </button>
@@ -286,7 +308,7 @@ export function MonthGrid({
             </div>
           </div>
           <TimelineLane
-            laneId="lane-unassigned"
+            laneId={scopedLaneId("lane-unassigned")}
             testIdSuffix="unassigned"
             title="Needs assignment"
             items={unassignedBookings}
@@ -302,7 +324,7 @@ export function MonthGrid({
             return (
               <TimelineLane
                 key={room.id}
-                laneId={`lane-room-${room.id}`}
+                laneId={scopedLaneId(`lane-room-${room.id}`)}
                 testIdSuffix={laneTestIdSuffix(room)}
                 title={title}
                 items={roomBookings}
@@ -318,7 +340,7 @@ export function MonthGrid({
 
       {isMobile && (
         <>
-          <RoomLane laneId="lane-unassigned" title="Needs assignment" testIdSuffix="unassigned">
+          <RoomLane laneId={scopedLaneId("lane-unassigned")} title="Needs assignment" testIdSuffix="unassigned">
             {unassignedBookings.map((b) => (
               <BookingCard
                 key={b.id}
@@ -337,7 +359,7 @@ export function MonthGrid({
             return (
               <RoomLane
                 key={room.id}
-                laneId={`lane-room-${room.id}`}
+                laneId={scopedLaneId(`lane-room-${room.id}`)}
                 title={title}
                 testIdSuffix={laneTestIdSuffix(room)}
               >
