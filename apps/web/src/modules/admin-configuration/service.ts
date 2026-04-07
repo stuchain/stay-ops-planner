@@ -1,4 +1,10 @@
-import { PrismaClient, type AlertConfigChannel, type AlertConfigEventType, type OperationalThresholdKey } from "@stay-ops/db";
+import {
+  Prisma,
+  PrismaClient,
+  type AlertConfigChannel,
+  type AlertConfigEventType,
+  type OperationalThresholdKey,
+} from "@stay-ops/db";
 import { writeAuditSnapshot } from "@stay-ops/audit";
 
 const prisma = new PrismaClient();
@@ -113,7 +119,7 @@ export async function upsertAlertTemplate(input: UpsertAlertTemplateInput): Prom
             title: input.title ?? null,
             body: input.body,
             enabled: input.enabled ?? true,
-            metaJson: input.metaJson ?? null,
+            metaJson: input.metaJson ? (input.metaJson as Prisma.InputJsonValue) : Prisma.JsonNull,
           },
         })
       : await tx.alertTemplateConfig.create({
@@ -124,7 +130,7 @@ export async function upsertAlertTemplate(input: UpsertAlertTemplateInput): Prom
             title: input.title ?? null,
             body: input.body,
             enabled: input.enabled ?? true,
-            metaJson: input.metaJson ?? null,
+            metaJson: input.metaJson ? (input.metaJson as Prisma.InputJsonValue) : Prisma.JsonNull,
           },
         });
 
@@ -238,7 +244,9 @@ export async function updateAlertTemplateById(
         ...(patch.title !== undefined ? { title: patch.title } : {}),
         ...(patch.body !== undefined ? { body: patch.body } : {}),
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
-        ...(patch.metaJson !== undefined ? { metaJson: patch.metaJson } : {}),
+        ...(patch.metaJson !== undefined
+          ? { metaJson: patch.metaJson ? (patch.metaJson as Prisma.InputJsonValue) : Prisma.JsonNull }
+          : {}),
       },
     });
 

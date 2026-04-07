@@ -1,4 +1,12 @@
-export { PrismaClient, Prisma, BookingStatus, Channel } from "@prisma/client";
+export {
+  PrismaClient,
+  Prisma,
+  BookingStatus,
+  Channel,
+  AlertConfigChannel,
+  AlertConfigEventType,
+  OperationalThresholdKey,
+} from "@prisma/client";
 export {
   assertNoOverlap,
   findStayConflict,
