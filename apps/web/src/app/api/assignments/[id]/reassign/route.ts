@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { reassignRoom } from "@/modules/allocation/service";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 
@@ -55,6 +56,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         roomId: parsed.data.roomId,
         expectedVersion: parsed.data.expectedVersion,
         actorUserId: session.userId,
+        auditMeta: auditMetaFromRequest(request),
       });
       return NextResponse.json(
         {

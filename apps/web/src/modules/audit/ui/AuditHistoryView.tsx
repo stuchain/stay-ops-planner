@@ -30,6 +30,60 @@ function sevenDaysAgoIsoDate(): string {
   return d.toISOString().slice(0, 10);
 }
 
+function formatJsonValue(v: unknown): string {
+  if (v === undefined) return "—";
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+
+/** Shallow key-level diff for JSON object snapshots; falls back to a single row for primitives. */
+export function shallowJsonDiff(
+  before: unknown,
+  after: unknown,
+): Array<{ key: string; before: string; after: string }> {
+  if (before == null && after !== null && typeof after === "object" && !Array.isArray(after)) {
+    const a = after as Record<string, unknown>;
+    return Object.keys(a).map((k) => ({
+      key: k,
+      before: "—",
+      after: formatJsonValue(a[k]),
+    }));
+  }
+  if (after == null && before !== null && typeof before === "object" && !Array.isArray(before)) {
+    const b = before as Record<string, unknown>;
+    return Object.keys(b).map((k) => ({
+      key: k,
+      before: formatJsonValue(b[k]),
+      after: "—",
+    }));
+  }
+  if (
+    before !== null &&
+    after !== null &&
+    typeof before === "object" &&
+    typeof after === "object" &&
+    !Array.isArray(before) &&
+    !Array.isArray(after)
+  ) {
+    const b = before as Record<string, unknown>;
+    const a = after as Record<string, unknown>;
+    const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
+    const rows: Array<{ key: string; before: string; after: string }> = [];
+    for (const k of keys) {
+      const bv = b[k];
+      const av = a[k];
+      if (JSON.stringify(bv) !== JSON.stringify(av)) {
+        rows.push({ key: k, before: formatJsonValue(bv), after: formatJsonValue(av) });
+      }
+    }
+    return rows;
+  }
+  return [{ key: "value", before: formatJsonValue(before), after: formatJsonValue(after) }];
+}
+
 export function AuditHistoryView() {
   const [entityType, setEntityType] = useState("");
   const [bookingId, setBookingId] = useState("");
@@ -133,6 +187,40 @@ export function AuditHistoryView() {
       {selected && (
         <section>
           <h2>Event detail</h2>
+          <p className="ops-muted">
+            {selected.action} · {selected.entityType} / {selected.entityId}
+            {selected.actorUserId ? ` · actor ${selected.actorUserId}` : ""}
+          </p>
+          <h3>Changes</h3>
+          {selected.beforeJson == null && selected.afterJson == null ? (
+            <p className="ops-muted">No before/after snapshot for this event.</p>
+          ) : (
+            <table className="ops-table">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Before</th>
+                  <th>After</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shallowJsonDiff(selected.beforeJson, selected.afterJson).map((row) => (
+                  <tr key={row.key}>
+                    <td>{row.key}</td>
+                    <td>
+                      <code>{row.before}</code>
+                    </td>
+                    <td>
+                      <code>{row.after}</code>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <h3>Meta</h3>
+          <pre className="ops-pre">{formatJsonValue(selected.metaJson)}</pre>
+          <h3>Raw event</h3>
           <pre className="ops-pre">{JSON.stringify(selected, null, 2)}</pre>
         </section>
       )}

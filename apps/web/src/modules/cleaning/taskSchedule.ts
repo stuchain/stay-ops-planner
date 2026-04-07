@@ -1,3 +1,4 @@
+import { writeAuditSnapshot } from "@stay-ops/audit";
 import {
   computeTurnoverPlannedWindowUTC,
   createServiceCleaningTask,
@@ -7,6 +8,30 @@ import {
   validateCleaningSchedule,
 } from "@stay-ops/db";
 import { CleaningBookingNotFoundError, CleaningTaskNotFoundError } from "./errors";
+
+function cleaningTaskSnapshot(t: {
+  id: string;
+  bookingId: string;
+  roomId: string;
+  status: string;
+  taskType: string;
+  plannedStart: Date | null;
+  plannedEnd: Date | null;
+  assigneeName: string | null;
+  durationMinutes: number | null;
+}) {
+  return {
+    id: t.id,
+    bookingId: t.bookingId,
+    roomId: t.roomId,
+    status: t.status,
+    taskType: t.taskType,
+    plannedStart: t.plannedStart?.toISOString() ?? null,
+    plannedEnd: t.plannedEnd?.toISOString() ?? null,
+    assigneeName: t.assigneeName,
+    durationMinutes: t.durationMinutes,
+  };
+}
 
 const prisma = new PrismaClient();
 
@@ -44,6 +69,8 @@ export async function updateCleaningTaskSchedule(params: {
   plannedStart: Date;
   plannedEnd: Date;
   assigneeName?: string | null;
+  actorUserId: string;
+  auditMeta?: Record<string, unknown>;
 }): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const task = await tx.cleaningTask.findUnique({ where: { id: params.taskId } });
@@ -58,13 +85,25 @@ export async function updateCleaningTaskSchedule(params: {
       plannedEnd: params.plannedEnd,
     });
 
-    await tx.cleaningTask.update({
+    const before = cleaningTaskSnapshot(task);
+
+    const updated = await tx.cleaningTask.update({
       where: { id: params.taskId },
       data: {
         plannedStart: params.plannedStart,
         plannedEnd: params.plannedEnd,
         ...(params.assigneeName !== undefined ? { assigneeName: params.assigneeName } : {}),
       },
+    });
+
+    await writeAuditSnapshot(tx, {
+      actorUserId: params.actorUserId,
+      action: "cleaning_task.schedule_update",
+      entityType: "cleaning_task",
+      entityId: updated.id,
+      before,
+      after: cleaningTaskSnapshot(updated),
+      meta: { bookingId: task.bookingId, ...(params.auditMeta ?? {}) },
     });
   });
 }
@@ -74,6 +113,8 @@ export async function createServiceCleaningTaskForApi(params: {
   roomId: string;
   sourceEventId?: string;
   plannedStart?: Date;
+  actorUserId: string;
+  auditMeta?: Record<string, unknown>;
 }): Promise<{
   created: boolean;
   task: {
@@ -116,6 +157,17 @@ export async function createServiceCleaningTaskForApi(params: {
       plannedStart,
     });
     const task = await tx.cleaningTask.findUniqueOrThrow({ where: { id: r.id } });
+    if (r.created) {
+      await writeAuditSnapshot(tx, {
+        actorUserId: params.actorUserId,
+        action: "cleaning_task.service_create",
+        entityType: "cleaning_task",
+        entityId: task.id,
+        before: null,
+        after: cleaningTaskSnapshot(task),
+        meta: { bookingId: params.bookingId, ...(params.auditMeta ?? {}) },
+      });
+    }
     return { created: r.created, task };
   });
 }

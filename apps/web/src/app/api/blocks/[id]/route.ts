@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import {
   BlockNotFoundError,
   InvalidBlockRangeError,
@@ -73,6 +74,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       endDate: parsed.data.endDate,
       reason: parsed.data.reason,
       actorUserId: sessionUserId,
+      auditMeta: auditMetaFromRequest(request),
     });
     return NextResponse.json({ data: blockToDto(block) }, { status: 200 });
   } catch (err) {
@@ -105,7 +107,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   const { id } = await ctx.params;
 
   try {
-    await ManualBlockService.delete(id, sessionUserId);
+    await ManualBlockService.delete(id, sessionUserId, auditMetaFromRequest(request));
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (err instanceof BlockNotFoundError) {

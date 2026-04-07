@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
 import { CleaningBookingNotFoundError } from "@/modules/cleaning/errors";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import {
   createServiceCleaningTaskForApi,
   listCleaningTasks,
@@ -78,8 +79,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let sessionUserId: string;
   try {
-    requireAdminSession(request);
+    sessionUserId = requireAdminSession(request).userId;
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
@@ -117,6 +119,8 @@ export async function POST(request: NextRequest) {
       roomId: parsed.data.roomId,
       sourceEventId: parsed.data.sourceEventId,
       plannedStart,
+      actorUserId: sessionUserId,
+      auditMeta: auditMetaFromRequest(request),
     });
     return NextResponse.json(
       { data: { task: taskDto(result.task), created: result.created } },

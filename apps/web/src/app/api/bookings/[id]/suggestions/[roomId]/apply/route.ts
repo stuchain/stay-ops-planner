@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { assignBookingToRoom } from "@/modules/allocation/service";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 
@@ -58,6 +59,7 @@ export async function POST(
         bookingId: id,
         roomId,
         actorUserId: session.userId,
+        auditMeta: auditMetaFromRequest(request),
       });
       return NextResponse.json(
         {

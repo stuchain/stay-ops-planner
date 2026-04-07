@@ -6,6 +6,7 @@ import {
   CleaningTaskNotFoundError,
   InvalidStateTransitionError,
 } from "@/modules/cleaning/errors";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { transitionCleaningTaskStatus } from "@/modules/cleaning/state-machine";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
@@ -41,6 +42,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         taskId: id,
         toStatus: parsed.data.status,
         actorUserId: session.userId,
+        auditMeta: auditMetaFromRequest(request),
       });
       return NextResponse.json({ data: { ok: true } }, { status: 200 });
     } catch (err) {

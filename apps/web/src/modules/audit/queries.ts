@@ -12,6 +12,7 @@ type AuditEventRow = {
   beforeJson: unknown;
   afterJson: unknown;
   metaJson: unknown;
+  payload: unknown;
   createdAt: Date;
 };
 
@@ -90,6 +91,7 @@ export async function listAuditEvents(filters: AuditEventFilters) {
       beforeJson: true,
       afterJson: true,
       metaJson: true,
+      payload: true,
       createdAt: true,
     },
   });
@@ -99,11 +101,16 @@ export async function listAuditEvents(filters: AuditEventFilters) {
       const matchBooking =
         jsonIncludes(row.metaJson, filters.bookingId) ||
         jsonIncludes(row.beforeJson, filters.bookingId) ||
-        jsonIncludes(row.afterJson, filters.bookingId);
+        jsonIncludes(row.afterJson, filters.bookingId) ||
+        jsonIncludes(row.payload, filters.bookingId);
       if (!matchBooking) return false;
     }
     if (filters.roomId) {
-      const matchRoom = jsonIncludes(row.beforeJson, filters.roomId) || jsonIncludes(row.afterJson, filters.roomId);
+      const matchRoom =
+        jsonIncludes(row.beforeJson, filters.roomId) ||
+        jsonIncludes(row.afterJson, filters.roomId) ||
+        jsonIncludes(row.metaJson, filters.roomId) ||
+        jsonIncludes(row.payload, filters.roomId);
       if (!matchRoom) return false;
     }
     return true;
@@ -123,7 +130,11 @@ export async function listAuditEvents(filters: AuditEventFilters) {
       afterJson: row.afterJson,
       metaJson: row.metaJson,
       createdAt: row.createdAt.toISOString(),
-      redacted: hasRedactions(row.beforeJson) || hasRedactions(row.afterJson) || hasRedactions(row.metaJson),
+      redacted:
+        hasRedactions(row.beforeJson) ||
+        hasRedactions(row.afterJson) ||
+        hasRedactions(row.metaJson) ||
+        hasRedactions(row.payload),
     })),
     nextCursor: next ? toCursor({ id: next.id, createdAt: next.createdAt }) : null,
   };

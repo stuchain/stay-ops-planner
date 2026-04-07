@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
 import { CleaningTaskNotFoundError } from "@/modules/cleaning/errors";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { updateCleaningTaskSchedule } from "@/modules/cleaning/taskSchedule";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
@@ -17,7 +18,7 @@ const PatchBodySchema = z
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    requireAdminSession(request);
+    const session = requireAdminSession(request);
     const { id } = await ctx.params;
 
     let body: unknown;
@@ -47,6 +48,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         plannedStart,
         plannedEnd,
         assigneeName: parsed.data.assigneeName,
+        actorUserId: session.userId,
+        auditMeta: auditMetaFromRequest(request),
       });
       return NextResponse.json({ data: { ok: true } }, { status: 200 });
     } catch (err) {

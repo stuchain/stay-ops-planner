@@ -70,6 +70,8 @@ describe("AuditHistoryView", () => {
       screen.getByRole("button", { name: /2026-04-01T00:00:00.000Z · assignment\.reassign · assignment\/asg-1/i }),
     );
     expect(screen.getByText(/Event detail/i)).toBeInTheDocument();
-    expect(screen.getByText(/"entityId": "asg-1"/i)).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /Field/i })).toBeInTheDocument();
+    expect(screen.getByText(/^roomId$/)).toBeInTheDocument();
+    expect(screen.getByText(/Raw event/i)).toBeInTheDocument();
   });
 });

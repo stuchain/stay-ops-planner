@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { unassignBooking } from "@/modules/allocation/service";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         assignmentId: id,
         expectedVersion: parsed.data.expectedVersion,
         actorUserId: session.userId,
+        auditMeta: auditMetaFromRequest(request),
       });
       return NextResponse.json({ data: { ok: true, auditRef: result.auditRef } }, { status: 200 });
     } catch (err) {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { AuthError, jsonError } from "@/modules/auth/errors";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { ManualBlockService } from "@/modules/blocks/service";
 
 const DateOnly = z
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       endDate: parsed.data.endDate,
       reason: parsed.data.reason,
       actorUserId: sessionUserId,
+      auditMeta: auditMetaFromRequest(request),
     });
     return NextResponse.json(
       {
