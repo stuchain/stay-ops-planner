@@ -307,16 +307,6 @@ export function MonthGrid({
               ))}
             </div>
           </div>
-          <TimelineLane
-            laneId={scopedLaneId("lane-unassigned")}
-            testIdSuffix="unassigned"
-            title="Needs assignment"
-            items={unassignedBookings}
-            month={data.month}
-            monthDayCount={monthDayCount}
-            dayKeys={dayKeys}
-            hintSpan={null}
-          />
           {data.rooms.map((room) => {
             const roomBookings = bookings.filter((b) => b.roomId === room.id);
             const title = room.name || room.code || room.id;

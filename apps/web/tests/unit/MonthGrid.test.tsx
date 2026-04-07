@@ -32,7 +32,7 @@ const payload: CalendarMonthPayload = {
 };
 
 describe("MonthGrid", () => {
-  it("renders month title, unassigned lane, room lane, and booking test ids", () => {
+  it("renders month title, room lane, and booking test ids", () => {
     const onPrev = vi.fn();
     const onNext = vi.fn();
     render(
@@ -51,8 +51,7 @@ describe("MonthGrid", () => {
     expect(screen.getByRole("heading", { name: "July 2026" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "More unassigned bookings" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Block dates" })).toBeInTheDocument();
-    expect(screen.getByTestId("ops-room-lane-unassigned")).toBeInTheDocument();
     expect(screen.getByTestId("ops-room-lane-A")).toBeInTheDocument();
-    expect(screen.getByTestId("ops-booking-card-b_un")).toBeInTheDocument();
+    expect(screen.queryByTestId("ops-booking-card-b_un")).not.toBeInTheDocument();
   });
 });

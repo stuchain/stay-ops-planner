@@ -1,16 +1,16 @@
 "use client";
-
-import Link from "next/link";
 import {
   DndContext,
   KeyboardSensor,
   PointerSensor,
   closestCorners,
+  useDraggable,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { UnassignedDrawer } from "@/modules/bookings/UnassignedDrawer";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
 import type { CalendarBlockItem, CalendarBookingItem, CalendarMonthPayload } from "./calendarTypes";
@@ -43,6 +43,14 @@ function defaultMonthYm(): string {
 const CALENDAR_MONTH_STORAGE_KEY = "ops.calendar.month";
 const CALENDAR_DISPLAY_MONTHS_STORAGE_KEY = "ops.calendar.displayMonths";
 
+type OverviewUnassignedBooking = {
+  bookingId: string;
+  guestName: string;
+  checkinDate: string;
+  checkoutDate: string;
+  status: string;
+};
+
 export function CalendarClient() {
   const [month, setMonth] = useState(() => {
     if (typeof window === "undefined") return defaultMonthYm();
@@ -69,13 +77,7 @@ export function CalendarClient() {
   const isMobile = useIsNarrowViewport();
   const [overview, setOverview] = useState<{
     rooms: Array<{ id: string; label: string }>;
-    unassigned: Array<{
-      bookingId: string;
-      guestName: string;
-      checkinDate: string;
-      checkoutDate: string;
-      status: string;
-    }>;
+    unassigned: OverviewUnassignedBooking[];
   } | null>(null);
   const [roomPick, setRoomPick] = useState<Record<string, string>>({});
   const visibleMonths = useMemo(
@@ -243,9 +245,6 @@ export function CalendarClient() {
       <main className="ops-calendar-main">
         <header className="ops-calendar-header">
           <h1>Bookings</h1>
-          <Link className="ops-btn" href="/app/cleaning">
-            Cleaning tasks
-          </Link>
         </header>
         <section className="ops-calendar-controls" aria-label="Calendar controls">
           <button type="button" className="ops-btn" onClick={() => setMonth(defaultMonthYm())}>
@@ -293,52 +292,32 @@ export function CalendarClient() {
           </button>
         </section>
         {!loading && !error && overview && (
-          <section className="ops-markers" aria-label="Needs assignment">
-            <h2>Needs assignment</h2>
-            {overview.unassigned.length === 0 ? (
-              <p className="ops-muted">All bookings are assigned for this month.</p>
-            ) : (
-              <ul className="ops-drawer-list">
-                {overview.unassigned.map((booking) => (
-                  <li key={booking.bookingId} className="ops-drawer-row">
-                    <div className="ops-drawer-row-main">
-                      <strong>{booking.guestName}</strong>
-                      <div className="ops-drawer-dates">
-                        {booking.checkinDate} → {booking.checkoutDate}
-                      </div>
-                      <div className="ops-drawer-meta">Status: {booking.status}</div>
-                    </div>
-                    <div className="ops-drawer-row-actions">
-                      <select
-                        className="ops-input"
-                        value={roomPick[booking.bookingId] ?? overview.rooms[0]?.id ?? ""}
-                        onChange={(ev) =>
-                          setRoomPick((prev) => ({
-                            ...prev,
-                            [booking.bookingId]: ev.target.value,
-                          }))
-                        }
-                        aria-label={`Apartment for booking ${booking.bookingId}`}
-                      >
-                        {overview.rooms.map((room) => (
-                          <option key={room.id} value={room.id}>
-                            {room.label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="ops-btn ops-btn-primary"
-                        disabled={assigningBookingId === booking.bookingId || overview.rooms.length === 0}
-                        onClick={() => void assignFromSimplePanel(booking.bookingId)}
-                      >
-                        {assigningBookingId === booking.bookingId ? "Assigning..." : "Assign apartment"}
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <section className="ops-needs-table" aria-label="Needs assignment table">
+            <div className="ops-needs-row">
+              <div className="ops-needs-label">Needs assignment</div>
+              <NeedsAssignmentDropZone laneId={`${month}:lane-unassigned`}>
+                {overview.unassigned.length === 0 ? (
+                  <span className="ops-muted">All bookings are assigned for this month.</span>
+                ) : (
+                  overview.unassigned.map((booking) => (
+                    <NeedsAssignmentDragCard
+                      key={booking.bookingId}
+                      booking={booking}
+                      roomValue={roomPick[booking.bookingId] ?? overview.rooms[0]?.id ?? ""}
+                      rooms={overview.rooms}
+                      assigning={assigningBookingId === booking.bookingId}
+                      onRoomChange={(roomId) =>
+                        setRoomPick((prev) => ({
+                          ...prev,
+                          [booking.bookingId]: roomId,
+                        }))
+                      }
+                      onAssign={() => void assignFromSimplePanel(booking.bookingId)}
+                    />
+                  ))
+                )}
+              </NeedsAssignmentDropZone>
+            </div>
           </section>
         )}
         {flash && (
@@ -402,5 +381,94 @@ export function CalendarClient() {
         )}
       </main>
     </DndContext>
+  );
+}
+
+function NeedsAssignmentDragCard({
+  booking,
+  roomValue,
+  rooms,
+  assigning,
+  onRoomChange,
+  onAssign,
+}: {
+  booking: OverviewUnassignedBooking;
+  roomValue: string;
+  rooms: Array<{ id: string; label: string }>;
+  assigning: boolean;
+  onRoomChange: (roomId: string) => void;
+  onAssign: () => void;
+}) {
+  const { setNodeRef, listeners, attributes, transform, isDragging } = useDraggable({
+    id: `needs-booking-${booking.bookingId}`,
+    data: {
+      type: "booking",
+      bookingId: booking.bookingId,
+      assignmentId: null,
+      assignmentVersion: null,
+      fromRoomId: null,
+    } satisfies BookingDragPayload,
+  });
+
+  const dragStyle = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <article
+      ref={setNodeRef}
+      className="ops-needs-card"
+      style={{
+        ...dragStyle,
+        opacity: isDragging ? 0.85 : 1,
+      }}
+    >
+      <button
+        type="button"
+        className="ops-needs-drag-handle"
+        title="Drag to an apartment row to assign"
+        aria-label={`Drag booking ${booking.guestName}`}
+        {...listeners}
+        {...attributes}
+      >
+        Drag
+      </button>
+      <strong>{booking.guestName}</strong>
+      <div className="ops-needs-dates">
+        {booking.checkinDate} → {booking.checkoutDate}
+      </div>
+      <div className="ops-needs-actions">
+        <select
+          className="ops-input"
+          value={roomValue}
+          onChange={(ev) => onRoomChange(ev.target.value)}
+          aria-label={`Apartment for booking ${booking.bookingId}`}
+        >
+          {rooms.map((room) => (
+            <option key={room.id} value={room.id}>
+              {room.label}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="ops-btn ops-btn-primary" disabled={assigning || rooms.length === 0} onClick={onAssign}>
+          {assigning ? "Assigning..." : "Assign"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function NeedsAssignmentDropZone({
+  laneId,
+  children,
+}: {
+  laneId: string;
+  children: ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: laneId });
+  return (
+    <div ref={setNodeRef} className={`ops-needs-cells${isOver ? " ops-needs-cells-over" : ""}`}>
+      {children}
+    </div>
   );
 }
