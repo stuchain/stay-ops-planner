@@ -17,6 +17,7 @@ const baseItem: CalendarBookingItem = {
   startDate: "2026-07-03",
   endDate: "2026-07-07",
   guestName: "River Tam",
+  channel: "airbnb",
   status: "confirmed",
   assignmentId: null,
   assignmentVersion: null,

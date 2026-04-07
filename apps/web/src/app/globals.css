@@ -216,6 +216,21 @@ body {
   min-width: 0;
 }
 
+.ops-timeline-booking.ops-booking-channel-airbnb {
+  border-color: #d65a5a;
+  background: #fde9e9;
+}
+
+.ops-timeline-booking.ops-booking-channel-booking {
+  border-color: #5c88e8;
+  background: #e9f0ff;
+}
+
+.ops-timeline-booking.ops-booking-channel-direct {
+  border-color: #c9a227;
+  background: #fff7db;
+}
+
 .ops-timeline-booking-name {
   font-weight: 600;
   overflow: hidden;
@@ -272,6 +287,21 @@ body {
 .ops-card-warning {
   border-color: #c45c26;
   background: #fff4ed;
+}
+
+.ops-booking-card.ops-booking-channel-airbnb {
+  border-color: #d65a5a;
+  background: #fde9e9;
+}
+
+.ops-booking-card.ops-booking-channel-booking {
+  border-color: #5c88e8;
+  background: #e9f0ff;
+}
+
+.ops-booking-card.ops-booking-channel-direct {
+  border-color: #c9a227;
+  background: #fff7db;
 }
 
 .ops-booking-card-title {

@@ -387,10 +387,16 @@ function TimelineBookingBar({
         opacity: isDragging ? 0.85 : 1,
       }
     : undefined;
+  const channelClass =
+    item.channel === "airbnb"
+      ? "ops-booking-channel-airbnb"
+      : item.channel === "booking"
+        ? "ops-booking-channel-booking"
+        : "ops-booking-channel-direct";
   return (
     <div
       ref={setNodeRef}
-      className="ops-timeline-booking"
+      className={`ops-timeline-booking ${channelClass}`}
       data-testid={`ops-booking-card-${item.id}`}
       title={item.guestName}
       style={{

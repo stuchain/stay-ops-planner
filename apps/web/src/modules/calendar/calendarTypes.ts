@@ -12,6 +12,7 @@ export type CalendarBookingItem = {
   startDate: string;
   endDate: string;
   guestName: string;
+  channel: "airbnb" | "booking" | "direct";
   status: string;
   assignmentId: string | null;
   assignmentVersion: number | null;

@@ -21,6 +21,7 @@ const payload: CalendarMonthPayload = {
       startDate: "2026-07-10",
       endDate: "2026-07-14",
       guestName: "Unassigned guest",
+      channel: "booking",
       status: "confirmed",
       assignmentId: null,
       assignmentVersion: null,

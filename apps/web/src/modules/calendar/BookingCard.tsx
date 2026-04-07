@@ -31,12 +31,18 @@ export function BookingCard({ item, isMobile, onQuickAssign }: Props) {
   const unassigned = item.flags.includes("unassigned");
   const needsRe = item.flags.includes("needs_reassignment");
   const stateClass = unassigned ? "ops-card-unassigned" : needsRe ? "ops-card-warning" : "ops-card-normal";
+  const channelClass =
+    item.channel === "airbnb"
+      ? "ops-booking-channel-airbnb"
+      : item.channel === "booking"
+        ? "ops-booking-channel-booking"
+        : "ops-booking-channel-direct";
 
   return (
     <div
       ref={setNodeRef}
       style={{ ...style, touchAction: isMobile ? "manipulation" : "none" }}
-      className={`ops-booking-card ${stateClass}`}
+      className={`ops-booking-card ${stateClass} ${channelClass}`}
       data-testid={`ops-booking-card-${item.id}`}
       {...(isMobile ? {} : listeners)}
       {...attributes}

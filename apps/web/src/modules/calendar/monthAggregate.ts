@@ -1,4 +1,4 @@
-import { BookingStatus, PrismaClient } from "@stay-ops/db";
+import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
 import { zonedMonthRangeUtc } from "./monthBounds";
 
 const prisma = new PrismaClient();
@@ -10,6 +10,7 @@ export type CalendarBookingItem = {
   startDate: string;
   endDate: string;
   guestName: string;
+  channel: Channel;
   status: BookingStatus;
   assignmentId: string | null;
   /** Present when assigned; required for reassign/unassign mutations. */
@@ -132,6 +133,7 @@ export async function getCalendarMonthAggregate(args: {
       startDate: dateStr(startDate),
       endDate: dateStr(endDate),
       guestName: guestNameFromRaw(b.rawPayload),
+      channel: b.channel,
       status: b.status,
       assignmentId: a?.id ?? null,
       assignmentVersion: a?.version ?? null,
