@@ -12,6 +12,12 @@ type DashboardData = {
   importErrors: {
     unresolvedTotal: number;
     byCode: Array<{ code: string; count: number }>;
+    oldestUnresolved: {
+      id: string;
+      code: string;
+      createdAt: string;
+      ageMs: number;
+    } | null;
   };
   conflicts: {
     unresolvedTotal: number;
@@ -62,6 +68,13 @@ export function OperationalDashboardView() {
           </section>
           <section className="ops-markers">
             <strong>Unresolved import errors:</strong> {data.importErrors.unresolvedTotal}
+            {data.importErrors.oldestUnresolved && (
+              <>
+                {" "}
+                (oldest: {Math.round(data.importErrors.oldestUnresolved.ageMs / 3600000)}h ago, code{" "}
+                {data.importErrors.oldestUnresolved.code})
+              </>
+            )}
           </section>
           <section className="ops-markers">
             <strong>Unresolved conflicts:</strong> {data.conflicts.unresolvedTotal} (lt24h: {data.conflicts.byAgeBucket.lt_24h}

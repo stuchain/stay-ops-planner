@@ -14,9 +14,11 @@ function ageBucket(updatedAt: Date): "lt_24h" | "h24_to_72" | "gt_72h" {
 }
 
 export async function getOperationalDashboardSummary() {
+  const startedAt = Date.now();
   const since = isoHoursAgo(24);
 
-  const [recentSyncRuns, unresolvedImportErrors, conflictBacklog, cleaningBacklog] = await Promise.all([
+  const [recentSyncRuns, unresolvedImportErrors, conflictBacklog, cleaningBacklog, oldestUnresolvedImportError] =
+    await Promise.all([
     prisma.syncRun.findMany({
       where: { startedAt: { gte: since } },
       orderBy: { startedAt: "desc" },
@@ -35,10 +37,23 @@ export async function getOperationalDashboardSummary() {
       by: ["status"],
       _count: { _all: true },
     }),
+    prisma.importError.findFirst({
+      where: { resolved: false },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, createdAt: true, code: true },
+    }),
   ]);
 
+  const elapsedMs = Date.now() - startedAt;
+  if (elapsedMs > 500) {
+    console.warn(`[dashboard] getOperationalDashboardSummary slow: ${elapsedMs}ms`);
+  }
+
   const totalSync = recentSyncRuns.length;
-  const successfulSync = recentSyncRuns.filter((r) => (r.status ?? "").toLowerCase() === "done").length;
+  const successfulSync = recentSyncRuns.filter((r) => {
+    const s = (r.status ?? "").toLowerCase();
+    return s === "completed" || s === "done";
+  }).length;
   const syncSuccessRatio24h = totalSync === 0 ? 0 : Number(((successfulSync / totalSync) * 100).toFixed(2));
 
   const unresolvedByAge = { lt_24h: 0, h24_to_72: 0, gt_72h: 0 };
@@ -64,6 +79,14 @@ export async function getOperationalDashboardSummary() {
         code: row.code ?? "UNKNOWN",
         count: row._count._all,
       })),
+      oldestUnresolved: oldestUnresolvedImportError
+        ? {
+            id: oldestUnresolvedImportError.id,
+            code: oldestUnresolvedImportError.code ?? "UNKNOWN",
+            createdAt: oldestUnresolvedImportError.createdAt.toISOString(),
+            ageMs: Date.now() - oldestUnresolvedImportError.createdAt.getTime(),
+          }
+        : null,
     },
     conflicts: {
       unresolvedTotal: conflictBacklog.length,

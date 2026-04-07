@@ -81,7 +81,7 @@ describe("api /api/dashboard/ops", () => {
       },
     });
     const syncRun = await prisma.syncRun.create({
-      data: { status: "done", source: "test", startedAt: new Date() },
+      data: { status: "completed", source: "test", startedAt: new Date() },
     });
     await prisma.importError.create({
       data: {
@@ -111,13 +111,19 @@ describe("api /api/dashboard/ops", () => {
     const json = (await res.json()) as {
       data: {
         sync: { successRatio24h: number };
-        importErrors: { unresolvedTotal: number };
+        importErrors: {
+          unresolvedTotal: number;
+          oldestUnresolved: { ageMs: number; code: string } | null;
+        };
         conflicts: { unresolvedTotal: number };
         cleaning: { backlogByStatus: Array<{ status: string; count: number }> };
       };
     };
-    expect(json.data.sync.successRatio24h).toBeGreaterThanOrEqual(0);
+    expect(json.data.sync.successRatio24h).toBe(100);
+    expect(json.data.sync.successfulRuns24h).toBe(1);
     expect(json.data.importErrors.unresolvedTotal).toBeGreaterThan(0);
+    expect(json.data.importErrors.oldestUnresolved).not.toBeNull();
+    expect(json.data.importErrors.oldestUnresolved?.ageMs).toBeGreaterThanOrEqual(0);
     expect(json.data.conflicts.unresolvedTotal).toBeGreaterThan(0);
     expect(json.data.cleaning.backlogByStatus.some((r) => r.status === "todo")).toBe(true);
   });
