@@ -7,6 +7,7 @@
 import { PrismaClient, BookingStatus, Channel } from "@prisma/client";
 
 const prisma = new PrismaClient();
+const E2E_SEED_LOCK_KEY = 9_209_001;
 
 const E2E_EXTERNAL = {
   unassigned: "e2e-seed-unassign",
@@ -186,7 +187,16 @@ async function main() {
   console.log(`seed-e2e: upserted rooms + bookings for calendar month ${ym}`);
 }
 
-main()
+async function withAdvisoryLock<T>(fn: () => Promise<T>): Promise<T> {
+  await prisma.$executeRaw`SELECT pg_advisory_lock(${E2E_SEED_LOCK_KEY})`;
+  try {
+    return await fn();
+  } finally {
+    await prisma.$executeRaw`SELECT pg_advisory_unlock(${E2E_SEED_LOCK_KEY})`;
+  }
+}
+
+withAdvisoryLock(main)
   .catch((e) => {
     console.error(e);
     process.exit(1);
