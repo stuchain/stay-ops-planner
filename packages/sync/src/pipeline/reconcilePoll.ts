@@ -52,8 +52,20 @@ export async function runHosthubReconcile(prisma: PrismaClient): Promise<void> {
 
     let nextPageUrl: string | null = null;
     let runMaxUpdated: number | undefined;
+    const seenPageUrls = new Set<string>();
+    let pagesRead = 0;
 
     for (;;) {
+      if (nextPageUrl) {
+        if (seenPageUrls.has(nextPageUrl)) {
+          break;
+        }
+        seenPageUrls.add(nextPageUrl);
+      }
+      pagesRead += 1;
+      if (pagesRead > 500) {
+        break;
+      }
       const page = await client.listCalendarEventsPage({
         nextPageUrl,
         updatedGte: nextPageUrl ? undefined : updatedGte,

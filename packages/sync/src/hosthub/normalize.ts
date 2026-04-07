@@ -47,6 +47,24 @@ function pickListingChannel(r: Record<string, unknown>): string | undefined {
   );
 }
 
+function pickListingName(r: Record<string, unknown>): string | undefined {
+  const rental = r.rental;
+  if (rental !== null && typeof rental === "object" && !Array.isArray(rental)) {
+    const n = pickString(rental as Record<string, unknown>, "name");
+    if (n) return n;
+  }
+  return pickString(r, "listing_name", "listingName", "property_name", "propertyName");
+}
+
+function pickGuestName(r: Record<string, unknown>): string | undefined {
+  const guest = r.guest;
+  if (guest !== null && typeof guest === "object" && !Array.isArray(guest)) {
+    const n = pickString(guest as Record<string, unknown>, "name", "full_name");
+    if (n) return n;
+  }
+  return pickString(r, "guest_name", "guestName", "room_guest_name");
+}
+
 /** Reduce ISO-8601 or date-only strings to `YYYY-MM-DD` when possible. */
 export function coerceHosthubDateField(value: string): string {
   const trimmed = value.trim();
@@ -149,10 +167,14 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
   }
 
   const listingChannel = pickListingChannel(r);
+  const listingName = pickListingName(r);
+  const guestName = pickGuestName(r);
 
   return {
     reservationId,
     listingId,
+    ...(listingName !== undefined ? { listingName } : {}),
+    ...(guestName !== undefined ? { guestName } : {}),
     status,
     checkIn: coerceHosthubDateField(checkInRaw),
     checkOut: coerceHosthubDateField(checkOutRaw),

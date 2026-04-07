@@ -7,6 +7,8 @@ import { z } from "zod";
 export const HosthubReservationDtoSchema = z.object({
   reservationId: z.string().min(1),
   listingId: z.string().min(1),
+  listingName: z.string().min(1).optional(),
+  guestName: z.string().min(1).optional(),
   status: z.enum(["confirmed", "cancelled", "pending"]),
   checkIn: z.string().min(1),
   checkOut: z.string().min(1),

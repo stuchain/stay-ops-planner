@@ -89,6 +89,8 @@ export class HosthubClient {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly onRequest?: HosthubRequestLog;
+  private readonly baseOrigin: string;
+  private readonly basePathPrefix: string;
 
   constructor(options: HosthubClientOptions & { onRequest?: HosthubRequestLog }) {
     if (!options.baseUrl?.trim()) {
@@ -98,6 +100,9 @@ export class HosthubClient {
       throw new Error("HosthubClient requires apiToken");
     }
     this.baseUrl = normalizeBaseUrl(options.baseUrl.trim());
+    const parsedBase = new URL(this.baseUrl);
+    this.baseOrigin = parsedBase.origin;
+    this.basePathPrefix = parsedBase.pathname.replace(/\/+$/, "");
     this.apiToken = options.apiToken.trim();
     const path = options.listReservationsPath?.trim() || "/calendar-events";
     this.listReservationsPath = path.startsWith("/") ? path : `/${path}`;
@@ -115,8 +120,24 @@ export class HosthubClient {
     if (t.startsWith("http://") || t.startsWith("https://")) {
       return t;
     }
-    const path = t.startsWith("/") ? t : `/${t}`;
-    return new URL(path, `${this.baseUrl}/`).toString();
+    if (t.startsWith("?")) {
+      const baseListPath = this.listReservationsPath.startsWith("/")
+        ? `${this.basePathPrefix}${this.listReservationsPath}`
+        : `${this.basePathPrefix}/${this.listReservationsPath}`;
+      const u = new URL(baseListPath, this.baseOrigin);
+      u.search = t;
+      return u.toString();
+    }
+    if (t.startsWith("/")) {
+      if (this.basePathPrefix && t.startsWith(`${this.basePathPrefix}/`)) {
+        return new URL(t, this.baseOrigin).toString();
+      }
+      if (this.basePathPrefix && !t.startsWith("/api/")) {
+        return new URL(`${this.basePathPrefix}${t}`, this.baseOrigin).toString();
+      }
+      return new URL(t, this.baseOrigin).toString();
+    }
+    return new URL(t, `${this.baseUrl}/`).toString();
   }
 
   private pathForLogFromUrl(fetchUrl: string): string {
@@ -142,7 +163,10 @@ export class HosthubClient {
       fetchUrl = this.resolveRequestUrl(args.nextPageUrl);
       pathForLog = this.pathForLogFromUrl(fetchUrl);
     } else {
-      const url = new URL(this.listReservationsPath, `${this.baseUrl}/`);
+      const firstPath = this.listReservationsPath.startsWith("/")
+        ? `${this.basePathPrefix}${this.listReservationsPath}`
+        : `${this.basePathPrefix}/${this.listReservationsPath}`;
+      const url = new URL(firstPath, this.baseOrigin);
       const gte = args.updatedGte;
       if (gte != null && Number.isFinite(gte)) {
         url.searchParams.set("updated_gte", String(Math.floor(gte)));

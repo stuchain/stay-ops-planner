@@ -128,8 +128,7 @@ describe("HosthubClient", () => {
     const c = client(fetchFn);
     await c.listCalendarEventsPage({ nextPageUrl: null, updatedGte: 1712345678 });
     const url = String(fetchFn.mock.calls[0]?.[0]);
-    expect(url).toContain("/calendar-events");
-    expect(url).toContain("updated_gte=1712345678");
+    expect(url).toBe("https://example.test/api/calendar-events?updated_gte=1712345678");
   });
 
   it("follows navigation.next URL verbatim on second request", async () => {
@@ -163,6 +162,92 @@ describe("HosthubClient", () => {
     expect(first.value.nextPageUrl).toBe(nextUrl);
     await c.listCalendarEventsPage({ nextPageUrl: nextUrl });
     expect(String(fetchFn.mock.calls[1]?.[0])).toBe(nextUrl);
+  });
+
+  it("resolves root-relative next path under API base prefix", async () => {
+    const page1 = {
+      data: [],
+      navigation: { next: "/calendar-events?cursor_gt=abc", previous: null },
+    };
+    const page2 = {
+      data: [
+        {
+          id: "r1",
+          rental_id: "l1",
+          type: "Booking",
+          date_from: "2026-05-01",
+          date_to: "2026-05-04",
+        },
+      ],
+    };
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(page1), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(page2), { status: 200 }));
+    const c = client(fetchFn);
+    const first = await c.listCalendarEventsPage({ nextPageUrl: null });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await c.listCalendarEventsPage({ nextPageUrl: first.value.nextPageUrl });
+    expect(String(fetchFn.mock.calls[1]?.[0])).toBe("https://example.test/api/calendar-events?cursor_gt=abc");
+  });
+
+  it("keeps API-prefixed root-relative next path intact", async () => {
+    const page1 = {
+      data: [],
+      navigation: { next: "/api/2019-03-01/calendar-events?cursor_gt=abc", previous: null },
+    };
+    const page2 = {
+      data: [
+        {
+          id: "r1",
+          rental_id: "l1",
+          type: "Booking",
+          date_from: "2026-05-01",
+          date_to: "2026-05-04",
+        },
+      ],
+    };
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(page1), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(page2), { status: 200 }));
+    const c = client(fetchFn);
+    const first = await c.listCalendarEventsPage({ nextPageUrl: null });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await c.listCalendarEventsPage({ nextPageUrl: first.value.nextPageUrl });
+    expect(String(fetchFn.mock.calls[1]?.[0])).toBe(
+      "https://example.test/api/2019-03-01/calendar-events?cursor_gt=abc",
+    );
+  });
+
+  it("supports query-only next values", async () => {
+    const page1 = {
+      data: [],
+      navigation: { next: "?cursor_gt=abc", previous: null },
+    };
+    const page2 = {
+      data: [
+        {
+          id: "r1",
+          rental_id: "l1",
+          type: "Booking",
+          date_from: "2026-05-01",
+          date_to: "2026-05-04",
+        },
+      ],
+    };
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(page1), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(page2), { status: 200 }));
+    const c = client(fetchFn);
+    const first = await c.listCalendarEventsPage({ nextPageUrl: null });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    await c.listCalendarEventsPage({ nextPageUrl: first.value.nextPageUrl });
+    expect(String(fetchFn.mock.calls[1]?.[0])).toBe("https://example.test/api/calendar-events?cursor_gt=abc");
   });
 
   it("accepts reservations[] with snake_case rows (Hosthub-style list payloads)", async () => {

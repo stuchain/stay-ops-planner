@@ -38,6 +38,7 @@ async function upsertListingAndBooking(
   const checkoutDate = parseDateOnlyUtc(dto.checkOut);
   const nights = nightsBetweenCheckinCheckout(checkinDate, checkoutDate);
   const status = mapHosthubBookingStatus(dto.status);
+  const listingName = dto.listingName?.trim() ? dto.listingName.trim() : null;
 
   const existingBooking = await tx.booking.findUnique({
     where: {
@@ -58,9 +59,22 @@ async function upsertListingAndBooking(
     create: {
       channel,
       externalListingId: dto.listingId,
-      title: null,
+      title: listingName,
     },
-    update: {},
+    update: { title: listingName },
+  });
+
+  await tx.room.upsert({
+    where: { code: listing.externalListingId },
+    create: {
+      code: listing.externalListingId,
+      displayName: listing.title ?? listing.externalListingId,
+      isActive: true,
+    },
+    update: {
+      displayName: listing.title ?? listing.externalListingId,
+      isActive: true,
+    },
   });
 
   const booking = await tx.booking.upsert({
