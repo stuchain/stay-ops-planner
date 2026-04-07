@@ -21,3 +21,24 @@ Release is **No-Go** if any of the following is true:
 - Rollback procedure is not validated for the target release.
 
 Release is **Go** only when all mandatory gates are complete with timestamped evidence and owner sign-off.
+
+## Gate 2: Immutable Test Matrix
+All commands below are mandatory and must pass for MVP release readiness.
+
+### Required command set
+1. `pnpm lint`
+2. `pnpm build`
+3. `pnpm test`
+4. `pnpm --filter @stay-ops/web test:e2e` or `pnpm e2e:local`
+
+### Environment preconditions
+- Node version satisfies repository engine requirement (`>=20`).
+- `pnpm` version matches repository package manager pin.
+- Postgres and Redis are running and reachable.
+- Required environment variables are present for web, DB, and sync modules.
+- Bootstrap/e2e admin credentials are seeded and aligned with E2E config.
+
+### Pass/fail policy
+- Any non-zero exit code is an automatic no-go.
+- Any missing precondition is an automatic no-go until corrected and re-run.
+- Command outputs and timestamps must be recorded in the release evidence pack.
