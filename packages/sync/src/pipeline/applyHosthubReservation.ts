@@ -1,3 +1,4 @@
+import { writeAuditSnapshot } from "@stay-ops/audit";
 import type { Prisma } from "@stay-ops/db";
 import { BookingStatus, ensureTurnoverCleaningTask, PrismaClient } from "@stay-ops/db";
 import type { HosthubReservationDto } from "../hosthub/types.dto.js";
@@ -6,6 +7,26 @@ import { revalidateAssignmentIfNeeded } from "../allocation/revalidateAssignment
 import { mapHosthubBookingStatus } from "./bookingStatus.js";
 import { mapHosthubListingChannel } from "./mapChannel.js";
 import { nightsBetweenCheckinCheckout, parseDateOnlyUtc } from "./dates.js";
+
+function bookingAuditShape(b: {
+  id: string;
+  status: string;
+  checkinDate: Date;
+  checkoutDate: Date;
+  nights: number;
+  channel: string;
+  externalBookingId: string;
+}) {
+  return {
+    id: b.id,
+    status: b.status,
+    checkinDate: b.checkinDate.toISOString().slice(0, 10),
+    checkoutDate: b.checkoutDate.toISOString().slice(0, 10),
+    nights: b.nights,
+    channel: b.channel,
+    externalBookingId: b.externalBookingId,
+  };
+}
 
 async function upsertListingAndBooking(
   tx: Prisma.TransactionClient,
@@ -17,6 +38,15 @@ async function upsertListingAndBooking(
   const checkoutDate = parseDateOnlyUtc(dto.checkOut);
   const nights = nightsBetweenCheckinCheckout(checkinDate, checkoutDate);
   const status = mapHosthubBookingStatus(dto.status);
+
+  const existingBooking = await tx.booking.findUnique({
+    where: {
+      channel_externalBookingId: {
+        channel,
+        externalBookingId: dto.reservationId,
+      },
+    },
+  });
 
   const listing = await tx.sourceListing.upsert({
     where: {
@@ -80,6 +110,19 @@ async function upsertListingAndBooking(
 
   if (booking.status === BookingStatus.cancelled) {
     await applyCancellationSideEffects(tx, booking.id);
+  }
+
+  const finalBooking = await tx.booking.findUnique({ where: { id: booking.id } });
+  if (finalBooking) {
+    await writeAuditSnapshot(tx, {
+      actorUserId: null,
+      entityType: "booking",
+      entityId: finalBooking.id,
+      action: "booking.sync_upsert",
+      before: existingBooking ? bookingAuditShape(existingBooking) : null,
+      after: bookingAuditShape(finalBooking),
+      meta: { bookingId: finalBooking.id, source: "sync" },
+    });
   }
 }
 

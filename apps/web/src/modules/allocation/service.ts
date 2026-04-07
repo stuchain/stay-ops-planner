@@ -9,7 +9,7 @@ import {
 } from "@stay-ops/db";
 import { AllocationError } from "./errors";
 import { throwIfStayConflict } from "./stayConflict";
-import { writeAuditSnapshot } from "@/modules/audit/writer";
+import { writeAuditSnapshot } from "@stay-ops/audit";
 
 const prisma = new PrismaClient();
 
@@ -53,6 +53,8 @@ export type AssignInput = {
   bookingId: string;
   roomId: string;
   actorUserId: string;
+  /** Merged into audit `metaJson` (e.g. `requestId` from headers). */
+  auditMeta?: Record<string, unknown>;
 };
 
 export type ReassignInput = {
@@ -60,12 +62,14 @@ export type ReassignInput = {
   roomId: string;
   expectedVersion: number;
   actorUserId: string;
+  auditMeta?: Record<string, unknown>;
 };
 
 export type UnassignInput = {
   assignmentId: string;
   expectedVersion: number;
   actorUserId: string;
+  auditMeta?: Record<string, unknown>;
 };
 
 export type AssignmentCommandResult = {
@@ -200,7 +204,7 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
           endDate: created.endDate.toISOString().slice(0, 10),
           version: created.version,
         },
-        meta: { bookingId: input.bookingId },
+        meta: { bookingId: input.bookingId, ...(input.auditMeta ?? {}) },
       });
 
       await ensureTurnoverCleaningTask(tx, {
@@ -292,7 +296,7 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
           roomId: updated.roomId,
           version: updated.version,
         },
-        meta: { bookingId: existing.bookingId },
+        meta: { bookingId: existing.bookingId, ...(input.auditMeta ?? {}) },
       });
 
       await ensureTurnoverCleaningTask(tx, {
@@ -367,7 +371,7 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
           version: existing.version,
         },
         after: null,
-        meta: { bookingId: existing.bookingId },
+        meta: { bookingId: existing.bookingId, ...(input.auditMeta ?? {}) },
       });
 
       return { auditRef };

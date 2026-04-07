@@ -1,3 +1,4 @@
+import { writeAuditSnapshot } from "@stay-ops/audit";
 import type { Prisma } from "@stay-ops/db";
 import { BookingStatus } from "@stay-ops/db";
 
@@ -43,13 +44,13 @@ export async function revalidateAssignmentIfNeeded(
   }
 
   const assignmentId = assignment.id;
-  const payload: Prisma.InputJsonValue = {
-    bookingId,
-    assignmentId,
-    assignmentStart: assignment.startDate.toISOString().slice(0, 10),
-    assignmentEnd: assignment.endDate.toISOString().slice(0, 10),
-    bookingCheckin: booking.checkinDate.toISOString().slice(0, 10),
-    bookingCheckout: booking.checkoutDate.toISOString().slice(0, 10),
+  const beforeAssignment = {
+    id: assignment.id,
+    bookingId: assignment.bookingId,
+    roomId: assignment.roomId,
+    startDate: assignment.startDate.toISOString().slice(0, 10),
+    endDate: assignment.endDate.toISOString().slice(0, 10),
+    version: assignment.version,
   };
 
   await tx.assignment.deleteMany({ where: { bookingId } });
@@ -58,13 +59,19 @@ export async function revalidateAssignmentIfNeeded(
     data: { status: BookingStatus.needs_reassignment },
   });
 
-  await tx.auditEvent.create({
-    data: {
-      userId: null,
-      action: "assignment.cleared_on_sync_revalidation",
-      entityType: "assignment",
-      entityId: assignmentId,
-      payload,
+  await writeAuditSnapshot(tx, {
+    actorUserId: null,
+    action: "assignment.cleared_on_sync_revalidation",
+    entityType: "assignment",
+    entityId: assignmentId,
+    before: beforeAssignment,
+    after: null,
+    meta: {
+      bookingId,
+      assignmentStart: assignment.startDate.toISOString().slice(0, 10),
+      assignmentEnd: assignment.endDate.toISOString().slice(0, 10),
+      bookingCheckin: booking.checkinDate.toISOString().slice(0, 10),
+      bookingCheckout: booking.checkoutDate.toISOString().slice(0, 10),
     },
   });
 }

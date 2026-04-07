@@ -1,3 +1,4 @@
+import { writeAuditSnapshot } from "@stay-ops/audit";
 import type { Prisma } from "@stay-ops/db";
 import { BookingStatus } from "@stay-ops/db";
 
@@ -23,15 +24,23 @@ export async function applyCancellationSideEffects(
   });
 
   if (assignment) {
+    const beforeAssignment = {
+      id: assignment.id,
+      bookingId: assignment.bookingId,
+      roomId: assignment.roomId,
+      startDate: assignment.startDate.toISOString().slice(0, 10),
+      endDate: assignment.endDate.toISOString().slice(0, 10),
+      version: assignment.version,
+    };
     await tx.assignment.delete({ where: { id: assignment.id } });
-    await tx.auditEvent.create({
-      data: {
-        userId: actorUserId ?? null,
-        action: "assignment.released_on_cancel",
-        entityType: "assignment",
-        entityId: assignment.id,
-        payload: { bookingId } as Prisma.InputJsonValue,
-      },
+    await writeAuditSnapshot(tx, {
+      actorUserId: actorUserId ?? null,
+      action: "assignment.released_on_cancel",
+      entityType: "assignment",
+      entityId: assignment.id,
+      before: beforeAssignment,
+      after: null,
+      meta: { bookingId },
     });
   }
 
@@ -40,7 +49,6 @@ export async function applyCancellationSideEffects(
       bookingId,
       status: { in: [...CLEANING_PENDING_STATUSES] },
     },
-    select: { id: true },
   });
 
   if (pendingTasks.length === 0) {
@@ -55,14 +63,23 @@ export async function applyCancellationSideEffects(
   });
 
   for (const t of pendingTasks) {
-    await tx.auditEvent.create({
-      data: {
-        userId: actorUserId ?? null,
-        action: "cleaning_task.cancelled_on_booking_cancel",
-        entityType: "cleaning_task",
-        entityId: t.id,
-        payload: { bookingId } as Prisma.InputJsonValue,
-      },
+    const beforeTask = {
+      id: t.id,
+      bookingId: t.bookingId,
+      roomId: t.roomId,
+      status: t.status,
+      taskType: t.taskType,
+      plannedStart: t.plannedStart?.toISOString() ?? null,
+      plannedEnd: t.plannedEnd?.toISOString() ?? null,
+    };
+    await writeAuditSnapshot(tx, {
+      actorUserId: actorUserId ?? null,
+      action: "cleaning_task.cancelled_on_booking_cancel",
+      entityType: "cleaning_task",
+      entityId: t.id,
+      before: beforeTask,
+      after: { ...beforeTask, status: "cancelled" },
+      meta: { bookingId },
     });
   }
 }

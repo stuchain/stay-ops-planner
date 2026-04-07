@@ -1,6 +1,6 @@
 import { findStayConflict, PrismaClient } from "@stay-ops/db";
 import { throwIfStayConflict } from "../allocation/stayConflict";
-import { writeAuditSnapshot } from "@/modules/audit/writer";
+import { writeAuditSnapshot } from "@stay-ops/audit";
 
 const prisma = new PrismaClient();
 
@@ -30,6 +30,7 @@ export type CreateManualBlockInput = {
   endDate: Date;
   reason?: string | null;
   actorUserId?: string;
+  auditMeta?: Record<string, unknown>;
 };
 
 export type UpdateManualBlockInput = {
@@ -37,6 +38,7 @@ export type UpdateManualBlockInput = {
   endDate?: Date;
   reason?: string | null;
   actorUserId?: string;
+  auditMeta?: Record<string, unknown>;
 };
 
 export async function createManualBlock(input: CreateManualBlockInput) {
@@ -68,6 +70,7 @@ export async function createManualBlock(input: CreateManualBlockInput) {
         endDate: created.endDate.toISOString().slice(0, 10),
         reason: created.reason,
       },
+      meta: { roomId: created.roomId, ...(input.auditMeta ?? {}) },
     });
     return created;
   });
@@ -121,12 +124,17 @@ export async function updateManualBlock(blockId: string, patch: UpdateManualBloc
         endDate: updated.endDate.toISOString().slice(0, 10),
         reason: updated.reason,
       },
+      meta: { roomId: updated.roomId, ...(patch.auditMeta ?? {}) },
     });
     return updated;
   });
 }
 
-export async function deleteManualBlock(blockId: string, actorUserId?: string): Promise<void> {
+export async function deleteManualBlock(
+  blockId: string,
+  actorUserId?: string,
+  auditMeta?: Record<string, unknown>,
+): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const existing = await tx.manualBlock.findUnique({ where: { id: blockId } });
     if (!existing) {
@@ -145,6 +153,7 @@ export async function deleteManualBlock(blockId: string, actorUserId?: string): 
         reason: existing.reason,
       },
       after: null,
+      meta: { roomId: existing.roomId, ...(auditMeta ?? {}) },
     });
   });
 }
@@ -159,7 +168,7 @@ export class ManualBlockService {
     return updateManualBlock(blockId, patch);
   }
 
-  static delete(blockId: string, actorUserId?: string) {
-    return deleteManualBlock(blockId, actorUserId);
+  static delete(blockId: string, actorUserId?: string, auditMeta?: Record<string, unknown>) {
+    return deleteManualBlock(blockId, actorUserId, auditMeta);
   }
 }

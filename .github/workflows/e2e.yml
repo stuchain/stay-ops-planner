@@ -59,7 +59,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build workspace packages
-        run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/sync build
+        run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/audit build && pnpm --filter @stay-ops/sync build
 
       - name: Migrate database
         run: pnpm --filter @stay-ops/db exec prisma migrate deploy
