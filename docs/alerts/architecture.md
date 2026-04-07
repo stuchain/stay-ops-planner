@@ -6,6 +6,7 @@ Define the alerting architecture for future implementation so operational events
 ## Scope
 - Design only. No runtime implementation in this document.
 - Covers event routing, trigger evaluation, suppression, dedupe, and provider port boundaries.
+- Provider contract and retry policy are defined in `provider-interface.md`.
 
 ## High-Level Flow
 ```mermaid
