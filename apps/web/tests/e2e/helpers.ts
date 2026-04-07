@@ -5,15 +5,19 @@ import type { Page } from "@playwright/test";
 /** Re-applies `packages/db` E2E fixtures (run from repo root via `pnpm --filter @stay-ops/web test:e2e`, cwd is `apps/web`). */
 export function reseedE2EFixtures(): void {
   const repoRoot = path.join(process.cwd(), "../..");
-  execSync("npx pnpm --filter @stay-ops/db seed:e2e", {
-    cwd: repoRoot,
-    stdio: "pipe",
-    env: {
-      ...process.env,
-      DATABASE_URL:
-        process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops",
-    },
-  });
+  try {
+    execSync("corepack pnpm --filter @stay-ops/db seed:e2e", {
+      cwd: repoRoot,
+      stdio: "pipe",
+      env: {
+        ...process.env,
+        DATABASE_URL:
+          process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops",
+      },
+    });
+  } catch (error) {
+    throw new Error(`E2E fixture reseed failed. Verify DATABASE_URL and db seed state. Cause: ${String(error)}`);
+  }
 }
 
 /** Must match a seeded user (e.g. BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD). */

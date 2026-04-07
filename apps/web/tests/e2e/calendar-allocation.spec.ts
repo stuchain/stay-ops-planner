@@ -17,14 +17,14 @@ async function assignE2EUnassignedToRoomA(page: Page): Promise<void> {
 
 test.describe("calendar allocation", () => {
   test.beforeEach(() => {
+    test.skip(
+      test.info().project.name === "mobile-chromium",
+      "Desktop-only coverage here; mobile path has dedicated quick-assign spec.",
+    );
     reseedE2EFixtures();
   });
 
   test("assign unassigned booking to E2E-A via queue when data exists", async ({ page }) => {
-    test.skip(
-      test.info().project.name === "mobile-chromium",
-      "Narrow viewports use quick assign; see mobile-quick-assign.spec.ts.",
-    );
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await page.goto("/app/calendar");
@@ -35,10 +35,6 @@ test.describe("calendar allocation", () => {
   });
 
   test("reassign into overlapping stay returns CONFLICT_ASSIGNMENT", async ({ page }) => {
-    test.skip(
-      test.info().project.name === "mobile-chromium",
-      "Same API behavior as desktop; mobile allocation UI is covered in mobile-quick-assign.spec.ts.",
-    );
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await page.goto("/app/calendar");
