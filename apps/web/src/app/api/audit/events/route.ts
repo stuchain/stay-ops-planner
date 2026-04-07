@@ -5,18 +5,23 @@ import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { listAuditEvents } from "@/modules/audit/queries";
 
-const DateOnly = z
+const FromDateOnly = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
   .transform((s) => new Date(`${s}T00:00:00.000Z`));
+
+const ToDateOnly = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
+  .transform((s) => new Date(`${s}T23:59:59.999Z`));
 
 const QuerySchema = z.object({
   entityType: z.string().min(1).optional(),
   bookingId: z.string().min(1).optional(),
   roomId: z.string().min(1).optional(),
   actorUserId: z.string().min(1).optional(),
-  from: DateOnly.optional(),
-  to: DateOnly.optional(),
+  from: FromDateOnly.optional(),
+  to: ToDateOnly.optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
 });
