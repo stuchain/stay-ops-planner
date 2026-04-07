@@ -42,6 +42,11 @@
 3. Re-run `GET /api/health`.
 4. Validate smoke checks before resuming normal traffic.
 
+## MVP strict release gate
+- Apply strict gate policy in `docs/runbooks/release-gate-mvp.md`.
+- Capture execution evidence in the dated release evidence file (current cycle: `docs/runbooks/release-evidence-mvp-2026-04-07.md`).
+- Do not proceed with production release unless all gate criteria are satisfied and sign-offs are complete.
+
 ## Startup checks
 - Ensure `SESSION_SECRET`, `DATABASE_URL`, and `REDIS_URL` are present.
 - Treat missing required env as a hard startup failure.

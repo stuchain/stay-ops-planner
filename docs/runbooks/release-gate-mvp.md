@@ -85,3 +85,23 @@ Run these probes in staging immediately before production release.
 - Each risk must be either:
   - fixed with linked commit/test evidence, or
   - explicitly accepted with approver sign-off and expiry date.
+
+## Gate 5: Evidence Pack and Sign-Off
+
+### Required evidence artifact
+- Create and maintain a dated evidence file:
+  - `docs/runbooks/release-evidence-mvp-2026-04-07.md`
+- The evidence file must include:
+  - command execution summary and timestamps,
+  - readiness probe outcomes,
+  - rollback verification checklist,
+  - risk disposition and sign-off results.
+
+### Required sign-offs
+- Engineering owner (test gate and probe completion).
+- Operations owner (deploy/rollback readiness).
+- Product owner (scope and release decision).
+
+### Final decision rule
+- `Go` only if all required sign-offs are marked approved and all blocker rules pass.
+- Otherwise `No-Go`.
