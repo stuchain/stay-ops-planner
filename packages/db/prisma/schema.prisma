@@ -20,6 +20,26 @@ enum Channel {
   direct
 }
 
+enum AlertConfigChannel {
+  whatsapp
+  sms
+}
+
+enum AlertConfigEventType {
+  sync_run_failed
+  unassigned_backlog_threshold_reached
+  cleaning_overdue
+  conflict_resolution_required
+}
+
+enum OperationalThresholdKey {
+  unassigned_backlog_count
+  unassigned_backlog_window_hours
+  cleaning_overdue_minutes
+  conflict_resolution_sla_minutes
+  sync_failure_suppression_minutes
+}
+
 /// Internal operator identity (Phase 1). Optional FKs on assignments and audit.
 model User {
   id           String   @id @default(cuid())
@@ -214,4 +234,37 @@ model AuditEvent {
   @@index([entityId, createdAt])
   @@index([userId, createdAt])
   @@map("audit_events")
+}
+
+model AlertTemplateConfig {
+  id              String               @id @default(cuid())
+  eventType       AlertConfigEventType @map("event_type")
+  channel         AlertConfigChannel
+  templateVersion Int                  @default(1) @map("template_version")
+  title           String?
+  body            String
+  enabled         Boolean              @default(true)
+  metaJson        Json?                @map("meta_json")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  @@unique([eventType, channel, templateVersion], map: "alert_template_configs_event_channel_version_key")
+  @@index([eventType, channel, enabled], map: "alert_template_configs_event_channel_enabled_idx")
+  @@map("alert_template_configs")
+}
+
+model OperationalThresholdConfig {
+  id           String                 @id @default(cuid())
+  key          OperationalThresholdKey @map("key_name")
+  numericValue Decimal?               @db.Decimal(12, 3) @map("numeric_value")
+  stringValue  String?                @map("string_value")
+  unit         String?
+  notes        String?
+  enabled      Boolean                @default(true)
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+
+  @@unique([key], map: "operational_threshold_configs_key_name_key")
+  @@index([enabled], map: "operational_threshold_configs_enabled_idx")
+  @@map("operational_threshold_configs")
 }
