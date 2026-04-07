@@ -3,6 +3,12 @@
 ## Purpose
 Manage alert templates and operational thresholds from the internal admin UI and verify persistence through protected APIs.
 
+## Daily User Path (Non-Technical)
+- Primary route: `/app/calendar`
+- Primary goal: assign unassigned bookings to one of the active apartments with clear guest names and stay dates.
+- The simple assignment panel is intended for day-to-day operations users.
+- Internal admin configuration is a separate advanced path and should be used by admins only.
+
 ## UI Entry Point
 - Route: `/app/admin/configuration`
 - Access: authenticated internal admin session.
