@@ -42,3 +42,26 @@ All commands below are mandatory and must pass for MVP release readiness.
 - Any non-zero exit code is an automatic no-go.
 - Any missing precondition is an automatic no-go until corrected and re-run.
 - Command outputs and timestamps must be recorded in the release evidence pack.
+
+## Gate 3: Readiness and Workflow Probes
+Run these probes in staging immediately before production release.
+
+### Endpoint probes
+- `GET /api/health/live` -> expect `200` and liveness payload.
+- `GET /api/health/ready` -> expect `200` and readiness payload.
+- `GET /api/health` -> expect readiness alias behavior consistent with deploy runbook.
+
+### Critical workflow probes
+- Auth login flow:
+  - `POST /api/auth/login` with valid credentials -> expect `200`.
+  - `GET /api/auth/me` after login -> expect `200` and session identity.
+- Allocation flow:
+  - `POST /api/assignments` for unassigned booking -> expect success response.
+  - `PATCH /api/assignments/[id]/reassign` with valid target room -> expect success response.
+- Sync visibility flow:
+  - `GET /api/sync/runs` with admin session -> expect `200` and recent run list shape.
+
+### Escalation and stop conditions
+- Any probe failure is an immediate no-go.
+- On failure, open incident channel, assign incident owner, and capture failure evidence.
+- Re-run the full probe set only after fix verification, not partial probes.
