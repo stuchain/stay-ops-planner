@@ -5,7 +5,10 @@ import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 async function assignE2EUnassignedToRoomA(page: Page): Promise<void> {
   const row = page.locator(".ops-drawer-row").filter({ hasText: "E2E Unassigned" }).first();
   await expect(row).toBeVisible({ timeout: 15_000 });
-  await row.getByLabel(/Apartment for booking/).selectOption({ label: "E2E-A" });
+  const roomSelect = row.getByLabel(/Apartment for booking/);
+  await roomSelect.selectOption({ value: "E2E-A" }).catch(async () => {
+    await roomSelect.selectOption({ label: "E2E Room A" });
+  });
   await row.getByRole("button", { name: "Assign apartment" }).click();
   await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
     timeout: 20_000,
