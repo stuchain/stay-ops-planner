@@ -89,18 +89,16 @@ test.describe("ops gate smoke @smoke", () => {
 
     await loginAsStaff(page);
     await page.goto("/app/calendar");
-    await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bookings" })).toBeVisible();
 
-    // Assignment workflow from unassigned queue.
-    await page.getByRole("button", { name: "Unassigned queue" }).click();
-    const row = page.locator(".ops-drawer-row").filter({ hasText: "e2e-seed-unassign" });
+    // Assignment workflow from unassigned panel.
+    const row = page.locator(".ops-drawer-row").filter({ hasText: "E2E Unassigned" }).first();
     await expect(row).toBeVisible({ timeout: 15_000 });
-    await row.getByLabel(/Room for booking/).selectOption({ label: "E2E-A" });
-    await row.getByRole("button", { name: "Assign" }).click();
+    await row.getByLabel(/Apartment for booking/).selectOption({ label: "E2E-A" });
+    await row.getByRole("button", { name: "Assign apartment" }).click();
     await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
       timeout: 20_000,
     });
-    await page.locator(".ops-drawer").getByRole("button", { name: "Close" }).click();
 
     // Conflict rejection smoke via reassign API path.
     const monthYm = (await page.locator(".ops-month-title").textContent())?.trim() ?? "";
@@ -132,7 +130,7 @@ test.describe("ops gate smoke @smoke", () => {
     expect(conflict).toEqual({ ok: true, status: 409, code: "CONFLICT_ASSIGNMENT" });
 
     // Maintenance block create (UI) — short range on E2E-B to avoid overlapping seeded assignments.
-    await page.getByRole("button", { name: "Add block" }).click();
+    await page.getByRole("button", { name: "Block dates" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: "Add maintenance block" })).toBeVisible();
     const ymParts = monthYm.split("-");

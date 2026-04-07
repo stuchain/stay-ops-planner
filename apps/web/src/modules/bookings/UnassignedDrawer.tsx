@@ -193,7 +193,7 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
         onClick={(ev) => ev.stopPropagation()}
       >
         <header className="ops-drawer-header">
-          <h2 id="ops-drawer-title">Unassigned queue</h2>
+          <h2 id="ops-drawer-title">Unassigned bookings</h2>
           <button type="button" className="ops-btn" onClick={onClose}>
             Close
           </button>
@@ -210,7 +210,7 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
         </label>
         {loading && <p className="ops-muted">Loading…</p>}
         {error && <p className="ops-error">{error}</p>}
-        {!loading && !error && filtered.length === 0 && <p className="ops-muted">No unassigned stays in this range.</p>}
+        {!loading && !error && filtered.length === 0 && <p className="ops-muted">No unassigned bookings in this range.</p>}
         <ul className="ops-drawer-list">
           {filtered.map((b) => (
             <li key={b.id} className="ops-drawer-row">

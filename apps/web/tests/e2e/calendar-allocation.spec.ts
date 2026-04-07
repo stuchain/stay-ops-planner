@@ -3,16 +3,13 @@ import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 /** Desktop path: dnd-kit + Playwright `dragTo` is flaky on Windows headless; queue uses the same mutation as drag. */
 async function assignE2EUnassignedToRoomA(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Unassigned queue" }).click();
-  await expect(page.getByRole("heading", { name: "Unassigned queue" })).toBeVisible();
-  const row = page.locator(".ops-drawer-row").filter({ hasText: "e2e-seed-unassign" });
+  const row = page.locator(".ops-drawer-row").filter({ hasText: "E2E Unassigned" }).first();
   await expect(row).toBeVisible({ timeout: 15_000 });
-  await row.getByLabel(/Room for booking/).selectOption({ label: "E2E-A" });
-  await row.getByRole("button", { name: "Assign" }).click();
+  await row.getByLabel(/Apartment for booking/).selectOption({ label: "E2E-A" });
+  await row.getByRole("button", { name: "Assign apartment" }).click();
   await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator(".ops-drawer").getByRole("button", { name: "Close" }).click();
 }
 
 test.describe("calendar allocation", () => {

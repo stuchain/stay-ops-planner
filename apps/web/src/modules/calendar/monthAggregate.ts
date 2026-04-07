@@ -83,7 +83,7 @@ export async function getCalendarMonthAggregate(args: {
     select: { id: true, code: true, displayName: true, isActive: true },
   });
 
-  const roomDtos: CalendarRoomDto[] = rooms.map((r) => ({
+  const allRoomDtos: CalendarRoomDto[] = rooms.map((r) => ({
     id: r.id,
     code: r.code,
     name: r.displayName,
@@ -97,7 +97,7 @@ export async function getCalendarMonthAggregate(args: {
         { checkoutDate: { gt: monthStartUtc } },
       ],
     },
-    include: { assignment: true },
+    include: { assignment: true, sourceListing: true },
     orderBy: [{ checkinDate: "asc" }, { id: "asc" }],
   });
 
@@ -166,6 +166,8 @@ export async function getCalendarMonthAggregate(args: {
       return x.id.localeCompare(y.id);
     },
   );
+
+  const roomDtos: CalendarRoomDto[] = allRoomDtos;
 
   return {
     month: args.yearMonth,

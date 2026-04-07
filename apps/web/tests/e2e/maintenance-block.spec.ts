@@ -10,7 +10,7 @@ test.describe("maintenance blocks", () => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await page.goto("/app/calendar");
-    await page.getByRole("button", { name: "Add block" }).click();
+    await page.getByRole("button", { name: "Block dates" }).click();
     await expect(page.getByRole("heading", { name: "Add maintenance block" })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByRole("heading", { name: "Add maintenance block" })).not.toBeVisible();
@@ -63,7 +63,7 @@ test.describe("maintenance blocks", () => {
     const ym = (await page.locator(".ops-month-title").textContent())?.trim();
     test.skip(!ym || !/^\d{4}-\d{2}$/.test(ym), "Could not read calendar month from UI.");
 
-    await page.getByRole("button", { name: "Add block" }).click();
+    await page.getByRole("button", { name: "Block dates" }).click();
     await page.getByLabel("Start date").fill(`${ym}-10`);
     await page.getByLabel("End date").fill(`${ym}-12`);
     await page.getByRole("button", { name: "Create" }).click();
