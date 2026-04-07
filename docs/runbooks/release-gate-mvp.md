@@ -65,3 +65,23 @@ Run these probes in staging immediately before production release.
 - Any probe failure is an immediate no-go.
 - On failure, open incident channel, assign incident owner, and capture failure evidence.
 - Re-run the full probe set only after fix verification, not partial probes.
+
+## Gate 4: Coverage Risk Register and Blocker Thresholds
+
+### Blocker thresholds
+- Any unresolved `P0` or `P1` risk is automatic no-go.
+- Any `Medium` risk without named owner and due date is automatic no-go.
+- Risks accepted for release require explicit approver and rationale in evidence pack.
+
+### Current risk register (must be reviewed per release)
+| Risk ID | Severity | Area | Description | Owner | Due date | Release status |
+|---|---|---|---|---|---|---|
+| RR-001 | High | Worker runtime | Worker bootstrap/shutdown path lacks direct test coverage. | _TBD_ | _TBD_ | Blocked until owned and dispositioned |
+| RR-002 | Medium | E2E reliability | E2E suites can be skipped when env/seed preconditions drift. | _TBD_ | _TBD_ | Blocked until ownership + guardrails |
+| RR-003 | Medium | Timezone correctness | Cleaning turnover logic includes placeholder timezone behavior. | _TBD_ | _TBD_ | Blocked until ownership + decision |
+
+### Verification requirements
+- Cross-check risk entries against current test inventory under `apps/web/tests` and workspace package tests.
+- Each risk must be either:
+  - fixed with linked commit/test evidence, or
+  - explicitly accepted with approver sign-off and expiry date.
