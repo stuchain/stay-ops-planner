@@ -19,7 +19,7 @@ async function assignE2EUnassignedToRoomA(page: Page): Promise<void> {
   await expect(row).toBeVisible({ timeout: 15_000 });
   const roomSelect = row.getByLabel(/Apartment for booking/);
   await selectE2ERoomA(roomSelect);
-  await row.getByRole("button", { name: "Assign" }).click();
+  await row.getByRole("button", { name: /^Assign$/ }).click();
   await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
     timeout: 20_000,
   });

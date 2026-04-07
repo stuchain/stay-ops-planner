@@ -104,7 +104,7 @@ test.describe("ops gate smoke @smoke", () => {
     });
     expect(targetValue, "E2E room A option missing from assignment dropdown").toBeTruthy();
     await roomSelect.selectOption(targetValue as string);
-    await row.getByRole("button", { name: "Assign" }).click();
+    await row.getByRole("button", { name: /^Assign$/ }).click();
     await expect(page.getByTestId("ops-room-lane-E2E-A").getByText("E2E Unassigned")).toBeVisible({
       timeout: 20_000,
     });
