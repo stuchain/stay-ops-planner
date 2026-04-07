@@ -40,8 +40,14 @@ function defaultMonthYm(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+const CALENDAR_MONTH_STORAGE_KEY = "ops.calendar.month";
+
 export function CalendarClient() {
-  const [month, setMonth] = useState(defaultMonthYm);
+  const [month, setMonth] = useState(() => {
+    if (typeof window === "undefined") return defaultMonthYm();
+    const stored = window.localStorage.getItem(CALENDAR_MONTH_STORAGE_KEY);
+    return stored && /^\d{4}-\d{2}$/.test(stored) ? stored : defaultMonthYm();
+  });
   const [data, setData] = useState<CalendarMonthPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +57,19 @@ export function CalendarClient() {
   const [flash, setFlash] = useState<string | null>(null);
   const [mobileAssignBooking, setMobileAssignBooking] = useState<CalendarBookingItem | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [assigningBookingId, setAssigningBookingId] = useState<string | null>(null);
   const isMobile = useIsNarrowViewport();
+  const [overview, setOverview] = useState<{
+    rooms: Array<{ id: string; label: string }>;
+    unassigned: Array<{
+      bookingId: string;
+      guestName: string;
+      checkinDate: string;
+      checkoutDate: string;
+      status: string;
+    }>;
+  } | null>(null);
+  const [roomPick, setRoomPick] = useState<Record<string, string>>({});
 
   const load = useCallback(async (ym: string) => {
     setLoading(true);
@@ -66,9 +84,33 @@ export function CalendarClient() {
       }
       const json = (await res.json()) as { data: CalendarMonthPayload };
       setData(json.data);
+      const overviewRes = await fetch(`/api/bookings/overview?month=${encodeURIComponent(ym)}`, {
+        credentials: "include",
+      });
+      if (overviewRes.ok) {
+        const overviewJson = (await overviewRes.json()) as {
+          data: {
+            rooms: Array<{ id: string; label: string }>;
+            unassigned: Array<{
+              bookingId: string;
+              guestName: string;
+              checkinDate: string;
+              checkoutDate: string;
+              status: string;
+            }>;
+          };
+        };
+        setOverview({
+          rooms: overviewJson.data.rooms,
+          unassigned: overviewJson.data.unassigned,
+        });
+      } else {
+        setOverview(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
       setData(null);
+      setOverview(null);
     } finally {
       setLoading(false);
     }
@@ -77,6 +119,11 @@ export function CalendarClient() {
   useEffect(() => {
     void load(month);
   }, [month, load]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, month);
+  }, [month]);
 
   useEffect(() => {
     if (!flash) return;
@@ -127,15 +174,93 @@ export function CalendarClient() {
     label: r.code ? `${r.code}${r.name ? ` — ${r.name}` : ""}` : r.name || r.id,
   }));
 
+  async function assignFromSimplePanel(bookingId: string) {
+    if (!overview) return;
+    const roomId = roomPick[bookingId] ?? overview.rooms[0]?.id;
+    if (!roomId) {
+      setFlash("No apartment available to assign.");
+      return;
+    }
+    setAssigningBookingId(bookingId);
+    setFlash(null);
+    try {
+      await performBookingAssignmentMutation(
+        {
+          type: "booking",
+          bookingId,
+          assignmentId: null,
+          assignmentVersion: null,
+          fromRoomId: null,
+        },
+        roomId,
+      );
+      setFlash("Booking assigned successfully.");
+      await load(month);
+    } catch (e) {
+      setFlash(e instanceof Error ? e.message : "Failed to assign booking.");
+    } finally {
+      setAssigningBookingId(null);
+    }
+  }
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
       <main className="ops-calendar-main">
         <header className="ops-calendar-header">
-          <h1>Calendar</h1>
+          <h1>Bookings</h1>
           <Link className="ops-btn" href="/app/cleaning">
-            Cleaning
+            Cleaning tasks
           </Link>
         </header>
+        {!loading && !error && overview && (
+          <section className="ops-markers" aria-label="Needs assignment">
+            <h2>Needs assignment</h2>
+            {overview.unassigned.length === 0 ? (
+              <p className="ops-muted">All bookings are assigned for this month.</p>
+            ) : (
+              <ul className="ops-drawer-list">
+                {overview.unassigned.map((booking) => (
+                  <li key={booking.bookingId} className="ops-drawer-row">
+                    <div className="ops-drawer-row-main">
+                      <strong>{booking.guestName}</strong>
+                      <div className="ops-drawer-dates">
+                        {booking.checkinDate} → {booking.checkoutDate}
+                      </div>
+                      <div className="ops-drawer-meta">Status: {booking.status}</div>
+                    </div>
+                    <div className="ops-drawer-row-actions">
+                      <select
+                        className="ops-input"
+                        value={roomPick[booking.bookingId] ?? overview.rooms[0]?.id ?? ""}
+                        onChange={(ev) =>
+                          setRoomPick((prev) => ({
+                            ...prev,
+                            [booking.bookingId]: ev.target.value,
+                          }))
+                        }
+                        aria-label={`Apartment for booking ${booking.bookingId}`}
+                      >
+                        {overview.rooms.map((room) => (
+                          <option key={room.id} value={room.id}>
+                            {room.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="ops-btn ops-btn-primary"
+                        disabled={assigningBookingId === booking.bookingId || overview.rooms.length === 0}
+                        onClick={() => void assignFromSimplePanel(booking.bookingId)}
+                      >
+                        {assigningBookingId === booking.bookingId ? "Assigning..." : "Assign apartment"}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
         {flash && (
           <div className="ops-toast" role="alert">
             {flash}
@@ -147,6 +272,7 @@ export function CalendarClient() {
           error={error}
           onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
           onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
+          onCurrentMonth={() => setMonth(defaultMonthYm())}
           onAddBlock={() => setBlockModal({ mode: "create" })}
           onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
           isMobile={isMobile}
