@@ -18,6 +18,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
+    "cleanup:e2e": "node ./scripts/cleanup-e2e.mjs",
     "clear:assignments": "node ./scripts/clear-assignments.mjs",
     "retention:prune": "node ./scripts/retention-prune.mjs",
     "build": "prisma generate && tsc",
