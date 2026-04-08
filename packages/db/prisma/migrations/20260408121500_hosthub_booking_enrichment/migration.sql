@@ -1,0 +1,20 @@
+-- Add dedicated Hosthub-enriched booking fields and full vendor payload columns.
+ALTER TABLE "bookings"
+  ADD COLUMN "guest_name" TEXT,
+  ADD COLUMN "guest_email" TEXT,
+  ADD COLUMN "guest_phone" TEXT,
+  ADD COLUMN "guest_adults" INTEGER,
+  ADD COLUMN "guest_children" INTEGER,
+  ADD COLUMN "guest_infants" INTEGER,
+  ADD COLUMN "guest_total" INTEGER,
+  ADD COLUMN "total_amount_cents" INTEGER,
+  ADD COLUMN "currency" TEXT,
+  ADD COLUMN "cleaning_fee_cents" INTEGER,
+  ADD COLUMN "tax_cents" INTEGER,
+  ADD COLUMN "payout_amount_cents" INTEGER,
+  ADD COLUMN "guest_paid_cents" INTEGER,
+  ADD COLUMN "action" TEXT,
+  ADD COLUMN "notes" TEXT,
+  ADD COLUMN "hosthub_calendar_event_raw" JSONB,
+  ADD COLUMN "hosthub_notes_raw" JSONB,
+  ADD COLUMN "hosthub_gr_taxes_raw" JSONB;
