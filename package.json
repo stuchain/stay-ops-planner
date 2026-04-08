@@ -10,6 +10,7 @@
     "build": "corepack pnpm -r run build",
     "lint": "corepack pnpm -r run lint",
     "test": "corepack pnpm -r run test",
+    "test:integration": "node ./scripts/test-integration.mjs",
     "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs",
     "e2e:local": "node ./scripts/e2e-local.mjs",
     "backup:pg": "node ./scripts/backup-postgres.mjs",

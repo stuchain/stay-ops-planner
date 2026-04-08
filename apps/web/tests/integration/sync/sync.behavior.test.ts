@@ -15,7 +15,7 @@ import {
 } from "@stay-ops/sync";
 import { handleHosthubWebhookPost } from "../../../src/modules/sync/hosthubWebhook";
 
-process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops";
+process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops_test";
 process.env.REDIS_URL ??= "redis://localhost:6379/2";
 
 const prisma = new PrismaClient();
@@ -135,6 +135,52 @@ describe("sync — revalidate assignment after date change", () => {
   });
   beforeEach(async () => {
     await truncateSyncDomain();
+  });
+
+  it("keeps assignment while updating non-date fields", async () => {
+    const resId = "reval-preserve-b1";
+    const listId = "reval-preserve-l1";
+    const raw1 = {
+      reservationId: resId,
+      listingId: listId,
+      status: "confirmed" as const,
+      checkIn: "2026-10-01",
+      checkOut: "2026-10-05",
+      listingChannel: "airbnb",
+      guestTotal: 2,
+      totalAmountCents: 50000,
+    };
+    await applyHosthubReservation(prisma, raw1, raw1);
+
+    const booking = await prisma.booking.findFirstOrThrow({
+      where: { externalBookingId: resId, channel: Channel.airbnb },
+    });
+    const room = await prisma.room.create({ data: { code: "reval-preserve-R1" } });
+    const assignmentRow = await prisma.assignment.create({
+      data: {
+        bookingId: booking.id,
+        roomId: room.id,
+        startDate: booking.checkinDate,
+        endDate: booking.checkoutDate,
+      },
+    });
+
+    const raw2 = {
+      ...raw1,
+      guestTotal: 4,
+      totalAmountCents: 73000,
+    };
+    await applyHosthubReservation(prisma, raw2, raw2);
+
+    const updated = await prisma.booking.findFirstOrThrow({
+      where: { id: booking.id },
+      include: { assignment: true },
+    });
+    expect(updated.status).toBe(BookingStatus.confirmed);
+    expect(updated.guestTotal).toBe(4);
+    expect(updated.totalAmountCents).toBe(73000);
+    expect(updated.assignment?.id).toBe(assignmentRow.id);
+    expect(updated.assignment?.roomId).toBe(room.id);
   });
 
   it("marks needs_reassignment and removes assignment when stay dates drift", async () => {
