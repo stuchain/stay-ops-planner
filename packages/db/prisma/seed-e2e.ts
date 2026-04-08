@@ -15,6 +15,7 @@ const E2E_EXTERNAL = {
   bravo: "e2e-seed-bravo",
   delta: "e2e-seed-delta",
 } as const;
+const E2E_ROOM_CODES = ["E2E-A", "E2E-B", "R1"] as const;
 
 async function wipeE2eBookings() {
   for (const externalBookingId of Object.values(E2E_EXTERNAL)) {
@@ -29,7 +30,7 @@ async function wipeE2eBlocksAndRooms() {
   // that reference the E2E rooms. Clean those up before deleting rooms.
   const roomIds = (
     await prisma.room.findMany({
-      where: { code: { in: ["E2E-A", "E2E-B"] } },
+      where: { code: { in: [...E2E_ROOM_CODES] } },
       select: { id: true },
     })
   ).map((r) => r.id);
@@ -44,7 +45,7 @@ async function wipeE2eBlocksAndRooms() {
     where: { reason: "e2e-seed-overlap-block" },
   });
   await prisma.room.deleteMany({
-    where: { code: { in: ["E2E-A", "E2E-B"] } },
+    where: { code: { in: [...E2E_ROOM_CODES] } },
   });
 }
 

@@ -85,7 +85,12 @@ async function main() {
   run("corepack", ["pnpm", "--filter", "@stay-ops/db", "seed:e2e"]);
 
   console.log("Running Playwright…");
-  run("corepack", ["pnpm", "--filter", "@stay-ops/web", "test:e2e"], { env: envForPlaywright() });
+  try {
+    run("corepack", ["pnpm", "--filter", "@stay-ops/web", "test:e2e"], { env: envForPlaywright() });
+  } finally {
+    console.log("Running cleanup:e2e (R1/E2E rooms) in finally…");
+    run("corepack", ["pnpm", "--filter", "@stay-ops/db", "cleanup:e2e"]);
+  }
 }
 
 main().catch((e) => {

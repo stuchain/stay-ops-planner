@@ -9,11 +9,12 @@ const E2E_EXTERNAL = [
   "e2e-seed-bravo",
   "e2e-seed-delta",
 ];
+const E2E_ROOM_CODES = ["E2E-A", "E2E-B", "R1"];
 
 async function cleanupE2eFixtures() {
   const roomIds = (
     await prisma.room.findMany({
-      where: { code: { in: ["E2E-A", "E2E-B"] } },
+      where: { code: { in: E2E_ROOM_CODES } },
       select: { id: true },
     })
   ).map((r) => r.id);
@@ -53,7 +54,7 @@ async function cleanupE2eFixtures() {
   });
 
   const rooms = await prisma.room.deleteMany({
-    where: { code: { in: ["E2E-A", "E2E-B"] } },
+    where: { code: { in: E2E_ROOM_CODES } },
   });
 
   return {
