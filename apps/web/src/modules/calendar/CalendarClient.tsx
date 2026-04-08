@@ -143,6 +143,14 @@ export function CalendarClient() {
   }, [month, displayMonths, load]);
 
   useEffect(() => {
+    function onSyncTick() {
+      void load(month, displayMonths);
+    }
+    window.addEventListener("ops:hosthub-sync-tick", onSyncTick);
+    return () => window.removeEventListener("ops:hosthub-sync-tick", onSyncTick);
+  }, [displayMonths, load, month]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, month);
   }, [month]);

@@ -183,7 +183,8 @@ export function MonthGrid({
 
   const unassignedBookings = bookings.filter((b) => b.roomId === null);
   const hasAnyItems = bookings.length > 0 || blocks.length > 0;
-  const monthParts = data.month.split("-").map((p) => Number(p));
+  const monthValue = data.month;
+  const monthParts = monthValue.split("-").map((p) => Number(p));
   const monthYear = monthParts[0] ?? 1970;
   const monthNumber = monthParts[1] ?? 1;
   const monthDayCount = new Date(monthYear, monthNumber, 0).getDate();
@@ -199,7 +200,7 @@ export function MonthGrid({
     ? bookings.find((b) => b.id === activePayload?.bookingId) ?? null
     : null;
   const draggedHintSpan = draggedBooking
-    ? toMonthSpan(draggedBooking, data.month, monthDayCount)
+    ? toMonthSpan(draggedBooking, monthValue, monthDayCount)
     : null;
 
   function spansOverlap(
@@ -213,7 +214,7 @@ export function MonthGrid({
     if (!draggedHintSpan) return false;
     const roomBookings = bookings.filter((b) => b.roomId === roomId);
     for (const booking of roomBookings) {
-      const span = toMonthSpan(booking, data.month, monthDayCount);
+      const span = toMonthSpan(booking, monthValue, monthDayCount);
       if (spansOverlap(draggedHintSpan, span)) return false;
     }
     const roomBlocks = blocksByRoom.get(roomId) ?? [];
@@ -221,9 +222,9 @@ export function MonthGrid({
       const blockStartMonth = block.startDate.slice(0, 7);
       const blockEndMonth = block.endDate.slice(0, 7);
       const blockSpan = {
-        start: blockStartMonth === data.month ? Math.max(1, dayOfMonthIso(block.startDate)) : 1,
+        start: blockStartMonth === monthValue ? Math.max(1, dayOfMonthIso(block.startDate)) : 1,
         endExclusive:
-          blockEndMonth === data.month
+          blockEndMonth === monthValue
             ? Math.min(monthDayCount + 1, dayOfMonthIso(block.endDate))
             : monthDayCount + 1,
       };

@@ -148,6 +148,7 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
       startDate: row.checkinDate,
       endDate: row.checkoutDate,
       guestName: row.externalBookingId,
+      channel: row.channel === "airbnb" || row.channel === "booking" ? row.channel : "direct",
       status: "confirmed",
       assignmentId: null,
       assignmentVersion: null,

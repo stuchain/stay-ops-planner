@@ -18,12 +18,15 @@ function rowAsJson(row: unknown): Prisma.InputJsonValue {
  * Records `sync_runs` + `import_errors` for observability.
  * Persists `cursor` as Unix `updated_gte` watermark from max `updated` on fetched rows.
  */
-export async function runHosthubReconcile(prisma: PrismaClient): Promise<void> {
+export async function runHosthubReconcile(
+  prisma: PrismaClient,
+  opts?: { apiToken?: string | null },
+): Promise<void> {
   const run = await startSyncRun(prisma, "hosthub_poll");
   const stats = emptySyncRunStats();
 
   try {
-    const token = process.env.HOSTHUB_API_TOKEN?.trim();
+    const token = opts?.apiToken?.trim() || process.env.HOSTHUB_API_TOKEN?.trim();
     if (!token) {
       console.warn("HOSTHUB_API_TOKEN not set; skipping Hosthub reconcile fetch");
       await finalizeSyncRun(prisma, run.id, "completed", stats, null);
