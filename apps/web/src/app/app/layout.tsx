@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SyncHeartbeat } from "@/modules/sync/SyncHeartbeat";
 
 export default function AppLayout({
   children,
@@ -7,6 +8,7 @@ export default function AppLayout({
 }>) {
   return (
     <div className="ops-shell">
+      <SyncHeartbeat />
       <header className="ops-shell-header" role="banner">
         <nav className="ops-shell-nav" aria-label="Main menu">
           <Link className="ops-shell-link" href="/app/calendar">
@@ -20,6 +22,9 @@ export default function AppLayout({
           </Link>
           <Link className="ops-shell-link" href="/app/excel">
             Excel
+          </Link>
+          <Link className="ops-shell-link" href="/app/settings">
+            Settings
           </Link>
         </nav>
       </header>
