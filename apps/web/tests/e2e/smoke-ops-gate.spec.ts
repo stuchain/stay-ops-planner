@@ -89,7 +89,7 @@ test.describe("ops gate smoke @smoke", () => {
 
     await loginAsStaff(page);
     await page.goto("/app/calendar");
-    await expect(page.getByRole("heading", { name: "Bookings" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
 
     // Assignment workflow from unassigned panel.
     const row = page.locator(".ops-needs-card").filter({ hasText: "E2E Unassigned" }).first();
