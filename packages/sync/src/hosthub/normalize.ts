@@ -10,6 +10,14 @@ function pickString(r: Record<string, unknown>, ...keys: string[]): string | und
   return undefined;
 }
 
+function objectAtPath(r: Record<string, unknown>, key: string): Record<string, unknown> | null {
+  const value = r[key];
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
 function pickListingId(r: Record<string, unknown>): string | undefined {
   const rental = r.rental;
   if (rental !== null && typeof rental === "object" && !Array.isArray(rental)) {
@@ -41,6 +49,7 @@ function pickListingChannel(r: Record<string, unknown>): string | undefined {
     r,
     "listingChannel",
     "listing_channel",
+    "channel_type_code",
     "channel",
     "source",
     "platform",
@@ -57,12 +66,19 @@ function pickListingName(r: Record<string, unknown>): string | undefined {
 }
 
 function pickGuestName(r: Record<string, unknown>): string | undefined {
-  const guest = r.guest;
-  if (guest !== null && typeof guest === "object" && !Array.isArray(guest)) {
-    const n = pickString(guest as Record<string, unknown>, "name", "full_name");
+  const guest =
+    objectAtPath(r, "guest") ??
+    objectAtPath(r, "customer") ??
+    objectAtPath(r, "guest_details") ??
+    objectAtPath(r, "traveler");
+  if (guest) {
+    const n = pickString(guest, "name", "full_name", "first_name");
     if (n) return n;
+    const first = pickString(guest, "first_name", "firstname");
+    const last = pickString(guest, "last_name", "lastname");
+    if (first || last) return `${first ?? ""} ${last ?? ""}`.trim();
   }
-  return pickString(r, "guest_name", "guestName", "room_guest_name");
+  return pickString(r, "guest_name", "guestName", "room_guest_name", "customer_name", "booker_name");
 }
 
 function pickNumber(r: Record<string, unknown>, ...keys: string[]): number | undefined {
@@ -223,31 +239,38 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
   const listingChannel = pickListingChannel(r);
   const listingName = pickListingName(r);
   const guestName = pickGuestName(r);
-  const guestObj = r.guest !== null && typeof r.guest === "object" && !Array.isArray(r.guest)
-    ? (r.guest as Record<string, unknown>)
-    : {};
+  const guestObj =
+    objectAtPath(r, "guest") ??
+    objectAtPath(r, "customer") ??
+    objectAtPath(r, "guest_details") ??
+    objectAtPath(r, "traveler") ??
+    {};
   const guestEmail =
-    pickString(guestObj, "email", "guest_email", "mail") ?? pickString(r, "guest_email", "guestEmail", "email");
+    pickString(guestObj, "email", "guest_email", "mail", "booker_email") ??
+    pickString(r, "guest_email", "guestEmail", "email", "booker_email", "customer_email");
   const guestPhone =
-    pickString(guestObj, "phone", "phone_number", "mobile") ??
-    pickString(r, "guest_phone", "guestPhone", "phone", "guest_phone_number");
+    pickString(guestObj, "phone", "phone_number", "mobile", "mobile_phone", "booker_phone") ??
+    pickString(r, "guest_phone", "guestPhone", "phone", "guest_phone_number", "mobile_phone", "customer_phone");
   const guestAdults =
-    pickNumber(guestObj, "adults", "adult_count") ?? pickNumber(r, "guest_adults", "guestAdults", "adults");
+    pickNumber(guestObj, "adults", "adult_count", "number_of_adults") ??
+    pickNumber(r, "guest_adults", "guestAdults", "adults", "number_of_adults");
   const guestChildren =
-    pickNumber(guestObj, "children", "child_count") ?? pickNumber(r, "guest_children", "guestChildren", "children");
+    pickNumber(guestObj, "children", "child_count", "number_of_children") ??
+    pickNumber(r, "guest_children", "guestChildren", "children", "number_of_children");
   const guestInfants =
-    pickNumber(guestObj, "infants", "infant_count") ?? pickNumber(r, "guest_infants", "guestInfants", "infants");
+    pickNumber(guestObj, "infants", "infant_count", "number_of_infants") ??
+    pickNumber(r, "guest_infants", "guestInfants", "infants", "number_of_infants");
   const guestTotal =
-    pickNumber(guestObj, "total", "count", "guest_count") ??
-    pickNumber(r, "guest_total", "guestTotal", "guest_count", "guestCount");
-  const totalAmountCents = pickMoneyCents(r, "booking_value", "total_value");
-  const cleaningFeeCents = pickMoneyCents(r, "cleaning_fee");
-  const taxCents = pickMoneyCents(r, "taxes", "tax");
-  const payoutAmountCents = pickMoneyCents(r, "total_payout", "payout");
-  const guestPaidCents = pickMoneyCents(r, "guest_paid");
-  const currency = pickCurrency(r, "booking_value", "total_value", "total_payout", "guest_paid", "currency");
+    pickNumber(guestObj, "total", "count", "guest_count", "number_of_guests") ??
+    pickNumber(r, "guest_total", "guestTotal", "guest_count", "guestCount", "number_of_guests");
+  const totalAmountCents = pickMoneyCents(r, "booking_value", "total_value", "total", "total_price");
+  const cleaningFeeCents = pickMoneyCents(r, "cleaning_fee", "cleaningFee", "cleaning");
+  const taxCents = pickMoneyCents(r, "taxes", "tax", "tax_amount");
+  const payoutAmountCents = pickMoneyCents(r, "total_payout", "payout", "host_payout", "net_payout");
+  const guestPaidCents = pickMoneyCents(r, "guest_paid", "amount_paid", "paid_amount");
+  const currency = pickCurrency(r, "booking_value", "total_value", "total_payout", "guest_paid", "total", "currency");
   const action = pickString(r, "action", "action_type");
-  const notes = pickString(r, "notes", "note");
+  const notes = pickString(r, "notes", "note", "remarks", "special_requests", "comment");
 
   return {
     reservationId,

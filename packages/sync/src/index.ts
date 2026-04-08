@@ -39,6 +39,7 @@ export { getSyncPrisma, disconnectSyncPrisma } from "./db/client.js";
 export { applyHosthubReservation } from "./pipeline/applyHosthubReservation.js";
 export { extractHosthubReservationDto } from "./pipeline/extractReservation.js";
 export { runHosthubReconcile } from "./pipeline/reconcilePoll.js";
+export { runHosthubEnrichmentBackfill } from "./pipeline/backfillEnrichment.js";
 export { mapHosthubListingChannel } from "./pipeline/mapChannel.js";
 export { mapHosthubBookingStatus } from "./pipeline/bookingStatus.js";
 export { parseDateOnlyUtc, nightsBetweenCheckinCheckout } from "./pipeline/dates.js";

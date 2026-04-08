@@ -88,6 +88,10 @@ async function upsertListingAndBooking(
       },
     },
   });
+  const stayDatesChanged =
+    existingBooking !== null &&
+    (existingBooking.checkinDate.getTime() !== checkinDate.getTime() ||
+      existingBooking.checkoutDate.getTime() !== checkoutDate.getTime());
 
   const listing = await tx.sourceListing.upsert({
     where: {
@@ -188,7 +192,9 @@ async function upsertListingAndBooking(
     },
   });
 
-  await revalidateAssignmentIfNeeded(tx, booking.id);
+  if (stayDatesChanged) {
+    await revalidateAssignmentIfNeeded(tx, booking.id);
+  }
 
   const afterRevalidate = await tx.booking.findUnique({
     where: { id: booking.id },

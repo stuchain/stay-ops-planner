@@ -6,7 +6,15 @@ import { Channel } from "@stay-ops/db";
  */
 export function mapHosthubListingChannel(listingChannel: string | undefined): Channel {
   const s = listingChannel?.trim().toLowerCase() ?? "";
-  if (s.includes("airbnb")) return Channel.airbnb;
-  if (s.includes("booking")) return Channel.booking;
+  const compact = s.replace(/[\s._-]+/g, "");
+  if (compact.includes("airbnb")) return Channel.airbnb;
+  if (
+    compact.includes("booking") ||
+    compact.includes("bookingcom") ||
+    compact.includes("bookingdotcom") ||
+    compact.includes("bcom")
+  ) {
+    return Channel.booking;
+  }
   return Channel.direct;
 }
