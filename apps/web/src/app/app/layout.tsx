@@ -17,8 +17,8 @@ export default function AppLayout({
           <Link className="ops-shell-link" href="/app/cleaning">
             Cleaning
           </Link>
-          <Link className="ops-shell-link" href="/app/reservations">
-            Reservations
+          <Link className="ops-shell-link" href="/app/bookings">
+            Bookings
           </Link>
           <Link className="ops-shell-link" href="/app/excel">
             Excel

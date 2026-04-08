@@ -1,0 +1,442 @@
+import type { BookingStatus, Channel, Prisma } from "@stay-ops/db";
+
+type Dict = Record<string, unknown>;
+
+function asObject(value: unknown): Dict {
+  return value && typeof value === "object" ? (value as Dict) : {};
+}
+
+function asString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function pickString(obj: Dict, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = asString(obj[key]);
+    if (value) return value;
+  }
+  return null;
+}
+
+function pickNumber(obj: Dict, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = asNumber(obj[key]);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function pickGuest(root: Dict, guestObj: Dict, keys: string[]): string | null {
+  for (const key of keys) {
+    const nested = asString(guestObj[key]);
+    if (nested) return nested;
+    const top = asString(root[key]);
+    if (top) return top;
+  }
+  return null;
+}
+
+function dateStr(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function centsToAmount(cents: number | null | undefined): number | null {
+  if (cents === null || cents === undefined) return null;
+  return cents / 100;
+}
+
+export type BookingListItemDto = {
+  id: string;
+  channel: Channel;
+  externalBookingId: string;
+  status: BookingStatus;
+  checkinDate: string;
+  checkoutDate: string;
+  nights: number;
+  guestName: string;
+  guestCount: number | null;
+  totalValue: number | null;
+  currency: string | null;
+  action: string | null;
+};
+
+export type BookingDetailDto = BookingListItemDto & {
+  createdAt: string;
+  updatedAt: string;
+  sourceListingId: string | null;
+  sourceListingName: string | null;
+  assignment: {
+    id: string;
+    roomId: string;
+    startDate: string;
+    endDate: string;
+    version: number;
+  } | null;
+  contact: {
+    email: string | null;
+    phone: string | null;
+  };
+  guests: {
+    adults: number | null;
+    children: number | null;
+    infants: number | null;
+    total: number | null;
+  };
+  money: {
+    total: number | null;
+    currency: string | null;
+    cleaningFee: number | null;
+    taxes: number | null;
+    payout: number | null;
+    guestPaid: number | null;
+  };
+  notes: string | null;
+  hosthub: {
+    calendarEventRaw: unknown;
+    notesRaw: unknown;
+    grTaxesRaw: unknown;
+  };
+  notesTimeline: Array<{
+    id: string | null;
+    created: string | null;
+    updated: string | null;
+    status: string | null;
+    content: string | null;
+  }>;
+  payloadSections: Array<{
+    id: string;
+    title: string;
+    fields: Array<{ key: string; label: string; value: string }>;
+  }>;
+  rawPayload: unknown;
+};
+
+export type BookingWithDetailRelations = Prisma.BookingGetPayload<{
+  include: {
+    assignment: true;
+    sourceListing: { select: { title: true } };
+  };
+}>;
+
+export type BookingRow = Prisma.BookingGetPayload<Record<string, never>>;
+
+export function bookingListItemFromModel(booking: BookingRow): BookingListItemDto {
+  const raw = asObject(booking.rawPayload);
+  const guestObj = asObject(raw.guest ?? raw.customer ?? raw.guest_details);
+
+  const guestName =
+    booking.guestName ??
+    pickGuest(raw, guestObj, ["name", "full_name", "guest_name", "guestName", "customer_name"]) ??
+    "Guest";
+  const guestCount =
+    booking.guestTotal ??
+    pickNumber(guestObj, ["total", "count", "guests", "guest_count"]) ??
+    pickNumber(raw, ["guests", "guest_count", "total_guests"]);
+  const totalValue =
+    centsToAmount(booking.totalAmountCents) ??
+    pickNumber(raw, ["total", "total_price", "total_value", "amount_total", "reservation_total"]);
+  const currency = booking.currency ?? pickString(raw, ["currency", "currency_code"]);
+  const action = booking.action ?? pickString(raw, ["action", "action_type", "reason", "source_action"]);
+
+  return {
+    id: booking.id,
+    channel: booking.channel,
+    externalBookingId: booking.externalBookingId,
+    status: booking.status,
+    checkinDate: dateStr(booking.checkinDate),
+    checkoutDate: dateStr(booking.checkoutDate),
+    nights: booking.nights,
+    guestName,
+    guestCount,
+    totalValue,
+    currency,
+    action,
+  };
+}
+
+export function bookingDetailFromModel(booking: BookingWithDetailRelations): BookingDetailDto {
+  const base = bookingListItemFromModel(booking);
+  const raw = asObject(booking.rawPayload);
+  const guestObj = asObject(raw.guest ?? raw.customer ?? raw.guest_details);
+
+  return {
+    ...base,
+    createdAt: booking.createdAt.toISOString(),
+    updatedAt: booking.updatedAt.toISOString(),
+    sourceListingId: booking.sourceListingId,
+    sourceListingName: booking.sourceListing?.title ?? null,
+    assignment: booking.assignment
+      ? {
+          id: booking.assignment.id,
+          roomId: booking.assignment.roomId,
+          startDate: dateStr(booking.assignment.startDate),
+          endDate: dateStr(booking.assignment.endDate),
+          version: booking.assignment.version,
+        }
+      : null,
+    contact: {
+      email: booking.guestEmail ?? pickGuest(raw, guestObj, ["email", "guest_email", "mail"]),
+      phone: booking.guestPhone ?? pickGuest(raw, guestObj, ["phone", "phone_number", "mobile"]),
+    },
+    guests: {
+      adults: booking.guestAdults ?? pickNumber(guestObj, ["adults", "adult_count"]) ?? pickNumber(raw, ["adults"]),
+      children:
+        booking.guestChildren ?? pickNumber(guestObj, ["children", "child_count"]) ?? pickNumber(raw, ["children"]),
+      infants: booking.guestInfants ?? pickNumber(guestObj, ["infants", "infant_count"]) ?? pickNumber(raw, ["infants"]),
+      total:
+        booking.guestTotal ??
+        pickNumber(guestObj, ["total", "count", "guests", "guest_count"]) ??
+        pickNumber(raw, ["guests", "guest_count", "total_guests"]),
+    },
+    money: {
+      total:
+        centsToAmount(booking.totalAmountCents) ??
+        pickNumber(raw, ["total", "total_price", "total_value", "amount_total", "reservation_total"]),
+      currency: booking.currency ?? pickString(raw, ["currency", "currency_code"]),
+      cleaningFee: centsToAmount(booking.cleaningFeeCents) ?? pickNumber(raw, ["cleaning_fee", "cleaningFee"]),
+      taxes: centsToAmount(booking.taxCents) ?? pickNumber(raw, ["taxes", "tax"]),
+      payout: centsToAmount(booking.payoutAmountCents) ?? pickNumber(raw, ["payout", "host_payout"]),
+      guestPaid: centsToAmount(booking.guestPaidCents) ?? pickNumber(raw, ["guest_paid"]),
+    },
+    notes: booking.notes ?? pickString(raw, ["notes", "note", "internal_notes"]),
+    hosthub: {
+      calendarEventRaw: booking.hosthubCalendarEventRaw,
+      notesRaw: booking.hosthubNotesRaw,
+      grTaxesRaw: booking.hosthubGrTaxesRaw,
+    },
+    notesTimeline: extractNotesTimeline(booking.hosthubNotesRaw),
+    payloadSections: buildPayloadSections([
+      booking.hosthubCalendarEventRaw,
+      booking.hosthubNotesRaw,
+      booking.hosthubGrTaxesRaw,
+      booking.rawPayload,
+    ]),
+    rawPayload: booking.rawPayload,
+  };
+}
+
+function extractNotesTimeline(value: unknown): BookingDetailDto["notesTimeline"] {
+  const root = asObject(value);
+  const arr = Array.isArray(root.data) ? root.data : [];
+  return arr.map((item) => {
+    const obj = asObject(item);
+    return {
+      id: asString(obj.id),
+      created: asString(obj.created),
+      updated: asString(obj.updated),
+      status: asString(obj.status),
+      content: asString(obj.content),
+    };
+  });
+}
+
+function titleCase(text: string): string {
+  return text
+    .replace(/[_\-.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function stringifyValue(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "string") return value.trim().length > 0 ? value : "-";
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    return value.length === 0
+      ? "[]"
+      : value
+          .map((item) => (typeof item === "object" ? JSON.stringify(item) : String(item)))
+          .join(", ");
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function flattenPayload(
+  value: unknown,
+  prefix: string,
+  out: Array<{ key: string; value: unknown }>,
+  seen: Set<unknown>,
+): void {
+  if (value === null || value === undefined) {
+    out.push({ key: prefix, value });
+    return;
+  }
+  if (typeof value !== "object") {
+    out.push({ key: prefix, value });
+    return;
+  }
+  if (seen.has(value)) return;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      out.push({ key: prefix, value: [] });
+      return;
+    }
+    for (let i = 0; i < value.length; i += 1) {
+      const nextKey = prefix ? `${prefix}[${i}]` : `[${i}]`;
+      flattenPayload(value[i], nextKey, out, seen);
+    }
+    return;
+  }
+
+  const obj = value as Dict;
+  const keys = Object.keys(obj);
+  if (keys.length === 0) {
+    out.push({ key: prefix, value: {} });
+    return;
+  }
+  for (const key of keys) {
+    const nextKey = prefix ? `${prefix}.${key}` : key;
+    flattenPayload(obj[key], nextKey, out, seen);
+  }
+}
+
+function sectionIdForKey(path: string): string {
+  const key = path.toLowerCase();
+  if (
+    key.includes("guest") ||
+    key.includes("email") ||
+    key.includes("phone") ||
+    key.includes("adults") ||
+    key.includes("children") ||
+    key.includes("infants")
+  ) {
+    return "guest_contact";
+  }
+  if (
+    key.includes("booking_value") ||
+    key.includes("total_payout") ||
+    key.includes("tax") ||
+    key.includes("paid") ||
+    key.includes("currency") ||
+    key.includes("fee") ||
+    key.includes("price") ||
+    key.includes("amount")
+  ) {
+    return "financial";
+  }
+  if (key.includes("source") || key.includes("channel")) return "source";
+  if (key.includes("rental") || key.includes("listing")) return "rental";
+  if (key.includes("date") || key.includes("check") || key.includes("night") || key.includes("status")) {
+    return "lifecycle";
+  }
+  if (key.includes("identification") || key.includes("passport") || key.includes("vat") || key.includes("id")) {
+    return "identification";
+  }
+  if (key.includes("note") || key.includes("memo") || key.includes("comment") || key.includes("message")) {
+    return "notes_meta";
+  }
+  if (key.includes("type") || key.includes("url") || key.includes("object")) return "core";
+  return "additional";
+}
+
+function sectionTitle(sectionId: string): string {
+  const titles: Record<string, string> = {
+    core: "Core",
+    guest_contact: "Guest and Contact",
+    financial: "Financial",
+    source: "Source",
+    rental: "Rental",
+    lifecycle: "Lifecycle",
+    identification: "Identification",
+    notes_meta: "Notes and Meta",
+    additional: "Additional Fields",
+  };
+  return titles[sectionId] ?? titleCase(sectionId);
+}
+
+function buildPayloadSections(sources: unknown[]): BookingDetailDto["payloadSections"] {
+  const flattened: Array<{ key: string; value: unknown }> = [];
+  const seenObjects = new Set<unknown>();
+  for (const source of sources) {
+    flattenPayload(source, "", flattened, seenObjects);
+  }
+
+  const dedup = new Set<string>();
+  const grouped = new Map<string, Array<{ key: string; label: string; value: string }>>();
+  for (const item of flattened) {
+    if (!item.key) continue;
+    const dedupKey = `${item.key}::${stringifyValue(item.value)}`;
+    if (dedup.has(dedupKey)) continue;
+    dedup.add(dedupKey);
+    const sectionId = sectionIdForKey(item.key);
+    const section = grouped.get(sectionId) ?? [];
+    section.push({
+      key: item.key,
+      label: titleCase(item.key.split(".").pop() ?? item.key),
+      value: stringifyValue(item.value),
+    });
+    grouped.set(sectionId, section);
+  }
+
+  const preferredOrder = [
+    "core",
+    "guest_contact",
+    "financial",
+    "source",
+    "rental",
+    "lifecycle",
+    "identification",
+    "notes_meta",
+    "additional",
+  ];
+
+  const sections: BookingDetailDto["payloadSections"] = [];
+  for (const sectionId of preferredOrder) {
+    const fields = grouped.get(sectionId);
+    if (!fields || fields.length === 0) continue;
+    fields.sort((a, b) => a.key.localeCompare(b.key));
+    sections.push({
+      id: sectionId,
+      title: sectionTitle(sectionId),
+      fields,
+    });
+  }
+  return sections;
+}
+
+export function mergeEditablePayload(currentPayload: unknown, updates: Dict): Dict {
+  const raw = asObject(currentPayload);
+  const guest = asObject(raw.guest);
+  const mergedGuest: Dict = { ...guest };
+
+  const assignIfDefined = (obj: Dict, key: string, value: unknown) => {
+    if (value !== undefined) obj[key] = value;
+  };
+
+  assignIfDefined(mergedGuest, "name", updates.guestName);
+  assignIfDefined(mergedGuest, "email", updates.email);
+  assignIfDefined(mergedGuest, "phone", updates.phone);
+  assignIfDefined(mergedGuest, "adults", updates.adults);
+  assignIfDefined(mergedGuest, "children", updates.children);
+  assignIfDefined(mergedGuest, "infants", updates.infants);
+  assignIfDefined(mergedGuest, "total", updates.totalGuests);
+
+  const merged: Dict = {
+    ...raw,
+    guest: mergedGuest,
+  };
+  assignIfDefined(merged, "total_price", updates.totalValue);
+  assignIfDefined(merged, "currency", updates.currency);
+  assignIfDefined(merged, "notes", updates.notes);
+  assignIfDefined(merged, "action", updates.action);
+
+  return merged;
+}
