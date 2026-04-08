@@ -2,6 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import type { CalendarBookingItem } from "./calendarTypes";
+import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 
 type Props = {
   item: CalendarBookingItem;
@@ -60,7 +61,10 @@ export function BookingCard({ item, isMobile, onQuickAssign }: Props) {
           Assign…
         </button>
       )}
-      <div className="ops-booking-card-title">{item.guestName}</div>
+      <div className="ops-booking-card-title ops-name-with-logo">
+        <ChannelLogo channel={item.channel} className="ops-channel-logo" />
+        <span>{item.guestName}</span>
+      </div>
       <div className="ops-booking-card-dates">
         {item.startDate} → {item.endDate}
       </div>

@@ -11,6 +11,7 @@ import { BookingCard } from "./BookingCard";
 import { BlockChip } from "./BlockChip";
 import { RoomLane } from "./RoomLane";
 import { bookingItemToDragPayload } from "./optimisticMove";
+import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 
 function laneTestIdSuffix(room: CalendarRoom): string {
   const raw = room.code?.trim() || room.id;
@@ -420,7 +421,10 @@ function TimelineBookingBar({
       {...listeners}
       {...attributes}
     >
-      <span className="ops-timeline-booking-name">{item.guestName}</span>
+      <span className="ops-timeline-booking-name ops-name-with-logo">
+        <ChannelLogo channel={item.channel} className="ops-channel-logo" />
+        <span>{item.guestName}</span>
+      </span>
       <span className="ops-timeline-booking-meta">{nights}</span>
     </div>
   );

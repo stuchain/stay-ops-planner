@@ -8,6 +8,7 @@ import {
 import { bookingItemToDragPayload } from "@/modules/calendar/optimisticMove";
 import type { CalendarBookingItem, CalendarRoom } from "@/modules/calendar/calendarTypes";
 import { SUGGESTION_REASON_CODE_LABELS, type SuggestionReasonCode } from "@/modules/suggestions/types";
+import { ChannelLogo } from "./ChannelLogo";
 
 type UnassignedRow = {
   id: string;
@@ -220,7 +221,11 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
                   {b.checkinDate} → {b.checkoutDate}
                 </div>
                 <div className="ops-drawer-meta">
-                  {b.channel} · {b.externalBookingId}
+                  <span className="ops-name-with-logo">
+                    <ChannelLogo channel={b.channel} className="ops-channel-logo" />
+                    <span>{b.channel}</span>
+                  </span>{" "}
+                  · {b.externalBookingId}
                 </div>
                 {rowError[b.id] && <p className="ops-error ops-drawer-row-err">{rowError[b.id]}</p>}
                 <div className="ops-suggestion-list" aria-label={`Suggestions for booking ${b.id}`}>

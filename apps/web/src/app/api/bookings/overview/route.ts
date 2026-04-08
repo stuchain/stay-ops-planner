@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
     .map((item) => ({
       bookingId: item.id,
       guestName: item.guestName,
+      channel: item.channel,
       checkinDate: item.startDate,
       checkoutDate: item.endDate,
       status: item.status,
@@ -68,6 +69,7 @@ export async function GET(request: NextRequest) {
       return {
         bookingId: item.id,
         guestName: item.guestName,
+        channel: item.channel,
         checkinDate: item.startDate,
         checkoutDate: item.endDate,
         status: item.status,

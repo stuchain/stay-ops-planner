@@ -1,6 +1,7 @@
 "use client";
 
 import type { CalendarBookingItem, CalendarRoom } from "./calendarTypes";
+import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 
 type Props = {
   open: boolean;
@@ -27,7 +28,11 @@ export function MobileAssignSheet({ open, booking, rooms, onClose, onPickRoom }:
           Assign stay
         </h2>
         <p className="ops-sheet-sub">
-          {booking.guestName} · {booking.startDate} → {booking.endDate}
+          <span className="ops-name-with-logo">
+            <ChannelLogo channel={booking.channel} className="ops-channel-logo" />
+            <span>{booking.guestName}</span>
+          </span>{" "}
+          · {booking.startDate} → {booking.endDate}
         </p>
         <div className="ops-sheet-actions">
           {booking.assignmentId && (

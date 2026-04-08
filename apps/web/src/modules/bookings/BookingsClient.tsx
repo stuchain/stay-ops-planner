@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChannelLogo } from "./ChannelLogo";
 
 type BookingStatus =
   | "pending"
@@ -531,7 +532,10 @@ export function BookingsClient() {
                 <tr key={item.id}>
                   <td>
                     <button className="ops-bookings-row-btn" type="button" onClick={() => void openBooking(item.id)}>
-                      {item.guestName}
+                      <span className="ops-name-with-logo">
+                        <ChannelLogo channel={item.channel} className="ops-channel-logo" />
+                        <span>{item.guestName}</span>
+                      </span>
                     </button>
                   </td>
                   <td>{item.checkinDate}</td>
@@ -561,7 +565,10 @@ export function BookingsClient() {
             ) : (
               <>
                 <div className="ops-booking-modal-head">
-                  <h2>{detail.guestName}</h2>
+                  <h2 className="ops-name-with-logo">
+                    <ChannelLogo channel={detail.channel} className="ops-channel-logo" />
+                    <span>{detail.guestName}</span>
+                  </h2>
                   <div className="ops-booking-modal-head-actions">
                     <button className="ops-btn" type="button" onClick={onCopy}>
                       Copy details

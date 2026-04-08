@@ -59,6 +59,12 @@ function guestNameFromRaw(raw: unknown): string {
   return "Guest";
 }
 
+function bestGuestName(booking: { guestName: string | null; rawPayload: unknown }): string {
+  const fromColumn = booking.guestName?.trim();
+  if (fromColumn) return fromColumn;
+  return guestNameFromRaw(booking.rawPayload);
+}
+
 function bookingIdFromImportPayload(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const o = payload as Record<string, unknown>;
@@ -132,7 +138,7 @@ export async function getCalendarMonthAggregate(args: {
       roomId: a ? a.roomId : null,
       startDate: dateStr(startDate),
       endDate: dateStr(endDate),
-      guestName: guestNameFromRaw(b.rawPayload),
+      guestName: bestGuestName(b),
       channel: b.channel,
       status: b.status,
       assignmentId: a?.id ?? null,

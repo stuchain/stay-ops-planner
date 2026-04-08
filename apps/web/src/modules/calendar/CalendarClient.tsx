@@ -1,13 +1,15 @@
 "use client";
 import {
+  closestCenter,
   DndContext,
   KeyboardSensor,
   PointerSensor,
-  closestCorners,
+  pointerWithin,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -24,6 +26,7 @@ import {
   type BookingDragPayload,
 } from "./optimisticMove";
 import { useIsNarrowViewport } from "./useIsNarrowViewport";
+import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 
 function shiftMonth(ym: string, delta: number): string {
   const parts = ym.split("-");
@@ -46,6 +49,7 @@ const CALENDAR_DISPLAY_MONTHS_STORAGE_KEY = "ops.calendar.displayMonths";
 type OverviewUnassignedBooking = {
   bookingId: string;
   guestName: string;
+  channel: "airbnb" | "booking" | "direct";
   checkinDate: string;
   checkoutDate: string;
   status: string;
@@ -119,6 +123,7 @@ export function CalendarClient() {
               checkinDate: string;
               checkoutDate: string;
               status: string;
+              channel: "airbnb" | "booking" | "direct";
             }>;
           };
         };
@@ -170,6 +175,13 @@ export function CalendarClient() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
+    const pointerHits = pointerWithin(args);
+    if (pointerHits.length > 0) {
+      return pointerHits;
+    }
+    return closestCenter(args);
+  }, []);
 
   const completeAssignment = useCallback(
     async (raw: BookingDragPayload, toRoomId: string | null) => {
@@ -205,6 +217,7 @@ export function CalendarClient() {
       if (!raw || raw.type !== "booking") return;
       const overId = String(over.id);
       const targetId = overId.includes(":") ? overId.slice(overId.indexOf(":") + 1) : overId;
+      if (!targetId.startsWith("lane-")) return;
       const target = parseLaneDropTarget(targetId);
       if (target === null) return;
       const toRoomId = target === "unassigned" ? null : target;
@@ -249,10 +262,10 @@ export function CalendarClient() {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={onDragEnd}>
       <main className="ops-calendar-main">
         <header className="ops-calendar-header">
-          <h1>Bookings</h1>
+          <h1>Calendar</h1>
         </header>
         <section className="ops-calendar-controls" aria-label="Calendar controls">
           <button type="button" className="ops-btn" onClick={() => setMonth(defaultMonthYm())}>
@@ -422,10 +435,17 @@ function NeedsAssignmentDragCard({
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
 
+  const channelClass =
+    booking.channel === "airbnb"
+      ? "ops-booking-channel-airbnb"
+      : booking.channel === "booking"
+        ? "ops-booking-channel-booking"
+        : "ops-booking-channel-direct";
+
   return (
     <article
       ref={setNodeRef}
-      className="ops-needs-card"
+      className={`ops-needs-card ${channelClass}`}
       style={{
         ...dragStyle,
         opacity: isDragging ? 0.85 : 1,
@@ -441,7 +461,10 @@ function NeedsAssignmentDragCard({
       >
         Drag
       </button>
-      <strong>{booking.guestName}</strong>
+      <strong className="ops-name-with-logo">
+        <ChannelLogo channel={booking.channel} className="ops-channel-logo" />
+        <span>{booking.guestName}</span>
+      </strong>
       <div className="ops-needs-dates">
         {booking.checkinDate} → {booking.checkoutDate}
       </div>
