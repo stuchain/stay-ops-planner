@@ -10,7 +10,7 @@ async function globalTeardown() {
       env: {
         ...process.env,
         DATABASE_URL:
-          process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops",
+          process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops?schema=e2e",
       },
     });
     const msg = out.toString("utf8").trim();

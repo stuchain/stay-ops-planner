@@ -18,7 +18,7 @@ const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD ?? "E2E_Test_Pass
 
 const env = {
   ...process.env,
-  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops",
+  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops?schema=e2e",
   REDIS_URL: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   SESSION_SECRET:
     process.env.SESSION_SECRET ?? "local-e2e-session-secret-at-least-32-chars-long",
