@@ -65,6 +65,60 @@ function pickGuestName(r: Record<string, unknown>): string | undefined {
   return pickString(r, "guest_name", "guestName", "room_guest_name");
 }
 
+function pickNumber(r: Record<string, unknown>, ...keys: string[]): number | undefined {
+  for (const k of keys) {
+    const v = r[k];
+    if (typeof v === "number" && Number.isFinite(v)) {
+      return v;
+    }
+    if (typeof v === "string" && v.trim().length > 0) {
+      const parsed = Number(v.trim());
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return undefined;
+}
+
+function readMoneyCents(value: unknown): number | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.round(value * 100);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) return Math.round(parsed * 100);
+    return undefined;
+  }
+  if (typeof value === "object" && !Array.isArray(value)) {
+    const o = value as Record<string, unknown>;
+    const cents = pickNumber(o, "cents");
+    if (cents !== undefined) return Math.round(cents);
+    const amount = pickNumber(o, "amount", "value");
+    if (amount !== undefined) return Math.round(amount * 100);
+  }
+  return undefined;
+}
+
+function pickMoneyCents(r: Record<string, unknown>, ...keys: string[]): number | undefined {
+  for (const k of keys) {
+    const cents = readMoneyCents(r[k]);
+    if (cents !== undefined) return cents;
+  }
+  return undefined;
+}
+
+function pickCurrency(r: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const k of keys) {
+    const value = r[k];
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = pickString(value as Record<string, unknown>, "currency");
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
 /** Reduce ISO-8601 or date-only strings to `YYYY-MM-DD` when possible. */
 export function coerceHosthubDateField(value: string): string {
   const trimmed = value.trim();
@@ -169,12 +223,51 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
   const listingChannel = pickListingChannel(r);
   const listingName = pickListingName(r);
   const guestName = pickGuestName(r);
+  const guestObj = r.guest !== null && typeof r.guest === "object" && !Array.isArray(r.guest)
+    ? (r.guest as Record<string, unknown>)
+    : {};
+  const guestEmail =
+    pickString(guestObj, "email", "guest_email", "mail") ?? pickString(r, "guest_email", "guestEmail", "email");
+  const guestPhone =
+    pickString(guestObj, "phone", "phone_number", "mobile") ??
+    pickString(r, "guest_phone", "guestPhone", "phone", "guest_phone_number");
+  const guestAdults =
+    pickNumber(guestObj, "adults", "adult_count") ?? pickNumber(r, "guest_adults", "guestAdults", "adults");
+  const guestChildren =
+    pickNumber(guestObj, "children", "child_count") ?? pickNumber(r, "guest_children", "guestChildren", "children");
+  const guestInfants =
+    pickNumber(guestObj, "infants", "infant_count") ?? pickNumber(r, "guest_infants", "guestInfants", "infants");
+  const guestTotal =
+    pickNumber(guestObj, "total", "count", "guest_count") ??
+    pickNumber(r, "guest_total", "guestTotal", "guest_count", "guestCount");
+  const totalAmountCents = pickMoneyCents(r, "booking_value", "total_value");
+  const cleaningFeeCents = pickMoneyCents(r, "cleaning_fee");
+  const taxCents = pickMoneyCents(r, "taxes", "tax");
+  const payoutAmountCents = pickMoneyCents(r, "total_payout", "payout");
+  const guestPaidCents = pickMoneyCents(r, "guest_paid");
+  const currency = pickCurrency(r, "booking_value", "total_value", "total_payout", "guest_paid", "currency");
+  const action = pickString(r, "action", "action_type");
+  const notes = pickString(r, "notes", "note");
 
   return {
     reservationId,
     listingId,
     ...(listingName !== undefined ? { listingName } : {}),
     ...(guestName !== undefined ? { guestName } : {}),
+    ...(guestEmail !== undefined ? { guestEmail } : {}),
+    ...(guestPhone !== undefined ? { guestPhone } : {}),
+    ...(guestAdults !== undefined ? { guestAdults } : {}),
+    ...(guestChildren !== undefined ? { guestChildren } : {}),
+    ...(guestInfants !== undefined ? { guestInfants } : {}),
+    ...(guestTotal !== undefined ? { guestTotal } : {}),
+    ...(totalAmountCents !== undefined ? { totalAmountCents } : {}),
+    ...(currency !== undefined ? { currency } : {}),
+    ...(cleaningFeeCents !== undefined ? { cleaningFeeCents } : {}),
+    ...(taxCents !== undefined ? { taxCents } : {}),
+    ...(payoutAmountCents !== undefined ? { payoutAmountCents } : {}),
+    ...(guestPaidCents !== undefined ? { guestPaidCents } : {}),
+    ...(action !== undefined ? { action } : {}),
+    ...(notes !== undefined ? { notes } : {}),
     status,
     checkIn: coerceHosthubDateField(checkInRaw),
     checkOut: coerceHosthubDateField(checkOutRaw),
@@ -246,6 +339,7 @@ function extractNextPageUrl(o: Record<string, unknown>): string | null {
 /** Normalizes list response shapes documented under https://www.hosthub.com/docs/api/ (and common JSON:API-style wrappers). */
 export function normalizeHosthubReservationPagePayload(input: unknown): {
   data: HosthubReservationDto[];
+  rawData: unknown[];
   nextPageUrl: string | null;
   skipped: number;
   maxUpdated?: number;
@@ -259,6 +353,7 @@ export function normalizeHosthubReservationPagePayload(input: unknown): {
     return null;
   }
   const data: HosthubReservationDto[] = [];
+  const rawData: unknown[] = [];
   let maxUpdated: number | undefined;
   for (const item of arr) {
     const u = parseUpdatedUnix(item);
@@ -268,17 +363,20 @@ export function normalizeHosthubReservationPagePayload(input: unknown): {
     const row = normalizeHosthubReservationRecord(item);
     if (row) {
       data.push(row);
+      rawData.push(item);
     }
   }
   const skipped = arr.length - data.length;
   const nextPageUrl = extractNextPageUrl(o);
   const out: {
     data: HosthubReservationDto[];
+    rawData: unknown[];
     nextPageUrl: string | null;
     skipped: number;
     maxUpdated?: number;
   } = {
     data,
+    rawData,
     nextPageUrl,
     skipped,
   };

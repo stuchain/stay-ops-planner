@@ -90,9 +90,23 @@ export async function runHosthubReconcile(
           runMaxUpdated === undefined ? page.value.maxUpdated : Math.max(runMaxUpdated, page.value.maxUpdated);
       }
 
-      for (const row of page.value.data) {
+      for (let idx = 0; idx < page.value.data.length; idx += 1) {
+        const row = page.value.data[idx];
+        if (!row) {
+          continue;
+        }
+        const rawEvent = page.value.rawData?.[idx] ?? row;
         try {
-          await applyHosthubReservation(prisma, row, rowAsJson(row));
+          const notesRes = await client.getCalendarEventNotes(row.reservationId);
+          const grTaxesRes = await client.getCalendarEventGrTaxes(row.reservationId);
+
+          const hosthubNotesRaw = notesRes.ok ? rowAsJson(notesRes.value) : null;
+          const hosthubGrTaxesRaw = grTaxesRes.ok ? rowAsJson(grTaxesRes.value) : null;
+
+          await applyHosthubReservation(prisma, row, rowAsJson(rawEvent), {
+            hosthubNotesRaw,
+            hosthubGrTaxesRaw,
+          });
           stats.upserted += 1;
         } catch (e) {
           stats.errors += 1;

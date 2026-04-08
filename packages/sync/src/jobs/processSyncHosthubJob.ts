@@ -9,6 +9,7 @@ import { extractHosthubReservationDto } from "../pipeline/extractReservation.js"
 import { applyHosthubReservation } from "../pipeline/applyHosthubReservation.js";
 import { runHosthubReconcile } from "../pipeline/reconcilePoll.js";
 import { finalizeSyncRun, recordImportError, startSyncRun } from "../pipeline/syncRunService.js";
+import { HosthubClient } from "../hosthub/client.js";
 
 /**
  * Dispatches BullMQ jobs on `sync-hosthub`.
@@ -27,7 +28,31 @@ export async function processSyncHosthubJob(job: Job): Promise<void> {
       if (!dto) {
         throw new Error("Inbound job: could not extract reservation from payload");
       }
-      await applyHosthubReservation(prisma, dto, parsed.value as Prisma.InputJsonValue);
+      const token = process.env.HOSTHUB_API_TOKEN?.trim();
+      let hosthubNotesRaw: Prisma.InputJsonValue | null | undefined;
+      let hosthubGrTaxesRaw: Prisma.InputJsonValue | null | undefined;
+      if (token) {
+        const baseUrl = process.env.HOSTHUB_API_BASE?.trim() ?? "https://app.hosthub.com/api/2019-03-01";
+        const client = new HosthubClient({ baseUrl, apiToken: token });
+        try {
+          const notesRes = await client.getCalendarEventNotes(dto.reservationId);
+          const grTaxesRes = await client.getCalendarEventGrTaxes(dto.reservationId);
+          hosthubNotesRaw = notesRes.ok
+            ? (JSON.parse(JSON.stringify(notesRes.value)) as Prisma.InputJsonValue)
+            : null;
+          hosthubGrTaxesRaw = grTaxesRes.ok
+            ? (JSON.parse(JSON.stringify(grTaxesRes.value)) as Prisma.InputJsonValue)
+            : null;
+        } catch {
+          hosthubNotesRaw = null;
+          hosthubGrTaxesRaw = null;
+        }
+      }
+
+      await applyHosthubReservation(prisma, dto, parsed.value as Prisma.InputJsonValue, {
+        hosthubNotesRaw,
+        hosthubGrTaxesRaw,
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const run = await startSyncRun(prisma, "hosthub_webhook");

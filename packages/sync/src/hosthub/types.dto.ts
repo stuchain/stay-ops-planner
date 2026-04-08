@@ -9,6 +9,20 @@ export const HosthubReservationDtoSchema = z.object({
   listingId: z.string().min(1),
   listingName: z.string().min(1).optional(),
   guestName: z.string().min(1).optional(),
+  guestEmail: z.string().min(1).optional(),
+  guestPhone: z.string().min(1).optional(),
+  guestAdults: z.number().int().min(0).optional(),
+  guestChildren: z.number().int().min(0).optional(),
+  guestInfants: z.number().int().min(0).optional(),
+  guestTotal: z.number().int().min(0).optional(),
+  totalAmountCents: z.number().int().optional(),
+  currency: z.string().min(1).optional(),
+  cleaningFeeCents: z.number().int().optional(),
+  taxCents: z.number().int().optional(),
+  payoutAmountCents: z.number().int().optional(),
+  guestPaidCents: z.number().int().optional(),
+  action: z.string().min(1).optional(),
+  notes: z.string().min(1).optional(),
   status: z.enum(["confirmed", "cancelled", "pending"]),
   checkIn: z.string().min(1),
   checkOut: z.string().min(1),
@@ -20,6 +34,8 @@ export type HosthubReservationDto = z.infer<typeof HosthubReservationDtoSchema>;
 
 export const HosthubReservationPageSchema = z.object({
   data: z.array(HosthubReservationDtoSchema),
+  /** Full raw item per normalized row; aligned by index with `data`. */
+  rawData: z.array(z.unknown()).optional(),
   /** Next page URL from Hosthub `navigation.next` (follow verbatim). */
   nextPageUrl: z.string().nullable(),
   skipped: z.number().int().nonnegative(),

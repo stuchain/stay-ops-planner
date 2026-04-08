@@ -178,6 +178,23 @@ export class HosthubClient {
     return this.getJson(fetchUrl, pathForLog, parseHosthubListResponse);
   }
 
+  async getCalendarEventNotes(calendarEventId: string): Promise<HosthubClientResult<unknown>> {
+    const id = encodeURIComponent(calendarEventId.trim());
+    const path = `${this.basePathPrefix}/calendar-events/${id}/notes`;
+    const url = new URL(path, this.baseOrigin).toString();
+    return this.getJson(url, `/calendar-events/${id}/notes`, (body) => ({ ok: true, value: body }));
+  }
+
+  async getCalendarEventGrTaxes(calendarEventId: string): Promise<HosthubClientResult<unknown>> {
+    const id = encodeURIComponent(calendarEventId.trim());
+    const path = `${this.basePathPrefix}/calendar-events/${id}/calendar-event-gr-taxes`;
+    const url = new URL(path, this.baseOrigin).toString();
+    return this.getJson(url, `/calendar-events/${id}/calendar-event-gr-taxes`, (body) => ({
+      ok: true,
+      value: body,
+    }));
+  }
+
   private async getJson<T>(
     url: string,
     pathForLog: string,
