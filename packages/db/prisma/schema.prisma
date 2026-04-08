@@ -268,3 +268,18 @@ model OperationalThresholdConfig {
   @@index([enabled], map: "operational_threshold_configs_enabled_idx")
   @@map("operational_threshold_configs")
 }
+
+model IntegrationSecret {
+  id         String   @id @default(cuid())
+  provider   String
+  secretKey  String   @map("secret_key")
+  displayName String? @map("display_name")
+  ciphertext String
+  iv         String
+  tag        String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([provider, secretKey], map: "integration_secrets_provider_secret_key_key")
+  @@map("integration_secrets")
+}
