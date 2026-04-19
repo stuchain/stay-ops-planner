@@ -117,6 +117,7 @@ body {
 .ops-calendar-main {
   width: min(98vw, 1800px);
   max-width: none;
+  margin: 0 auto;
 }
 
 .ops-calendar-header {
@@ -334,14 +335,70 @@ body {
 .ops-timeline-month {
   border: 1px solid #d9d9d9;
   border-radius: 10px;
-  overflow: auto;
+  overflow: hidden;
   background: #fff;
+}
+
+.ops-timeline-month-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fafafa;
+}
+
+.ops-timeline-month-title-cluster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  max-width: 100%;
+}
+
+.ops-month-title-inline {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  flex: 1 1 auto;
+  text-align: center;
+  min-width: 8rem;
+}
+
+.ops-timeline-month-title-cluster .ops-month-title-inline {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 0.25rem;
+}
+
+.ops-month-step {
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0.35rem 0.45rem;
+  flex-shrink: 0;
+}
+
+.ops-timeline-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.ops-timeline-scroll .ops-timeline-header,
+.ops-timeline-scroll .ops-timeline-row {
+  min-width: min(1200px, max(100%, 58rem));
+}
+
+.ops-timeline-scroll--multi .ops-timeline-header,
+.ops-timeline-scroll--multi .ops-timeline-row {
+  min-width: var(--ops-timeline-min-width, max(100%, 58rem));
 }
 
 .ops-timeline-header,
 .ops-timeline-row {
   display: grid;
-  grid-template-columns: 190px minmax(1200px, 1fr);
+  grid-template-columns: 190px minmax(0, 1fr);
 }
 
 .ops-timeline-header {
@@ -358,10 +415,38 @@ body {
 
 .ops-timeline-head-cell {
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: #555;
-  padding: 0.35rem 0;
+  padding: 0.3rem 0.1rem;
   border-left: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+/* Hide vertical line between day columns 2 and 3 (left edge of third column). Single-month grid only. */
+.ops-timeline-scroll:not(.ops-timeline-scroll--multi) .ops-timeline-head-cell:nth-child(3),
+.ops-timeline-scroll:not(.ops-timeline-scroll--multi) .ops-timeline-day-cell:nth-child(3) {
+  border-left: none;
+}
+
+.ops-timeline-head-cell--month-start,
+.ops-timeline-day-cell--month-start {
+  border-left: 2px solid #64748b;
+  background-color: rgba(241, 245, 249, 0.92);
+}
+
+.ops-timeline-head-dow {
+  font-size: 0.62rem;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.ops-timeline-head-dom {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #333;
 }
 
 .ops-timeline-row {
@@ -372,9 +457,29 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
   color: #3f8d8f;
-  padding: 0.65rem 0.6rem;
+  padding: 0.5rem 0.45rem;
   border-right: 1px solid #eee;
   background: #f8fbfb;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ops-room-sort-handle {
+  flex: 0 0 auto;
+  border: 1px solid #c5d8d8;
+  background: #eef8f8;
+  color: #2a6a6c;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 0.2rem 0.3rem;
+  cursor: grab;
+}
+
+.ops-timeline-room-title {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .ops-timeline-track {
@@ -389,16 +494,49 @@ body {
 .ops-timeline-day-grid {
   position: absolute;
   inset: 0;
+  z-index: 0;
 }
 
 .ops-timeline-day-cell {
   border-left: 1px solid #f1f1f1;
+  position: relative;
+}
+
+.ops-timeline-day-price {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  font-size: 0.62rem;
+  color: #5a6b7d;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .ops-timeline-bars {
   position: relative;
+  z-index: 1;
   padding: 2px 0;
   gap: 3px 0;
+}
+
+.ops-timeline-booking-wrap {
+  margin: 2px;
+  cursor: grab;
+  z-index: 2;
+  min-width: 0;
+}
+
+/* Same-day turnover: pull wraps together and micro-overlap diagonals so background does not show. */
+.ops-timeline-booking-wrap[data-turnover-in="true"] {
+  margin-left: -1px;
+}
+
+.ops-timeline-booking-wrap[data-turnover-out="true"] {
+  margin-right: -1px;
+}
+
+.ops-timeline-booking-wrap .ops-timeline-booking {
+  margin: 0;
 }
 
 .ops-timeline-booking {
@@ -416,6 +554,172 @@ body {
   white-space: nowrap;
   overflow: hidden;
   min-width: 0;
+}
+
+/* Nights only (no checkout column in this month): full pill. */
+.ops-timeline-booking-main--nights-only {
+  border-radius: 999px;
+}
+
+/* True check-in day (stay starts this month): diagonal “bite” on the leading edge so adjacent bars can share a lane. */
+.ops-timeline-booking-main--checkin-cut {
+  /* No bottom corner radii: with clip-path, rounding the box bottom draws an “_|” hook past the cut. */
+  border-radius: 6px 6px 0 0;
+  clip-path: polygon(
+    0.5rem 0,
+    100% 0,
+    100% 100%,
+    0.35rem 100%,
+    0 calc(100% - 0.4rem),
+    0 0.4rem
+  );
+}
+
+/* Nights span meets checkout-day column: flat edge before the checkout sliver. */
+.ops-timeline-booking-main--before-checkout-nib {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ops-timeline-booking-main--checkin-cut.ops-timeline-booking-main--before-checkout-nib {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Single border between main segment and checkout nib (avoid double “|” seam). */
+.ops-timeline-booking-main--before-checkout-nib:has(+ .ops-timeline-booking-checkout-day-nib) {
+  border-right: none;
+}
+
+.ops-timeline-booking-main--before-checkout-nib + .ops-timeline-booking-checkout-day-nib {
+  border-left: none;
+  margin-left: -1px;
+}
+
+/* First column split when check-in mates a checkout nib above (20% / 80%). */
+.ops-timeline-mate-split {
+  align-self: stretch;
+  min-height: 0;
+  height: 100%;
+}
+
+.ops-timeline-mate-spacer {
+  min-width: 0;
+}
+
+/* One outline across spacer | main or bridge (avoid double “|” seam). */
+.ops-timeline-mate-split > .ops-timeline-booking-main--checkin-mate {
+  border-left: none;
+}
+
+/*
+ * Complementary slants: checkout nib’s trailing diagonal matches check-in mate’s leading edge
+ * (same 0.55rem offset as the nib’s right cut).
+ */
+.ops-timeline-booking-main--checkin-mate {
+  border-radius: 6px 6px 0 0;
+  clip-path: polygon(
+    0.55rem 0,
+    100% 0,
+    100% 100%,
+    0.35rem 100%,
+    0 calc(100% - 0.4rem),
+    0 0.4rem
+  );
+}
+
+.ops-timeline-booking-main--checkin-mate.ops-timeline-booking-main--before-checkout-nib {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/*
+ * Same-day turnover: leading edge “\” (top-left → bottom at 0.55rem) to mate the nib’s trailing “/”.
+ * Two “/” edges are parallel and gap; “\” meets “/” at the column seam.
+ */
+.ops-timeline-booking-main--checkin-mate-turnover {
+  border-radius: 0 6px 0 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0.55rem 100%);
+  border-left: none;
+}
+
+.ops-timeline-booking-main--checkin-mate.ops-timeline-booking-main--checkin-mate-turnover {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0.55rem 100%);
+}
+
+.ops-timeline-booking-main--checkin-cut.ops-timeline-booking-main--checkin-mate-turnover {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0.55rem 100%);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.ops-timeline-booking-main--checkin-mate-turnover.ops-timeline-booking-main--before-checkout-nib {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Continuation strip in the first column (multi-night mate): visually bridges into column 2. */
+.ops-timeline-booking-main--mate-bridge {
+  min-height: 1.45rem;
+  width: 100%;
+  padding: 0;
+  align-self: stretch;
+  border-radius: 0;
+  pointer-events: none;
+  border-right: none;
+}
+
+/* Main segment after the mate bridge: flat left to meet the bridge; right per checkout / nights. */
+.ops-timeline-booking-main--after-mate-bridge {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: none;
+  margin-left: -1px;
+}
+
+.ops-timeline-booking-main--after-mate-bridge.ops-timeline-booking-main--nights-only {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+/* Stay continues after the last visible day: square trailing edge (no pill cap). */
+.ops-timeline-booking-main--trail-clipped.ops-timeline-booking-main--nights-only {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ops-timeline-booking-main--trail-clipped.ops-timeline-booking-main--after-mate-bridge.ops-timeline-booking-main--nights-only {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ops-timeline-booking-main--trail-clipped.ops-timeline-booking-main--checkin-cut:not(.ops-timeline-booking-main--before-checkout-nib) {
+  border-top-right-radius: 0;
+}
+
+.ops-timeline-booking-main--trail-clipped.ops-timeline-booking-main--checkin-mate:not(.ops-timeline-booking-main--before-checkout-nib) {
+  border-top-right-radius: 0;
+}
+
+/* Ongoing past the grid: no vertical “|” on the open trailing edge (border is only top/left/bottom). */
+.ops-timeline-booking.ops-timeline-booking-main--trail-clipped {
+  border-right: none;
+}
+
+/* Visual-only strip on checkout morning (~20% of that day column). */
+.ops-timeline-booking-checkout-day-nib {
+  padding: 0;
+  min-height: 1.5rem;
+  align-self: stretch;
+  /* Sharp bottom-right so the diagonal meets a point (no curve on the slant); keep a little round on top-right only. */
+  border-radius: 0 6px 0 0;
+  /* Right outline follows the clip diagonal, not the box edge; a full border-right leaves a vertical stub after clip. */
+  border-right: none;
+  clip-path: polygon(0 0, calc(100% - 0.55rem) 0, 100% 100%, 0 100%);
 }
 
 .ops-timeline-booking.ops-booking-channel-airbnb {
