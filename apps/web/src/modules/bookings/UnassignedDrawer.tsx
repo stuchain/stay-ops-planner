@@ -6,9 +6,14 @@ import {
   performBookingAssignmentMutation,
 } from "@/modules/calendar/assignmentMutations";
 import { bookingItemToDragPayload } from "@/modules/calendar/optimisticMove";
-import type { CalendarBookingItem, CalendarRoom } from "@/modules/calendar/calendarTypes";
+import type {
+  CalendarBlockItem,
+  CalendarBookingItem,
+  CalendarRoom,
+} from "@/modules/calendar/calendarTypes";
 import { SUGGESTION_REASON_CODE_LABELS, type SuggestionReasonCode } from "@/modules/suggestions/types";
 import { ChannelLogo } from "./ChannelLogo";
+import { suggestDefaultRoomForBooking } from "@/modules/calendar/assignmentSuggest";
 
 type UnassignedRow = {
   id: string;
@@ -17,6 +22,10 @@ type UnassignedRow = {
   checkinDate: string;
   checkoutDate: string;
   nights: number;
+  guestTotal: number | null;
+  guestAdults: number | null;
+  guestChildren: number | null;
+  guestInfants: number | null;
 };
 
 type SuggestionItem = {
@@ -50,16 +59,30 @@ function useDebouncedValue<T>(value: T, ms: number): T {
   return debounced;
 }
 
+type SuggestContext = {
+  month: string;
+  monthDayCount: number;
+  bookings: CalendarBookingItem[];
+  blocks: CalendarBlockItem[];
+};
+
 type Props = {
   open: boolean;
   month: string;
   rooms: CalendarRoom[];
+  /** When set, default room select uses availability + capacity (same as calendar strip). */
+  suggestContext?: SuggestContext;
   onClose: () => void;
   /** After a successful assign, refresh calendar + drawer. */
   onAssigned: () => void;
 };
 
-export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Props) {
+function roomOptionLabel(r: CalendarRoom): string {
+  if (r.code?.trim()) return r.name?.trim() ? `${r.code} — ${r.name}` : r.code;
+  return r.name ?? r.id;
+}
+
+export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, onAssigned }: Props) {
   const [rows, setRows] = useState<UnassignedRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,10 +155,39 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
     );
   }, [rows, debouncedSearch]);
 
-  const defaultRoomId = rooms[0]?.id ?? "";
+  const defaultRoomByRowId = useMemo(() => {
+    if (!suggestContext) return {} as Record<string, string>;
+    const roomOpts = rooms.map((r) => ({
+      id: r.id,
+      label: roomOptionLabel(r),
+      maxGuests: r.maxGuests ?? null,
+    }));
+    const out: Record<string, string> = {};
+    for (const row of rows) {
+      const sug = suggestDefaultRoomForBooking(
+        {
+          guestTotal: row.guestTotal,
+          guestAdults: row.guestAdults,
+          guestChildren: row.guestChildren,
+          guestInfants: row.guestInfants,
+        },
+        roomOpts,
+        row.checkinDate,
+        row.checkoutDate,
+        suggestContext.month,
+        suggestContext.monthDayCount,
+        suggestContext.bookings,
+        suggestContext.blocks,
+      );
+      if (sug) out[row.id] = sug;
+    }
+    return out;
+  }, [rows, rooms, suggestContext]);
+
+  const fallbackRoomId = rooms[0]?.id ?? "";
 
   async function assignOne(row: UnassignedRow) {
-    const roomId = roomPick[row.id] ?? defaultRoomId;
+    const roomId = roomPick[row.id] ?? defaultRoomByRowId[row.id] ?? fallbackRoomId;
     if (!roomId) {
       setRowError((r) => ({ ...r, [row.id]: "Pick a room" }));
       return;
@@ -149,6 +201,10 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
       startDate: row.checkinDate,
       endDate: row.checkoutDate,
       guestName: row.externalBookingId,
+      guestTotal: row.guestTotal,
+      guestAdults: row.guestAdults,
+      guestChildren: row.guestChildren,
+      guestInfants: row.guestInfants,
       channel: row.channel === "airbnb" || row.channel === "booking" ? row.channel : "direct",
       status: "confirmed",
       assignmentId: null,
@@ -257,7 +313,7 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
               <div className="ops-drawer-row-actions">
                 <select
                   className="ops-input"
-                  value={roomPick[b.id] ?? defaultRoomId}
+                  value={roomPick[b.id] ?? defaultRoomByRowId[b.id] ?? fallbackRoomId}
                   onChange={(ev) =>
                     setRoomPick((prev) => ({
                       ...prev,
@@ -268,7 +324,7 @@ export function UnassignedDrawer({ open, month, rooms, onClose, onAssigned }: Pr
                 >
                   {rooms.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.code ?? r.name ?? r.id}
+                      {roomOptionLabel(r)}
                     </option>
                   ))}
                 </select>

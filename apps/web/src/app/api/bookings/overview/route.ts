@@ -40,10 +40,21 @@ export async function GET(request: NextRequest) {
   }
 
   const timeZone = process.env.APP_TIMEZONE?.trim() || "Etc/UTC";
-  const data = await getCalendarMonthAggregate({
-    yearMonth: parsed.data.month,
-    timeZone,
-  });
+
+  let data: Awaited<ReturnType<typeof getCalendarMonthAggregate>>;
+  try {
+    data = await getCalendarMonthAggregate({
+      yearMonth: parsed.data.month,
+      timeZone,
+    });
+  } catch (err) {
+    console.error("[api/bookings/overview]", err);
+    const message =
+      process.env.NODE_ENV === "development" && err instanceof Error
+        ? err.message
+        : "Could not load bookings overview.";
+    return NextResponse.json(jsonError("INTERNAL_ERROR", message), { status: 500 });
+  }
 
   const allRooms = data.rooms;
   const roomById = new Map(allRooms.map((room) => [room.id, room]));
@@ -54,6 +65,10 @@ export async function GET(request: NextRequest) {
     .map((item) => ({
       bookingId: item.id,
       guestName: item.guestName,
+      guestTotal: item.guestTotal,
+      guestAdults: item.guestAdults,
+      guestChildren: item.guestChildren,
+      guestInfants: item.guestInfants,
       channel: item.channel,
       checkinDate: item.startDate,
       checkoutDate: item.endDate,
@@ -87,6 +102,7 @@ export async function GET(request: NextRequest) {
       rooms: allRooms.map((room) => ({
         id: room.id,
         label: roomLabel(room),
+        maxGuests: room.maxGuests ?? null,
       })),
       unassigned,
       assigned,
