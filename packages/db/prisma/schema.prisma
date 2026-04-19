@@ -58,12 +58,16 @@ model User {
 
 /// Physical unit in the property (R1…RN in fixtures).
 model Room {
-  id          String   @id @default(cuid())
-  code        String?  @unique
-  displayName String?  @map("display_name")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(cuid())
+  code                String?  @unique
+  displayName         String?  @map("display_name")
+  isActive            Boolean  @default(true) @map("is_active")
+  /// Lower sorts first on calendar; null sorts after set values.
+  calendarSortIndex   Int?     @map("calendar_sort_index")
+  /// Max sleeping guests; null means no capacity limit for proposals.
+  maxGuests           Int?     @map("max_guests")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   assignments   Assignment[]
   manualBlocks  ManualBlock[]

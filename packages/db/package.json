@@ -27,7 +27,8 @@
   },
   "dependencies": {
     "@prisma/client": "^6.3.1",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
