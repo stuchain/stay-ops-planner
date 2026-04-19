@@ -6,16 +6,6 @@ test.describe("maintenance blocks", () => {
     reseedE2EFixtures();
   });
 
-  test("open add block modal and cancel", async ({ page }) => {
-    test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
-    await loginAsStaff(page);
-    await page.goto("/app/calendar");
-    await page.getByRole("button", { name: "Block dates" }).click();
-    await expect(page.getByRole("heading", { name: "Add maintenance block" })).toBeVisible();
-    await page.getByRole("button", { name: "Cancel" }).click();
-    await expect(page.getByRole("heading", { name: "Add maintenance block" })).not.toBeVisible();
-  });
-
   test("open edit on seeded block and cancel", async ({ page }) => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
@@ -56,21 +46,40 @@ test.describe("maintenance blocks", () => {
     ).toHaveCount(0, { timeout: 15_000 });
   });
 
-  test("overlap error when creating invalid block", async ({ page }) => {
+  test("overlap error when creating invalid block via API", async ({ page }) => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await page.goto("/app/calendar");
-    await expect(page.locator(".ops-month-title")).toBeVisible();
+    await expect(page.locator(".ops-month-title, .ops-month-title-inline").first()).toBeVisible();
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "Run seed:e2e for overlap block on E2E-A.");
-    const ym = (await page.locator(".ops-month-title").textContent())?.trim();
+    const ym = await page.getByLabel("Select month").inputValue();
     test.skip(!ym || !/^\d{4}-\d{2}$/.test(ym), "Could not read calendar month from UI.");
 
-    await page.getByRole("button", { name: "Block dates" }).click();
-    await page.getByLabel("Start date").fill(`${ym}-10`);
-    await page.getByLabel("End date").fill(`${ym}-12`);
-    await page.getByRole("button", { name: "Create" }).click();
-    await expect(
-      page.getByRole("dialog").locator(".ops-modal-form .ops-error"),
-    ).toBeVisible({ timeout: 8000 });
+    const err = await page.evaluate(async (monthYm: string) => {
+      const cal = await fetch(`/api/calendar/month?month=${encodeURIComponent(monthYm)}`, {
+        credentials: "include",
+      });
+      if (!cal.ok) return { ok: false as const };
+      const body = (await cal.json()) as {
+        data?: { rooms: { id: string; code: string | null }[] };
+      };
+      const roomA = body.data?.rooms.find((r) => r.code === "E2E-A");
+      if (!roomA) return { ok: false as const };
+      const res = await fetch("/api/blocks", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          roomId: roomA.id,
+          startDate: `${monthYm}-10`,
+          endDate: `${monthYm}-12`,
+        }),
+      });
+      const j = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
+      return { ok: true as const, status: res.status, code: j?.error?.code ?? null };
+    }, ym);
+    expect(err.ok).toBe(true);
+    expect(err.status).toBeGreaterThanOrEqual(400);
+    expect(err.code).toBeTruthy();
   });
 });

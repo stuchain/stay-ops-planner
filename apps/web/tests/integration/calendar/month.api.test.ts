@@ -97,7 +97,14 @@ describe("api GET /api/calendar/month", () => {
     );
     expect(res.status).toBe(200);
     const json = (await res.json()) as {
-      data: { month: string; timezone: string; rooms: unknown[]; items: unknown[]; markers: unknown[] };
+      data: {
+        month: string;
+        timezone: string;
+        rooms: unknown[];
+        items: unknown[];
+        markers: unknown[];
+        dailyRatesByRoomDay: unknown;
+      };
     };
     expect(json.data.month).toBe("2026-07");
     expect(json.data.timezone).toBe("Etc/UTC");

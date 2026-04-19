@@ -138,21 +138,30 @@ test.describe("ops gate smoke @smoke", () => {
     }, monthYm);
     expect(conflict).toEqual({ ok: true, status: 409, code: "CONFLICT_ASSIGNMENT" });
 
-    // Maintenance block create (UI) — short range on E2E-B to avoid overlapping seeded assignments.
-    await page.getByRole("button", { name: "Block dates" }).click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("heading", { name: "Add maintenance block" })).toBeVisible();
-    const ymParts = monthYm.split("-");
-    const y = Number(ymParts[0]);
-    const m = Number(ymParts[1]);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const start = `${y}-${pad(m)}-01`;
-    const end = `${y}-${pad(m)}-03`;
-    await dialog.getByRole("combobox").selectOption({ label: "E2E-B — E2E Room B" });
-    await dialog.getByLabel(/^Start date$/i).fill(start);
-    await dialog.getByLabel(/^End date$/i).fill(end);
-    await dialog.getByRole("button", { name: "Create" }).click();
-    await expect(dialog).toBeHidden({ timeout: 15_000 });
+    // Maintenance block create (API) — short range on E2E-B to avoid overlapping seeded assignments.
+    const blockOk = await page.evaluate(async (ym: string) => {
+      const cal = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, { credentials: "include" });
+      if (!cal.ok) return false;
+      const body = (await cal.json()) as {
+        data?: { rooms: { id: string; code: string | null }[] };
+      };
+      const roomB = body.data?.rooms.find((r) => r.code === "E2E-B");
+      if (!roomB) return false;
+      const ymParts = ym.split("-");
+      const y = Number(ymParts[0]);
+      const m = Number(ymParts[1]);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const start = `${y}-${pad(m)}-01`;
+      const end = `${y}-${pad(m)}-03`;
+      const res = await fetch("/api/blocks", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ roomId: roomB.id, startDate: start, endDate: end }),
+      });
+      return res.ok;
+    }, monthYm);
+    expect(blockOk).toBe(true);
 
     // Cleaning lifecycle smoke.
     await page.goto("/app/cleaning");

@@ -96,8 +96,9 @@ describe("suggestion engine ranking determinism", () => {
     const second = await rankBookingSuggestions(booking.id);
 
     expect(first).toEqual(second);
-    expect(first.map((row) => row.roomId)).toEqual([roomA.id, roomC.id, roomB.id]);
-    expect(first.map((row) => row.score)).toEqual([90, 60, 30]);
+    /* Overlapping room B is excluded from proposals (not merely down-ranked). */
+    expect(first.map((row) => row.roomId)).toEqual([roomA.id, roomC.id]);
+    expect(first.map((row) => row.score)).toEqual([90, 60]);
     expect(first[0]?.breakdown).toEqual({ availability: 60, cleaningFit: 30, tieBreaker: 0 });
     expect(first[0]?.reasonCodes).toContain("ROOM_AVAILABLE");
     expect(first[0]?.reasonCodes).toContain("CLEANING_WINDOW_FITS");
@@ -118,25 +119,11 @@ describe("suggestion engine ranking determinism", () => {
       },
     });
 
-    await prisma.manualBlock.create({
-      data: {
-        roomId: roomA.id,
-        startDate: new Date("2026-12-19T00:00:00.000Z"),
-        endDate: new Date("2026-12-21T00:00:00.000Z"),
-      },
-    });
-    await prisma.manualBlock.create({
-      data: {
-        roomId: roomB.id,
-        startDate: new Date("2026-12-19T00:00:00.000Z"),
-        endDate: new Date("2026-12-21T00:00:00.000Z"),
-      },
-    });
-
     const ranked = await rankBookingSuggestions(booking.id);
     expect(ranked).toHaveLength(2);
-    expect(ranked[0].score).toBe(ranked[1].score);
-    expect(ranked[0].roomId).toBe(roomA.id);
-    expect(ranked[1].roomId).toBe(roomB.id);
+    expect(ranked[0]?.score).toBe(90);
+    expect(ranked[1]?.score).toBe(90);
+    expect(ranked[0]?.roomId).toBe(roomA.id);
+    expect(ranked[1]?.roomId).toBe(roomB.id);
   });
 });

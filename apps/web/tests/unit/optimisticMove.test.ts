@@ -10,7 +10,7 @@ import {
 const basePayload = (): CalendarMonthPayload => ({
   month: "2026-07",
   timezone: "Etc/UTC",
-  rooms: [{ id: "r1", code: "A", name: null, isActive: true }],
+  rooms: [{ id: "r1", code: "A", name: null, isActive: true, maxGuests: null }],
   items: [
     {
       kind: "booking",
@@ -19,6 +19,10 @@ const basePayload = (): CalendarMonthPayload => ({
       startDate: "2026-07-05",
       endDate: "2026-07-10",
       guestName: "Guest A",
+      guestTotal: null,
+      guestAdults: null,
+      guestChildren: null,
+      guestInfants: null,
       channel: "direct",
       status: "confirmed",
       assignmentId: null,
@@ -32,6 +36,10 @@ const basePayload = (): CalendarMonthPayload => ({
       startDate: "2026-07-12",
       endDate: "2026-07-15",
       guestName: "Guest B",
+      guestTotal: 2,
+      guestAdults: null,
+      guestChildren: null,
+      guestInfants: null,
       channel: "booking",
       status: "confirmed",
       assignmentId: "asg_2",
@@ -48,6 +56,7 @@ const basePayload = (): CalendarMonthPayload => ({
     },
   ],
   markers: [],
+  dailyRatesByRoomDay: {},
 });
 
 describe("applyOptimisticBookingMove", () => {

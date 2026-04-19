@@ -115,14 +115,14 @@ describe("api GET /api/bookings/overview", () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as {
       data: {
-        rooms: Array<{ id: string; label: string }>;
+        rooms: Array<{ id: string; label: string; maxGuests: number | null }>;
         unassigned: Array<{ guestName: string }>;
         assigned: Array<{ guestName: string; roomLabel: string }>;
       };
     };
     expect(json.data.rooms).toEqual([
-      { id: roomA.id, label: "Apartment A" },
-      { id: roomB.id, label: "Apartment B" },
+      { id: roomA.id, label: "Apartment A", maxGuests: null },
+      { id: roomB.id, label: "Apartment B", maxGuests: null },
     ]);
     expect(json.data.unassigned.map((b) => b.guestName)).toContain("Unassigned Guest");
     expect(json.data.assigned).toEqual(

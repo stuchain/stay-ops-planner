@@ -13,7 +13,7 @@ vi.mock("@/modules/calendar/assignmentMutations", () => ({
 }));
 
 describe("UnassignedDrawer", () => {
-  const rooms = [{ id: "r1", code: "R1", name: null, isActive: true }];
+  const rooms = [{ id: "r1", code: "R1", name: null, isActive: true, maxGuests: null }];
 
   beforeEach(() => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -35,6 +35,10 @@ describe("UnassignedDrawer", () => {
                   checkinDate: "2026-07-01",
                   checkoutDate: "2026-07-05",
                   nights: 4,
+                  guestTotal: null,
+                  guestAdults: null,
+                  guestChildren: null,
+                  guestInfants: null,
                 },
                 {
                   id: "b2",
@@ -43,6 +47,10 @@ describe("UnassignedDrawer", () => {
                   checkinDate: "2026-07-06",
                   checkoutDate: "2026-07-08",
                   nights: 2,
+                  guestTotal: null,
+                  guestAdults: null,
+                  guestChildren: null,
+                  guestInfants: null,
                 },
               ],
             },
