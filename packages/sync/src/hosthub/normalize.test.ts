@@ -62,6 +62,37 @@ describe("normalizeHosthubReservationRecord", () => {
     ).toBeNull();
   });
 
+  it("maps different reservation and listing id casing to the same canonical values", () => {
+    const base = {
+      type: "Booking",
+      date_from: "2026-06-20",
+      date_to: "2026-07-01",
+      rental: { id: "rent-List-1" },
+      source: { name: "Booking.com" },
+    };
+    const upperMix = normalizeHosthubReservationRecord({ ...base, id: "qamrr2jAmw" });
+    const lower = normalizeHosthubReservationRecord({ ...base, id: "qamrr2jamw" });
+    expect(upperMix).not.toBeNull();
+    expect(lower).not.toBeNull();
+    expect(upperMix?.reservationId).toBe("qamrr2jamw");
+    expect(upperMix?.reservationId).toBe(lower?.reservationId);
+    expect(upperMix?.listingId).toBe("rent-list-1");
+    expect(upperMix?.listingId).toBe(lower?.listingId);
+
+    const listingCaseA = normalizeHosthubReservationRecord({
+      ...base,
+      id: "same-id",
+      rental: { id: "Rent-ABC" },
+    });
+    const listingCaseB = normalizeHosthubReservationRecord({
+      ...base,
+      id: "same-id",
+      rental: { id: "rent-abc" },
+    });
+    expect(listingCaseA?.listingId).toBe("rent-abc");
+    expect(listingCaseA?.listingId).toBe(listingCaseB?.listingId);
+  });
+
   it("maps is_visible false and cancelled_at to cancelled", () => {
     const hidden = normalizeHosthubReservationRecord({
       id: "b1",

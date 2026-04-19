@@ -174,6 +174,15 @@ function parseUpdatedUnix(raw: unknown): number | undefined {
 }
 
 /**
+ * Trim + lowercase so upserts on `(channel, external_booking_id)` stay stable when Hosthub
+ * sends the same reservation id with different casing. Hosthub treats these ids as opaque; API
+ * calls use this same canonical value.
+ */
+function normalizeHosthubExternalId(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
  * Maps a single JSON object from Hosthub list/webhook payloads into our canonical DTO.
  * Calendar events: stable `id`, `date_from`/`date_to`, nested `rental`, `source`; skips `Hold` rows.
  */
@@ -188,7 +197,7 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
     return null;
   }
 
-  const reservationId = pickString(
+  const reservationIdRaw = pickString(
     r,
     "id",
     "uuid",
@@ -197,7 +206,9 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
     "booking_id",
     "bookingId",
   );
-  const listingId = pickListingId(r);
+  const listingIdRaw = pickListingId(r);
+  const reservationId = reservationIdRaw ? normalizeHosthubExternalId(reservationIdRaw) : undefined;
+  const listingId = listingIdRaw ? normalizeHosthubExternalId(listingIdRaw) : undefined;
 
   const checkInRaw = pickString(
     r,

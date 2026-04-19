@@ -268,8 +268,8 @@ describe("HosthubClient", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.data).toHaveLength(1);
-      expect(result.value.data[0]?.reservationId).toBe("rX");
-      expect(result.value.data[0]?.listingId).toBe("lX");
+      expect(result.value.data[0]?.reservationId).toBe("rx");
+      expect(result.value.data[0]?.listingId).toBe("lx");
     }
   });
 
