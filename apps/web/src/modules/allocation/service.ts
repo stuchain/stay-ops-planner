@@ -431,6 +431,10 @@ export async function listUnassignedBookings(params: UnassignedListParams) {
       checkinDate: true,
       checkoutDate: true,
       nights: true,
+      guestTotal: true,
+      guestAdults: true,
+      guestChildren: true,
+      guestInfants: true,
     },
   });
 }

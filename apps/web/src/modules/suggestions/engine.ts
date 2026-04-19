@@ -1,4 +1,5 @@
 import { BookingStatus, PrismaClient, TURNOVER_MINUTES } from "@stay-ops/db";
+import { effectiveGuestCount, roomAcceptsParty } from "@/modules/bookings/effectiveGuestCount";
 import type { SuggestionReasonCode, SuggestionScoreBreakdown } from "./types";
 
 export const SUGGESTION_ENGINE_VERSION = 1;
@@ -13,6 +14,7 @@ type SuggestionContext = {
   bookingId: string;
   checkinDate: Date;
   checkoutDate: Date;
+  effectiveGuests: number | null;
 };
 
 type RoomCandidate = {
@@ -27,6 +29,7 @@ type BookingWindowSnapshot = {
 
 type RoomTimelineSnapshot = {
   roomId: string;
+  maxGuests: number | null;
   assignments: BookingWindowSnapshot[];
   blocks: BookingWindowSnapshot[];
 };
@@ -120,6 +123,10 @@ async function loadContext(bookingId: string): Promise<SuggestionContext | null>
       status: true,
       checkinDate: true,
       checkoutDate: true,
+      guestTotal: true,
+      guestAdults: true,
+      guestChildren: true,
+      guestInfants: true,
       assignment: { select: { id: true } },
     },
   });
@@ -132,6 +139,7 @@ async function loadContext(bookingId: string): Promise<SuggestionContext | null>
     bookingId: booking.id,
     checkinDate: booking.checkinDate,
     checkoutDate: booking.checkoutDate,
+    effectiveGuests: effectiveGuestCount(booking),
   };
 }
 
@@ -141,6 +149,7 @@ async function loadRoomSnapshots(): Promise<RoomTimelineSnapshot[]> {
     select: {
       id: true,
       code: true,
+      maxGuests: true,
       assignments: { select: { startDate: true, endDate: true } },
       manualBlocks: { select: { startDate: true, endDate: true } },
     },
@@ -149,6 +158,7 @@ async function loadRoomSnapshots(): Promise<RoomTimelineSnapshot[]> {
   const ordered = sortRoomsDeterministically(rooms);
   return ordered.map((room) => ({
     roomId: room.id,
+    maxGuests: room.maxGuests,
     assignments: room.assignments.map((row) => ({
       checkinDate: row.startDate,
       checkoutDate: row.endDate,
@@ -160,14 +170,22 @@ async function loadRoomSnapshots(): Promise<RoomTimelineSnapshot[]> {
   }));
 }
 
+function isProposalCandidate(snapshot: RoomTimelineSnapshot, ctx: SuggestionContext): boolean {
+  if (hasAvailabilityConflict(snapshot, ctx)) return false;
+  if (!roomAcceptsParty(snapshot.maxGuests, ctx.effectiveGuests)) return false;
+  return true;
+}
+
 export async function rankBookingSuggestions(bookingId: string): Promise<RankedSuggestion[]> {
   const ctx = await loadContext(bookingId);
   if (!ctx) return [];
 
   const snapshots = await loadRoomSnapshots();
-  return snapshots
+  const feasible = snapshots.filter((s) => isProposalCandidate(s, ctx));
+  const n = feasible.length;
+  return feasible
     .map((snapshot, index) => {
-      const scored = scoreRoom(snapshot, ctx, index, snapshots.length);
+      const scored = scoreRoom(snapshot, ctx, index, n);
       return {
         roomId: snapshot.roomId,
         score: scored.score,

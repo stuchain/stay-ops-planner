@@ -8,7 +8,8 @@ const prisma = new PrismaClient();
 
 export const LoginBodySchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  // Length policy belongs to account provisioning; login only verifies the stored hash.
+  password: z.string().min(1),
 });
 
 export type LoginBody = z.infer<typeof LoginBodySchema>;
