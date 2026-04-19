@@ -12,11 +12,18 @@ import {
   type CollisionDetection,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { BookingDetailModal } from "@/modules/bookings/BookingDetailModal";
 import { UnassignedDrawer } from "@/modules/bookings/UnassignedDrawer";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
-import type { CalendarBlockItem, CalendarBookingItem, CalendarMonthPayload } from "./calendarTypes";
+import type {
+  CalendarBlockItem,
+  CalendarBookingItem,
+  CalendarMonthPayload,
+} from "./calendarTypes";
 import { MonthGrid } from "./MonthGrid";
+import { MultiMonthTimeline } from "./MultiMonthTimeline";
 import { performBookingAssignmentMutation } from "./assignmentMutations";
 import { MobileAssignSheet } from "./MobileAssignSheet";
 import {
@@ -27,6 +34,7 @@ import {
 } from "./optimisticMove";
 import { useIsNarrowViewport } from "./useIsNarrowViewport";
 import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
+import { suggestDefaultRoomForBooking } from "./assignmentSuggest";
 
 function shiftMonth(ym: string, delta: number): string {
   const parts = ym.split("-");
@@ -49,6 +57,10 @@ const CALENDAR_DISPLAY_MONTHS_STORAGE_KEY = "ops.calendar.displayMonths";
 type OverviewUnassignedBooking = {
   bookingId: string;
   guestName: string;
+  guestTotal: number | null;
+  guestAdults: number | null;
+  guestChildren: number | null;
+  guestInfants: number | null;
   channel: "airbnb" | "booking" | "direct";
   checkinDate: string;
   checkoutDate: string;
@@ -80,10 +92,12 @@ export function CalendarClient() {
   const [assigningBookingId, setAssigningBookingId] = useState<string | null>(null);
   const isMobile = useIsNarrowViewport();
   const [overview, setOverview] = useState<{
-    rooms: Array<{ id: string; label: string }>;
+    rooms: Array<{ id: string; label: string; maxGuests: number | null }>;
     unassigned: OverviewUnassignedBooking[];
   } | null>(null);
   const [roomPick, setRoomPick] = useState<Record<string, string>>({});
+  const [orderedRoomIds, setOrderedRoomIds] = useState<string[] | null>(null);
+  const [detailBookingId, setDetailBookingId] = useState<string | null>(null);
   const visibleMonths = useMemo(
     () => Array.from({ length: displayMonths }, (_, idx) => shiftMonth(month, idx)),
     [month, displayMonths],
@@ -93,33 +107,47 @@ export function CalendarClient() {
   const load = useCallback(async (baseYm: string, monthCount: 1 | 2 | 3) => {
     setLoading(true);
     setError(null);
+    const fetchOpts: RequestInit = {
+      credentials: "include",
+      signal: AbortSignal.timeout(45_000),
+    };
     try {
       const months = Array.from({ length: monthCount }, (_, idx) => shiftMonth(baseYm, idx));
       const monthPayloads = await Promise.all(
         months.map(async (ym) => {
-          const res = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, {
-            credentials: "include",
-          });
+          const res = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, fetchOpts);
           if (!res.ok) {
             const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
             throw new Error(j?.error?.message ?? `HTTP ${res.status}`);
           }
           const json = (await res.json()) as { data: CalendarMonthPayload };
-          return [ym, json.data] as const;
+          const payload = json.data;
+          return [
+            ym,
+            {
+              ...payload,
+              dailyRatesByRoomDay: payload.dailyRatesByRoomDay ?? {},
+            },
+          ] as const;
         }),
       );
       setDataByMonth(Object.fromEntries(monthPayloads));
 
-      const overviewRes = await fetch(`/api/bookings/overview?month=${encodeURIComponent(baseYm)}`, {
-        credentials: "include",
-      });
+      const overviewRes = await fetch(
+        `/api/bookings/overview?month=${encodeURIComponent(baseYm)}`,
+        fetchOpts,
+      );
       if (overviewRes.ok) {
         const overviewJson = (await overviewRes.json()) as {
           data: {
-            rooms: Array<{ id: string; label: string }>;
+            rooms: Array<{ id: string; label: string; maxGuests: number | null }>;
             unassigned: Array<{
               bookingId: string;
               guestName: string;
+              guestTotal: number | null;
+              guestAdults: number | null;
+              guestChildren: number | null;
+              guestInfants: number | null;
               checkinDate: string;
               checkoutDate: string;
               status: string;
@@ -135,7 +163,12 @@ export function CalendarClient() {
         setOverview(null);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      let message = e instanceof Error ? e.message : "Failed to load";
+      if (e instanceof Error && e.name === "AbortError") {
+        message =
+          "Request timed out. Ensure Docker Postgres is running and DATABASE_URL is set (use the repo-root .env from .env.example).";
+      }
+      setError(message);
       setDataByMonth({});
       setOverview(null);
     } finally {
@@ -146,6 +179,63 @@ export function CalendarClient() {
   useEffect(() => {
     void load(month, displayMonths);
   }, [month, displayMonths, load]);
+
+  useEffect(() => {
+    if (!baseData?.rooms.length) return;
+    setOrderedRoomIds((prev) => {
+      const ids = baseData.rooms.map((r) => r.id);
+      if (!prev || ids.length !== prev.length || !ids.every((id) => prev.includes(id))) return ids;
+      return prev;
+    });
+  }, [baseData]);
+
+  const unassignedDrawerSuggestContext = useMemo(() => {
+    if (!baseData) return undefined;
+    const parts = baseData.month.split("-").map(Number);
+    const y = parts[0] ?? 2020;
+    const m = parts[1] ?? 1;
+    return {
+      month: baseData.month,
+      monthDayCount: new Date(y, m, 0).getDate(),
+      bookings: baseData.items.filter((i): i is CalendarBookingItem => i.kind === "booking"),
+      blocks: baseData.items.filter((i): i is CalendarBlockItem => i.kind === "block"),
+    };
+  }, [baseData]);
+
+  const defaultRoomIdByBooking = useMemo(() => {
+    if (!overview || !baseData) return {} as Record<string, string>;
+    const parts = baseData.month.split("-").map(Number);
+    const y = parts[0] ?? 2020;
+    const m = parts[1] ?? 1;
+    const monthDayCount = new Date(y, m, 0).getDate();
+    const bookings = baseData.items.filter((i): i is CalendarBookingItem => i.kind === "booking");
+    const blocks = baseData.items.filter((i): i is CalendarBlockItem => i.kind === "block");
+    const roomOpts = overview.rooms.map((r) => ({
+      id: r.id,
+      label: r.label,
+      maxGuests: r.maxGuests ?? null,
+    }));
+    const out: Record<string, string> = {};
+    for (const u of overview.unassigned) {
+      const sug = suggestDefaultRoomForBooking(
+        {
+          guestTotal: u.guestTotal,
+          guestAdults: u.guestAdults,
+          guestChildren: u.guestChildren,
+          guestInfants: u.guestInfants,
+        },
+        roomOpts,
+        u.checkinDate,
+        u.checkoutDate,
+        baseData.month,
+        monthDayCount,
+        bookings,
+        blocks,
+      );
+      if (sug) out[u.bookingId] = sug;
+    }
+    return out;
+  }, [overview, baseData]);
 
   useEffect(() => {
     function onSyncTick() {
@@ -213,6 +303,40 @@ export function CalendarClient() {
     async (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || isMobile) return;
+      const activeId = String(active.id);
+      if (activeId.startsWith("room-order:")) {
+        const overId = String(over.id);
+        if (!overId.startsWith("room-order:") || !orderedRoomIds) return;
+        const from = activeId.replace("room-order:", "");
+        const to = overId.replace("room-order:", "");
+        if (from === to) return;
+        const oldIndex = orderedRoomIds.indexOf(from);
+        const newIndex = orderedRoomIds.indexOf(to);
+        if (oldIndex < 0 || newIndex < 0) return;
+        const next = arrayMove(orderedRoomIds, oldIndex, newIndex);
+        setOrderedRoomIds(next);
+        setFlash(null);
+        try {
+          const res = await fetch("/api/rooms/reorder", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ orderedRoomIds: next }),
+          });
+          if (!res.ok) {
+            const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+            setFlash(j?.error?.message ?? "Could not save room order");
+            await load(month, displayMonths);
+            return;
+          }
+          await load(month, displayMonths);
+        } catch (e) {
+          setFlash(e instanceof Error ? e.message : "Could not save room order");
+          await load(month, displayMonths);
+        }
+        return;
+      }
+
       const raw = active.data.current as BookingDragPayload | undefined;
       if (!raw || raw.type !== "booking") return;
       const overId = String(over.id);
@@ -224,7 +348,7 @@ export function CalendarClient() {
       if (toRoomId === raw.fromRoomId) return;
       await completeAssignment(raw, toRoomId);
     },
-    [completeAssignment, isMobile],
+    [completeAssignment, displayMonths, isMobile, load, month, orderedRoomIds],
   );
 
   const roomOptions: BlockRoomOption[] = (baseData?.rooms ?? []).map((r) => ({
@@ -234,7 +358,8 @@ export function CalendarClient() {
 
   async function assignFromSimplePanel(bookingId: string) {
     if (!overview) return;
-    const roomId = roomPick[bookingId] ?? overview.rooms[0]?.id;
+    const roomId =
+      roomPick[bookingId] ?? defaultRoomIdByBooking[bookingId] ?? overview.rooms[0]?.id;
     if (!roomId) {
       setFlash("No apartment available to assign.");
       return;
@@ -271,12 +396,6 @@ export function CalendarClient() {
           <button type="button" className="ops-btn" onClick={() => setMonth(defaultMonthYm())}>
             Today
           </button>
-          <button type="button" className="ops-btn" onClick={() => setMonth((m) => shiftMonth(m, -1))}>
-            ◀
-          </button>
-          <button type="button" className="ops-btn" onClick={() => setMonth((m) => shiftMonth(m, 1))}>
-            ▶
-          </button>
           <input
             type="month"
             className="ops-input"
@@ -303,14 +422,6 @@ export function CalendarClient() {
           <button type="button" className="ops-btn" disabled={!baseData} onClick={() => setQueueOpen(true)}>
             Unassigned list
           </button>
-          <button
-            type="button"
-            className="ops-btn ops-btn-primary"
-            disabled={!baseData}
-            onClick={() => setBlockModal({ mode: "create" })}
-          >
-            Block dates
-          </button>
         </section>
         {!loading && !error && overview && (
           <section className="ops-needs-table" aria-label="Needs assignment table">
@@ -324,7 +435,11 @@ export function CalendarClient() {
                     <NeedsAssignmentDragCard
                       key={booking.bookingId}
                       booking={booking}
-                      roomValue={roomPick[booking.bookingId] ?? overview.rooms[0]?.id ?? ""}
+                      roomValue={
+                        roomPick[booking.bookingId] ??
+                        defaultRoomIdByBooking[booking.bookingId] ??
+                        ""
+                      }
                       rooms={overview.rooms}
                       assigning={assigningBookingId === booking.bookingId}
                       onRoomChange={(roomId) =>
@@ -346,31 +461,72 @@ export function CalendarClient() {
             {flash}
           </div>
         )}
-        <section className={`ops-multi-month-grid ops-multi-month-${displayMonths}`}>
-          {visibleMonths.map((ym) => (
-            <MonthGrid
-              key={ym}
-              data={dataByMonth[ym] ?? null}
-              loading={loading}
-              error={error}
-              onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
-              onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
-              onCurrentMonth={() => setMonth(defaultMonthYm())}
-              onAddBlock={() => setBlockModal({ mode: "create" })}
-              onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
-              isMobile={isMobile}
-              onQuickAssign={isMobile ? (b) => setMobileAssignBooking(b) : undefined}
-              onOpenUnassigned={baseData ? () => setQueueOpen(true) : undefined}
-              laneScope={ym}
-              showNavigation={false}
-            />
-          ))}
+        <section
+          className={
+            isMobile || displayMonths === 1
+              ? `ops-multi-month-grid ops-multi-month-${displayMonths}`
+              : "ops-multi-month-grid"
+          }
+        >
+          {!isMobile && displayMonths > 1 ? (
+            error ? (
+              <MultiMonthTimeline
+                monthsData={[]}
+                loading={false}
+                error={error}
+                onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
+                onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
+                sortableRoomIds={orderedRoomIds}
+                onBookingClick={(id) => setDetailBookingId(id)}
+              />
+            ) : (
+              (() => {
+                const monthsPayloadList = visibleMonths.map((ym) => dataByMonth[ym]);
+                const allReady = monthsPayloadList.every(
+                  (p): p is CalendarMonthPayload => p != null,
+                );
+                if (!allReady) {
+                  return <p className="ops-muted">Loading bookings…</p>;
+                }
+                return (
+                  <MultiMonthTimeline
+                    monthsData={monthsPayloadList}
+                    loading={loading}
+                    error={null}
+                    onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
+                    onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
+                    sortableRoomIds={orderedRoomIds}
+                    onBookingClick={(id) => setDetailBookingId(id)}
+                  />
+                );
+              })()
+            )
+          ) : (
+            visibleMonths.map((ym) => (
+              <MonthGrid
+                key={ym}
+                data={dataByMonth[ym] ?? null}
+                loading={loading}
+                error={error}
+                onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
+                onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
+                onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
+                isMobile={isMobile}
+                onQuickAssign={isMobile ? (b) => setMobileAssignBooking(b) : undefined}
+                laneScope={ym}
+                showNavigation={!isMobile}
+                sortableRoomIds={!isMobile ? orderedRoomIds : null}
+                onBookingClick={!isMobile ? (id) => setDetailBookingId(id) : undefined}
+              />
+            ))
+          )}
         </section>
         {baseData && (
           <UnassignedDrawer
             open={queueOpen}
             month={month}
             rooms={baseData.rooms}
+            suggestContext={unassignedDrawerSuggestContext}
             onClose={() => setQueueOpen(false)}
             onAssigned={() => void load(month, displayMonths)}
           />
@@ -400,6 +556,11 @@ export function CalendarClient() {
             onSaved={() => void load(month, displayMonths)}
           />
         )}
+        <BookingDetailModal
+          bookingId={detailBookingId}
+          onClose={() => setDetailBookingId(null)}
+          onAfterSave={() => void load(month, displayMonths)}
+        />
       </main>
     </DndContext>
   );
@@ -415,7 +576,7 @@ function NeedsAssignmentDragCard({
 }: {
   booking: OverviewUnassignedBooking;
   roomValue: string;
-  rooms: Array<{ id: string; label: string }>;
+  rooms: Array<{ id: string; label: string; maxGuests?: number | null }>;
   assigning: boolean;
   onRoomChange: (roomId: string) => void;
   onAssign: () => void;

@@ -36,10 +36,18 @@ export async function GET(request: NextRequest) {
 
   const timeZone = process.env.APP_TIMEZONE?.trim() || "Etc/UTC";
 
-  const data = await getCalendarMonthAggregate({
-    yearMonth: parsed.data.month,
-    timeZone,
-  });
-
-  return NextResponse.json({ data });
+  try {
+    const data = await getCalendarMonthAggregate({
+      yearMonth: parsed.data.month,
+      timeZone,
+    });
+    return NextResponse.json({ data });
+  } catch (err) {
+    console.error("[api/calendar/month]", err);
+    const message =
+      process.env.NODE_ENV === "development" && err instanceof Error
+        ? err.message
+        : "Could not load calendar data.";
+    return NextResponse.json(jsonError("INTERNAL_ERROR", message), { status: 500 });
+  }
 }

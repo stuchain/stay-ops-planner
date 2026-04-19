@@ -3,6 +3,8 @@ export type CalendarRoom = {
   code: string | null;
   name: string | null;
   isActive: boolean;
+  /** Null = no capacity limit for assignment suggestions. */
+  maxGuests: number | null;
 };
 
 export type CalendarBookingItem = {
@@ -12,6 +14,10 @@ export type CalendarBookingItem = {
   startDate: string;
   endDate: string;
   guestName: string;
+  guestTotal: number | null;
+  guestAdults: number | null;
+  guestChildren: number | null;
+  guestInfants: number | null;
   channel: "airbnb" | "booking" | "direct";
   status: string;
   assignmentId: string | null;
@@ -42,4 +48,6 @@ export type CalendarMonthPayload = {
   rooms: CalendarRoom[];
   items: (CalendarBookingItem | CalendarBlockItem)[];
   markers: CalendarMarker[];
+  /** Sparse nightly rates from Hosthub JSON when available (room id → YYYY-MM-DD → money). */
+  dailyRatesByRoomDay: Record<string, Record<string, { amountCents: number; currency: string }>>;
 };

@@ -1,4 +1,5 @@
 import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
+import { extractDailyRatesFromHosthubJson } from "./hosthubDailyRates";
 import { zonedMonthRangeUtc } from "./monthBounds";
 
 const prisma = new PrismaClient();
@@ -10,6 +11,10 @@ export type CalendarBookingItem = {
   startDate: string;
   endDate: string;
   guestName: string;
+  guestTotal: number | null;
+  guestAdults: number | null;
+  guestChildren: number | null;
+  guestInfants: number | null;
   channel: Channel;
   status: BookingStatus;
   assignmentId: string | null;
@@ -40,6 +45,7 @@ export type CalendarRoomDto = {
   code: string | null;
   name: string | null;
   isActive: boolean;
+  maxGuests: number | null;
 };
 
 function dateStr(d: Date): string {
@@ -73,6 +79,11 @@ function bookingIdFromImportPayload(payload: unknown): string | null {
   return null;
 }
 
+export type DailyRatesByRoomDay = Record<
+  string,
+  Record<string, { amountCents: number; currency: string }>
+>;
+
 export async function getCalendarMonthAggregate(args: {
   yearMonth: string;
   timeZone: string;
@@ -82,19 +93,38 @@ export async function getCalendarMonthAggregate(args: {
   rooms: CalendarRoomDto[];
   items: (CalendarBookingItem | CalendarBlockItem)[];
   markers: CalendarMarker[];
+  dailyRatesByRoomDay: DailyRatesByRoomDay;
 }> {
   const { monthStartUtc, monthEndExclusiveUtc } = zonedMonthRangeUtc(args.yearMonth, args.timeZone);
 
-  const rooms = await prisma.room.findMany({
-    orderBy: [{ isActive: "desc" }, { code: "asc" }, { id: "asc" }],
-    select: { id: true, code: true, displayName: true, isActive: true },
+  const roomsRaw = await prisma.room.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      code: true,
+      displayName: true,
+      isActive: true,
+      calendarSortIndex: true,
+      maxGuests: true,
+    },
   });
 
-  const allRoomDtos: CalendarRoomDto[] = rooms.map((r) => ({
+  const roomsSorted = [...roomsRaw].sort((a, b) => {
+    const ai = a.calendarSortIndex ?? Number.MAX_SAFE_INTEGER;
+    const bi = b.calendarSortIndex ?? Number.MAX_SAFE_INTEGER;
+    if (ai !== bi) return ai - bi;
+    const ac = a.code ?? "";
+    const bc = b.code ?? "";
+    if (ac !== bc) return ac.localeCompare(bc);
+    return a.id.localeCompare(b.id);
+  });
+
+  const allRoomDtos: CalendarRoomDto[] = roomsSorted.map((r) => ({
     id: r.id,
     code: r.code,
     name: r.displayName,
     isActive: r.isActive,
+    maxGuests: r.maxGuests,
   }));
 
   const bookings = await prisma.booking.findMany({
@@ -102,10 +132,27 @@ export async function getCalendarMonthAggregate(args: {
       AND: [
         { checkinDate: { lt: monthEndExclusiveUtc } },
         { checkoutDate: { gt: monthStartUtc } },
+        /* Cancelled stays remain in DB for history; hide from the operational month grid (avoids “duplicate” bars next to the active booking). */
+        { status: { not: BookingStatus.cancelled } },
       ],
     },
-    include: { assignment: true, sourceListing: true },
     orderBy: [{ checkinDate: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      checkinDate: true,
+      checkoutDate: true,
+      guestName: true,
+      guestTotal: true,
+      guestAdults: true,
+      guestChildren: true,
+      guestInfants: true,
+      rawPayload: true,
+      channel: true,
+      status: true,
+      hosthubCalendarEventRaw: true,
+      assignment: true,
+      sourceListing: true,
+    },
   });
 
   const blocks = await prisma.manualBlock.findMany({
@@ -139,6 +186,10 @@ export async function getCalendarMonthAggregate(args: {
       startDate: dateStr(startDate),
       endDate: dateStr(endDate),
       guestName: bestGuestName(b),
+      guestTotal: b.guestTotal ?? null,
+      guestAdults: b.guestAdults ?? null,
+      guestChildren: b.guestChildren ?? null,
+      guestInfants: b.guestInfants ?? null,
       channel: b.channel,
       status: b.status,
       assignmentId: a?.id ?? null,
@@ -146,6 +197,20 @@ export async function getCalendarMonthAggregate(args: {
       flags,
     };
   });
+
+  const dailyRatesByRoomDay: DailyRatesByRoomDay = {};
+  for (const b of bookings) {
+    const a = b.assignment;
+    if (!a || !b.hosthubCalendarEventRaw) continue;
+    const extracted = extractDailyRatesFromHosthubJson(b.hosthubCalendarEventRaw);
+    if (extracted.size === 0) continue;
+    const roomId = a.roomId;
+    if (!dailyRatesByRoomDay[roomId]) dailyRatesByRoomDay[roomId] = {};
+    const dest = dailyRatesByRoomDay[roomId];
+    for (const [d, cell] of extracted) {
+      if (dest[d] === undefined) dest[d] = cell;
+    }
+  }
 
   const blockItems: CalendarBlockItem[] = blocks.map((blk) => ({
     kind: "block" as const,
@@ -183,5 +248,6 @@ export async function getCalendarMonthAggregate(args: {
     rooms: roomDtos,
     items,
     markers,
+    dailyRatesByRoomDay,
   };
 }
