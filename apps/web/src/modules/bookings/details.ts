@@ -105,12 +105,15 @@ export type BookingDetailDto = BookingListItemDto & {
   contact: {
     email: string | null;
     phone: string | null;
+    country: string | null;
+    id: string | null;
   };
   guests: {
     adults: number | null;
     children: number | null;
     infants: number | null;
     total: number | null;
+    childrenAges: string | null;
   };
   money: {
     total: number | null;
@@ -119,6 +122,13 @@ export type BookingDetailDto = BookingListItemDto & {
     taxes: number | null;
     payout: number | null;
     guestPaid: number | null;
+    otherFees: number | null;
+    paymentCharges: number | null;
+    serviceFeeHost: number | null;
+    serviceFeeHostBase: number | null;
+    serviceFeeHostVat: number | null;
+    extraTaxes: number | null;
+    collectedByChannel: number | null;
   };
   notes: string | null;
   hosthub: {
@@ -255,6 +265,7 @@ export function bookingDetailFromModel(booking: BookingWithDetailRelations): Boo
   const base = bookingListItemFromModel(booking);
   const raw = asObject(booking.rawPayload);
   const guestObj = asObject(raw.guest ?? raw.customer ?? raw.guest_details);
+  const taxesObj = asObject(booking.hosthubGrTaxesRaw);
 
   return {
     ...base,
@@ -274,6 +285,8 @@ export function bookingDetailFromModel(booking: BookingWithDetailRelations): Boo
     contact: {
       email: booking.guestEmail ?? pickGuest(raw, guestObj, ["email", "guest_email", "mail"]),
       phone: booking.guestPhone ?? pickGuest(raw, guestObj, ["phone", "phone_number", "mobile"]),
+      country: pickGuest(raw, guestObj, ["country", "country_code", "guest_country", "nationality"]),
+      id: pickGuest(raw, guestObj, ["id", "id_number", "identification", "passport", "passport_number"]),
     },
     guests: {
       adults: booking.guestAdults ?? pickNumber(guestObj, ["adults", "adult_count"]) ?? pickNumber(raw, ["adults"]),
@@ -284,6 +297,9 @@ export function bookingDetailFromModel(booking: BookingWithDetailRelations): Boo
         booking.guestTotal ??
         pickNumber(guestObj, ["total", "count", "guests", "guest_count"]) ??
         pickNumber(raw, ["guests", "guest_count", "total_guests"]),
+      childrenAges:
+        pickString(guestObj, ["children_ages", "child_ages", "childrenAges"]) ??
+        pickString(raw, ["children_ages", "child_ages", "childrenAges"]),
     },
     money: {
       total:
@@ -294,6 +310,22 @@ export function bookingDetailFromModel(booking: BookingWithDetailRelations): Boo
       taxes: centsToAmount(booking.taxCents) ?? pickNumber(raw, ["taxes", "tax"]),
       payout: centsToAmount(booking.payoutAmountCents) ?? pickNumber(raw, ["payout", "host_payout"]),
       guestPaid: centsToAmount(booking.guestPaidCents) ?? pickNumber(raw, ["guest_paid"]),
+      otherFees: pickNumber(raw, ["other_fees", "otherFees"]),
+      paymentCharges: pickNumber(raw, ["payment_charges", "paymentCharges", "payment_fees"]),
+      serviceFeeHost:
+        pickNumber(raw, ["service_fee_host", "serviceFeeHost"]) ??
+        pickNumber(taxesObj, ["service_fee_host", "serviceFeeHost"]),
+      serviceFeeHostBase:
+        pickNumber(raw, ["service_fee_host_base", "serviceFeeHostBase"]) ??
+        pickNumber(taxesObj, ["service_fee_host_base", "serviceFeeHostBase"]),
+      serviceFeeHostVat:
+        pickNumber(raw, ["service_fee_host_vat", "serviceFeeHostVat"]) ??
+        pickNumber(taxesObj, ["service_fee_host_vat", "serviceFeeHostVat"]),
+      extraTaxes:
+        pickNumber(raw, ["extra_taxes", "extraTaxes"]) ?? pickNumber(taxesObj, ["extra_taxes", "extraTaxes"]),
+      collectedByChannel:
+        pickNumber(raw, ["collected_by_channel", "collectedByChannel"]) ??
+        pickNumber(taxesObj, ["collected_by_channel", "collectedByChannel"]),
     },
     notes: booking.notes ?? pickString(raw, ["notes", "note", "internal_notes"]),
     hosthub: {
