@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { BookingDetailModal } from "./BookingDetailModal";
 import { ChannelLogo } from "./ChannelLogo";
 
@@ -12,7 +12,11 @@ type BookingStatus =
   | "no_show"
   | "needs_reassignment";
 type Channel = "airbnb" | "booking" | "direct";
-type DateType = "checkinDate" | "checkoutDate" | "createdAt" | "updatedAt";
+type ReservationStatus = "all" | "active" | "cancelled";
+type SortBy = "updatedAt" | "createdAt" | "checkinDate" | "checkoutDate" | "totalValue";
+type SortOrder = "asc" | "desc";
+type ExportMenu = "standard" | "financial" | null;
+type MultiSelectMenu = "rentals" | "channels" | null;
 
 type BookingListItem = {
   id: string;
@@ -21,40 +25,42 @@ type BookingListItem = {
   status: BookingStatus;
   checkinDate: string;
   checkoutDate: string;
+  createdAt: string;
+  updatedAt: string;
   nights: number;
   guestName: string;
   guestCount: number | null;
   totalValue: number | null;
   currency: string | null;
+  cleaningFee: number | null;
+  taxes: number | null;
+  payout: number | null;
+  guestPaid: number | null;
   action: string | null;
+  assignedRentalId: string | null;
+  assignedRentalName: string | null;
 };
 
 type Filters = {
-  channel: "" | Channel;
-  status: "" | BookingStatus;
-  dateType: DateType;
+  search: string;
+  channels: Channel[];
+  rentalIds: string[];
+  reservationStatus: ReservationStatus;
   startDate: string;
   endDate: string;
-  action: string;
-  guestName: string;
-  guestCountMin: string;
-  guestCountMax: string;
-  valueMin: string;
-  valueMax: string;
+  sortBy: SortBy;
+  sortOrder: SortOrder;
 };
 
 const DEFAULT_FILTERS: Filters = {
-  channel: "",
-  status: "",
-  dateType: "checkinDate",
+  search: "",
+  channels: [],
+  rentalIds: [],
+  reservationStatus: "all",
   startDate: "",
   endDate: "",
-  action: "",
-  guestName: "",
-  guestCountMin: "",
-  guestCountMax: "",
-  valueMin: "",
-  valueMax: "",
+  sortBy: "checkinDate",
+  sortOrder: "asc",
 };
 
 function todayDateLocal(): string {
@@ -67,39 +73,56 @@ function todayDateLocal(): string {
 
 function fmtMoney(value: number | null, currency: string | null): string {
   if (value === null) return "-";
-  if (currency) return `${value.toFixed(2)} ${currency}`;
+  if (currency) {
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(value);
+    } catch {
+      return `${value.toFixed(2)} ${currency}`;
+    }
+  }
   return value.toFixed(2);
+}
+
+function fmtDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
 }
 
 function toQuery(filters: Filters): string {
   const params = new URLSearchParams();
-  if (filters.channel) params.set("channel", filters.channel);
-  if (filters.status) params.set("status", filters.status);
-  if (filters.startDate || filters.endDate) params.set("dateType", filters.dateType);
+  if (filters.search.trim()) params.set("search", filters.search.trim());
+  for (const channel of filters.channels) params.append("channels", channel);
+  for (const rentalId of filters.rentalIds) params.append("rentalIds", rentalId);
+  params.set("reservationStatus", filters.reservationStatus);
   if (filters.startDate) params.set("startDate", filters.startDate);
   if (filters.endDate) params.set("endDate", filters.endDate);
-  if (filters.action.trim()) params.set("action", filters.action.trim());
-  if (filters.guestName.trim()) params.set("guestName", filters.guestName.trim());
-  if (filters.guestCountMin.trim()) params.set("guestCountMin", filters.guestCountMin.trim());
-  if (filters.guestCountMax.trim()) params.set("guestCountMax", filters.guestCountMax.trim());
-  if (filters.valueMin.trim()) params.set("valueMin", filters.valueMin.trim());
-  if (filters.valueMax.trim()) params.set("valueMax", filters.valueMax.trim());
+  params.set("sortBy", filters.sortBy);
+  params.set("sortOrder", filters.sortOrder);
   return params.toString();
 }
 
 export function BookingsClient() {
   const defaultFilters = useMemo<Filters>(() => ({ ...DEFAULT_FILTERS, startDate: todayDateLocal() }), []);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
   const [items, setItems] = useState<BookingListItem[]>([]);
+  const [rentalOptions, setRentalOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [exportMenu, setExportMenu] = useState<ExportMenu>(null);
+  const [multiSelectMenu, setMultiSelectMenu] = useState<MultiSelectMenu>(null);
+  const [filtersOpen, setFiltersOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const firstLiveRunRef = useRef<boolean>(true);
+  const multiSelectWrapRef = useRef<HTMLDivElement | null>(null);
 
-  const load = useCallback(async (activeFilters: Filters) => {
+  const load = useCallback(async (activeFilters: Filters, options?: { keepExportMenu?: boolean }) => {
     setLoading(true);
     setError(null);
+    if (!options?.keepExportMenu) setExportMenu(null);
     try {
       const query = toQuery(activeFilters);
       const res = await fetch(`/api/bookings/list${query ? `?${query}` : ""}`, {
@@ -112,7 +135,18 @@ export function BookingsClient() {
         setItems([]);
         return;
       }
-      setItems(body.data.items as BookingListItem[]);
+      const nextItems = body.data.items as BookingListItem[];
+      setItems(nextItems);
+      setRentalOptions((prev) => {
+        const map = new Map(prev.map((item) => [item.id, item.name]));
+        for (const row of nextItems) {
+          if (!row.assignedRentalId || !row.assignedRentalName) continue;
+          map.set(row.assignedRentalId, row.assignedRentalName);
+        }
+        return [...map.entries()]
+          .map(([id, name]) => ({ id, name }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+      });
     } catch {
       setError("Failed to load bookings");
       setItems([]);
@@ -126,10 +160,26 @@ export function BookingsClient() {
   }, [defaultFilters, load]);
 
   useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2600);
+    if (firstLiveRunRef.current) {
+      firstLiveRunRef.current = false;
+      return;
+    }
+    const id = window.setTimeout(() => {
+      void load(filters);
+    }, 320);
     return () => window.clearTimeout(id);
-  }, [toast]);
+  }, [filters, load]);
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!multiSelectWrapRef.current || !filtersOpen) return;
+      if (!multiSelectWrapRef.current.contains(event.target as Node)) {
+        setMultiSelectMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [filtersOpen]);
 
   const openBooking = useCallback((bookingId: string) => {
     setSelectedId(bookingId);
@@ -139,152 +189,440 @@ export function BookingsClient() {
     setSelectedId(null);
   }, []);
 
+  const onRowKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLTableRowElement>, bookingId: string) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openBooking(bookingId);
+    },
+    [openBooking],
+  );
+
+  const toggleChannel = useCallback((channel: Channel) => {
+    setFilters((state) => {
+      const has = state.channels.includes(channel);
+      return {
+        ...state,
+        channels: has ? state.channels.filter((value) => value !== channel) : [...state.channels, channel],
+      };
+    });
+  }, []);
+
+  const toggleRental = useCallback((rentalId: string) => {
+    setFilters((state) => {
+      const has = state.rentalIds.includes(rentalId);
+      return {
+        ...state,
+        rentalIds: has ? state.rentalIds.filter((value) => value !== rentalId) : [...state.rentalIds, rentalId],
+      };
+    });
+  }, []);
+
+  const selectedRentalLabels = useMemo(() => {
+    const map = new Map(rentalOptions.map((rental) => [rental.id, rental.name]));
+    return filters.rentalIds.map((id) => map.get(id) ?? id);
+  }, [filters.rentalIds, rentalOptions]);
+
+  const selectedChannelLabels = useMemo(
+    () =>
+      filters.channels.map((channel) => (channel === "airbnb" ? "Airbnb" : channel === "booking" ? "Booking" : "Direct")),
+    [filters.channels],
+  );
+
+  const setSort = useCallback((sortBy: SortBy, sortOrder: SortOrder) => {
+    setFilters((state) => ({ ...state, sortBy, sortOrder }));
+  }, []);
+
+  const cycleHeaderSort = useCallback(
+    (sortBy: SortBy) => {
+      if (filters.sortBy !== sortBy) {
+        setSort(sortBy, "asc");
+        return;
+      }
+      if (filters.sortOrder === "asc") {
+        setSort(sortBy, "desc");
+        return;
+      }
+      setSort(defaultFilters.sortBy, defaultFilters.sortOrder);
+    },
+    [defaultFilters.sortBy, defaultFilters.sortOrder, filters.sortBy, filters.sortOrder, setSort],
+  );
+
+  const sortLabel = useCallback(
+    (sortBy: SortBy) => {
+      if (filters.sortBy !== sortBy) return "";
+      return filters.sortOrder === "asc" ? " ▲" : " ▼";
+    },
+    [filters.sortBy, filters.sortOrder],
+  );
+
+  const toCsv = useCallback((rows: BookingListItem[], kind: ExportMenu): string => {
+    const isFinancial = kind === "financial";
+    const headers = isFinancial
+      ? [
+          "Booking ID",
+          "Guest",
+          "Rental",
+          "Channel",
+          "Total Value",
+          "Currency",
+          "Cleaning Fee",
+          "Taxes",
+          "Payout",
+          "Guest Paid",
+        ]
+      : [
+          "Booking ID",
+          "Guest",
+          "Rental",
+          "Channel",
+          "Status",
+          "Check-in",
+          "Check-out",
+          "Date Created",
+          "Date Updated",
+          "Guests",
+          "Total Value",
+          "Currency",
+        ];
+    const rowValues = rows.map((row) =>
+      isFinancial
+        ? [
+            row.externalBookingId,
+            row.guestName,
+            row.assignedRentalName ?? "Unassigned",
+            row.channel,
+            row.totalValue ?? "",
+            row.currency ?? "",
+            row.cleaningFee ?? "",
+            row.taxes ?? "",
+            row.payout ?? "",
+            row.guestPaid ?? "",
+          ]
+        : [
+            row.externalBookingId,
+            row.guestName,
+            row.assignedRentalName ?? "Unassigned",
+            row.channel,
+            row.status,
+            row.checkinDate,
+            row.checkoutDate,
+            row.createdAt,
+            row.updatedAt,
+            row.guestCount ?? "",
+            row.totalValue ?? "",
+            row.currency ?? "",
+          ],
+    );
+    return [headers, ...rowValues]
+      .map((line) =>
+        line
+          .map((cell) => {
+            const text = String(cell ?? "");
+            const escaped = text.replaceAll('"', '""');
+            return `"${escaped}"`;
+          })
+          .join(","),
+      )
+      .join("\n");
+  }, []);
+
+  const downloadBlob = useCallback((blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
+  }, []);
+
+  const exportRows = useCallback(
+    async (kind: ExportMenu, format: "csv" | "xlsx") => {
+      if (!kind) return;
+      if (format === "csv") {
+        const csv = toCsv(items, kind);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        downloadBlob(blob, `${kind === "financial" ? "bookings-financial" : "bookings"}-${todayDateLocal()}.csv`);
+        setExportMenu(null);
+        return;
+      }
+
+      const xlsx = await import("xlsx");
+      const records =
+        kind === "financial"
+          ? items.map((row) => ({
+              bookingId: row.externalBookingId,
+              guest: row.guestName,
+              rental: row.assignedRentalName ?? "Unassigned",
+              channel: row.channel,
+              totalValue: row.totalValue,
+              currency: row.currency,
+              cleaningFee: row.cleaningFee,
+              taxes: row.taxes,
+              payout: row.payout,
+              guestPaid: row.guestPaid,
+            }))
+          : items.map((row) => ({
+              bookingId: row.externalBookingId,
+              guest: row.guestName,
+              rental: row.assignedRentalName ?? "Unassigned",
+              channel: row.channel,
+              status: row.status,
+              checkin: row.checkinDate,
+              checkout: row.checkoutDate,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+              guests: row.guestCount,
+              totalValue: row.totalValue,
+              currency: row.currency,
+            }));
+      const worksheet = xlsx.utils.json_to_sheet(records);
+      const workbook = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(workbook, worksheet, "Bookings");
+      const out = xlsx.write(workbook, { type: "array", bookType: "xlsx" });
+      const blob = new Blob([out], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      downloadBlob(blob, `${kind === "financial" ? "bookings-financial" : "bookings"}-${todayDateLocal()}.xlsx`);
+      setExportMenu(null);
+    },
+    [downloadBlob, items, toCsv],
+  );
+
   const totalText = useMemo(() => `${items.length} bookings`, [items.length]);
+  const sortLabelText = useMemo(() => {
+    const nameMap: Record<SortBy, string> = {
+      updatedAt: "date updated",
+      createdAt: "date created",
+      checkinDate: "check-in date",
+      checkoutDate: "check-out date",
+      totalValue: "total value",
+    };
+    return `Sorted by ${nameMap[filters.sortBy]} (${filters.sortOrder})`;
+  }, [filters.sortBy, filters.sortOrder]);
 
   return (
     <main className="ops-bookings-main">
       <header className="ops-bookings-header">
         <h1>Bookings</h1>
-        <p className="ops-muted">Sorted by check-in date (earliest first)</p>
+        <p className="ops-muted">{sortLabelText}</p>
       </header>
 
-      <section className="ops-bookings-filters" aria-label="Filters">
-        <label className="ops-label">
-          <span>Channel</span>
-          <select
-            className="ops-input"
-            value={filters.channel}
-            onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value as Filters["channel"] }))}
+      <section className="ops-bookings-filters" aria-label="Filters" ref={multiSelectWrapRef}>
+        <div className="ops-bookings-toolbar-row">
+          <label className="ops-label ops-bookings-searchbar">
+            <span>Search bookings</span>
+            <input
+              className="ops-input"
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters((state) => ({ ...state, search: e.target.value }))}
+              placeholder="Guest name or booking ID"
+            />
+          </label>
+          <button
+            className="ops-btn"
+            type="button"
+            onClick={() => {
+              setFiltersOpen((state) => !state);
+              setMultiSelectMenu(null);
+            }}
+            aria-expanded={filtersOpen}
           >
-            <option value="">All</option>
-            <option value="airbnb">Airbnb</option>
-            <option value="booking">Booking</option>
-            <option value="direct">Direct</option>
-          </select>
-        </label>
+            Filters
+          </button>
+          <button
+            className="ops-btn"
+            type="button"
+            onClick={() => setExportMenu((state) => (state === "standard" ? null : "standard"))}
+          >
+            Export
+          </button>
+          <button
+            className="ops-btn"
+            type="button"
+            onClick={() => setExportMenu((state) => (state === "financial" ? null : "financial"))}
+          >
+            Financial export
+          </button>
+          {exportMenu ? (
+            <span className="ops-bookings-export-picker">
+              <button className="ops-btn" type="button" onClick={() => void exportRows(exportMenu, "csv")}>
+                CSV
+              </button>
+              <button className="ops-btn" type="button" onClick={() => void exportRows(exportMenu, "xlsx")}>
+                XLSX
+              </button>
+            </span>
+          ) : null}
+        </div>
+        {filtersOpen ? (
+          <div className="ops-bookings-filters-panel">
+        <div className="ops-label">
+          <span>Rentals</span>
+          <div className="ops-multiselect">
+            <button
+              className="ops-multiselect-trigger"
+              type="button"
+              onClick={() => setMultiSelectMenu((state) => (state === "rentals" ? null : "rentals"))}
+            >
+              {selectedRentalLabels.length === 0 ? (
+                <span className="ops-muted">All rentals</span>
+              ) : (
+                <span className="ops-multiselect-chips">
+                  {selectedRentalLabels.map((label) => (
+                    <span key={label} className="ops-multiselect-chip">
+                      {label}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </button>
+            {multiSelectMenu === "rentals" ? (
+              <div className="ops-multiselect-menu">
+                <button
+                  className="ops-multiselect-clear"
+                  type="button"
+                  onClick={() => setFilters((state) => ({ ...state, rentalIds: [] }))}
+                >
+                  Clear selection
+                </button>
+                {rentalOptions.length === 0 ? (
+                  <p className="ops-muted">No rentals available yet.</p>
+                ) : (
+                  rentalOptions.map((rental) => (
+                    <label key={rental.id} className="ops-multiselect-option">
+                      <input
+                        type="checkbox"
+                        checked={filters.rentalIds.includes(rental.id)}
+                        onChange={() => toggleRental(rental.id)}
+                      />
+                      <span>{rental.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="ops-label">
+          <span>Channels</span>
+          <div className="ops-multiselect">
+            <button
+              className="ops-multiselect-trigger"
+              type="button"
+              onClick={() => setMultiSelectMenu((state) => (state === "channels" ? null : "channels"))}
+            >
+              {selectedChannelLabels.length === 0 ? (
+                <span className="ops-muted">All channels</span>
+              ) : (
+                <span className="ops-multiselect-chips">
+                  {selectedChannelLabels.map((label) => (
+                    <span key={label} className="ops-multiselect-chip">
+                      {label}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </button>
+            {multiSelectMenu === "channels" ? (
+              <div className="ops-multiselect-menu">
+                <button
+                  className="ops-multiselect-clear"
+                  type="button"
+                  onClick={() => setFilters((state) => ({ ...state, channels: [] }))}
+                >
+                  Clear selection
+                </button>
+                <label className="ops-multiselect-option">
+                  <input
+                    type="checkbox"
+                    checked={filters.channels.includes("airbnb")}
+                    onChange={() => toggleChannel("airbnb")}
+                  />
+                  <span>Airbnb</span>
+                </label>
+                <label className="ops-multiselect-option">
+                  <input
+                    type="checkbox"
+                    checked={filters.channels.includes("booking")}
+                    onChange={() => toggleChannel("booking")}
+                  />
+                  <span>Booking</span>
+                </label>
+                <label className="ops-multiselect-option">
+                  <input
+                    type="checkbox"
+                    checked={filters.channels.includes("direct")}
+                    onChange={() => toggleChannel("direct")}
+                  />
+                  <span>Direct</span>
+                </label>
+              </div>
+            ) : null}
+          </div>
+        </div>
         <label className="ops-label">
           <span>Status</span>
           <select
             className="ops-input"
-            value={filters.status}
-            onChange={(e) => setFilters((s) => ({ ...s, status: e.target.value as Filters["status"] }))}
+            value={filters.reservationStatus}
+            onChange={(e) =>
+              setFilters((state) => ({
+                ...state,
+                reservationStatus: e.target.value as ReservationStatus,
+              }))
+            }
           >
-            <option value="">All</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
+            <option value="all">All</option>
+            <option value="active">Active</option>
             <option value="cancelled">Cancelled</option>
-            <option value="completed">Completed</option>
-            <option value="no_show">No show</option>
-            <option value="needs_reassignment">Needs reassignment</option>
           </select>
         </label>
         <label className="ops-label">
-          <span>Guest name</span>
-          <input
-            className="ops-input"
-            type="text"
-            value={filters.guestName}
-            onChange={(e) => setFilters((s) => ({ ...s, guestName: e.target.value }))}
-            placeholder="Search guest"
-          />
+          <span>Date range (check-in)</span>
+          <div className="ops-bookings-date-range">
+            <input
+              className="ops-input"
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => setFilters((state) => ({ ...state, startDate: e.target.value }))}
+            />
+            <input
+              className="ops-input"
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => setFilters((state) => ({ ...state, endDate: e.target.value }))}
+            />
+          </div>
         </label>
         <label className="ops-label">
-          <span>Date type</span>
+          <span>Sort by</span>
           <select
             className="ops-input"
-            value={filters.dateType}
-            onChange={(e) => setFilters((s) => ({ ...s, dateType: e.target.value as DateType }))}
+            value={filters.sortBy}
+            onChange={(e) => setSort(e.target.value as SortBy, filters.sortOrder)}
           >
+            <option value="updatedAt">Date updated</option>
+            <option value="createdAt">Date created</option>
             <option value="checkinDate">Check-in date</option>
-            <option value="checkoutDate">Checkout date</option>
-            <option value="createdAt">Created date</option>
-            <option value="updatedAt">Updated date</option>
+            <option value="checkoutDate">Check-out date</option>
+            <option value="totalValue">Total value</option>
           </select>
         </label>
         <label className="ops-label">
-          <span>Start date</span>
-          <input
+          <span>Sort order</span>
+          <select
             className="ops-input"
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => setFilters((s) => ({ ...s, startDate: e.target.value }))}
-          />
-        </label>
-        <label className="ops-label">
-          <span>End date</span>
-          <input
-            className="ops-input"
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => setFilters((s) => ({ ...s, endDate: e.target.value }))}
-          />
-        </label>
-        <div className="ops-bookings-advanced-toggle-wrap">
-          <button
-            className="ops-btn"
-            type="button"
-            onClick={() => setShowAdvancedFilters((v) => !v)}
-            aria-expanded={showAdvancedFilters}
+            value={filters.sortOrder}
+            onChange={(e) => setSort(filters.sortBy, e.target.value as SortOrder)}
           >
-            {showAdvancedFilters ? "Hide advanced filters" : "More filters"}
-          </button>
-        </div>
-        {showAdvancedFilters ? (
-          <>
-            <label className="ops-label">
-              <span>Action</span>
-              <input
-                className="ops-input"
-                type="text"
-                value={filters.action}
-                onChange={(e) => setFilters((s) => ({ ...s, action: e.target.value }))}
-                placeholder="Any action"
-              />
-            </label>
-            <label className="ops-label">
-              <span>Guests min</span>
-              <input
-                className="ops-input"
-                type="number"
-                min={0}
-                value={filters.guestCountMin}
-                onChange={(e) => setFilters((s) => ({ ...s, guestCountMin: e.target.value }))}
-              />
-            </label>
-            <label className="ops-label">
-              <span>Guests max</span>
-              <input
-                className="ops-input"
-                type="number"
-                min={0}
-                value={filters.guestCountMax}
-                onChange={(e) => setFilters((s) => ({ ...s, guestCountMax: e.target.value }))}
-              />
-            </label>
-            <label className="ops-label">
-              <span>Value min</span>
-              <input
-                className="ops-input"
-                type="number"
-                min={0}
-                step="0.01"
-                value={filters.valueMin}
-                onChange={(e) => setFilters((s) => ({ ...s, valueMin: e.target.value }))}
-              />
-            </label>
-            <label className="ops-label">
-              <span>Value max</span>
-              <input
-                className="ops-input"
-                type="number"
-                min={0}
-                step="0.01"
-                value={filters.valueMax}
-                onChange={(e) => setFilters((s) => ({ ...s, valueMax: e.target.value }))}
-              />
-            </label>
-          </>
-        ) : null}
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </label>
         <div className="ops-bookings-filter-actions">
           <button className="ops-btn ops-btn-primary" type="button" onClick={() => void load(filters)}>
             Search
@@ -295,13 +633,15 @@ export function BookingsClient() {
             onClick={() => {
               const cleared = { ...defaultFilters };
               setFilters(cleared);
+              setMultiSelectMenu(null);
               void load(cleared);
-              setShowAdvancedFilters(false);
             }}
           >
-            Clear
+            Clear filters
           </button>
         </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="ops-bookings-list-wrap" aria-label="Bookings list">
@@ -315,28 +655,55 @@ export function BookingsClient() {
           <table className="ops-bookings-table">
             <thead>
               <tr>
-                <th>Guest</th>
-                <th>Check-in</th>
-                <th>Checkout</th>
-                <th>Total value</th>
-                <th>Status</th>
+                <th className="ops-bookings-th-static">Booking</th>
+                <th className="ops-bookings-th-static">Rental</th>
+                <th className="ops-bookings-th-static">Guest name</th>
+                <th>
+                  <button className="ops-bookings-sort-btn" type="button" onClick={() => cycleHeaderSort("checkinDate")}>
+                    Check-in{sortLabel("checkinDate")}
+                  </button>
+                </th>
+                <th>
+                  <button className="ops-bookings-sort-btn" type="button" onClick={() => cycleHeaderSort("checkoutDate")}>
+                    Check-out{sortLabel("checkoutDate")}
+                  </button>
+                </th>
+                <th>
+                  <button className="ops-bookings-sort-btn" type="button" onClick={() => cycleHeaderSort("totalValue")}>
+                    Total value{sortLabel("totalValue")}
+                  </button>
+                </th>
+                <th className="ops-bookings-th-static">Guests</th>
+                <th>
+                  <button className="ops-bookings-sort-btn" type="button" onClick={() => cycleHeaderSort("createdAt")}>
+                    Date created{sortLabel("createdAt")}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id}>
+                <tr
+                  key={item.id}
+                  className="ops-bookings-row"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openBooking(item.id)}
+                  onKeyDown={(event) => onRowKeyDown(event, item.id)}
+                  aria-label={`Open booking ${item.externalBookingId}`}
+                >
                   <td>
-                    <button className="ops-bookings-row-btn" type="button" onClick={() => openBooking(item.id)}>
-                      <span className="ops-name-with-logo">
-                        <ChannelLogo channel={item.channel} className="ops-channel-logo" />
-                        <span>{item.guestName}</span>
-                      </span>
-                    </button>
+                    <span className="ops-bookings-row-logo">
+                      <ChannelLogo channel={item.channel} className="ops-channel-logo" />
+                    </span>
                   </td>
-                  <td>{item.checkinDate}</td>
-                  <td>{item.checkoutDate}</td>
+                  <td>{item.assignedRentalName ?? "Unassigned ⚠"}</td>
+                  <td>{item.guestName}</td>
+                  <td>{fmtDate(item.checkinDate)}</td>
+                  <td>{fmtDate(item.checkoutDate)}</td>
                   <td>{fmtMoney(item.totalValue, item.currency)}</td>
-                  <td>{item.status}</td>
+                  <td>{item.guestCount ?? "-"}</td>
+                  <td>{fmtDate(item.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -345,8 +712,6 @@ export function BookingsClient() {
       </section>
 
       <BookingDetailModal bookingId={selectedId} onClose={closeModal} onAfterSave={() => void load(filters)} />
-
-      {toast ? <div className="ops-toast">{toast}</div> : null}
     </main>
   );
 }

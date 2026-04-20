@@ -56,6 +56,17 @@ function centsToAmount(cents: number | null | undefined): number | null {
   return cents / 100;
 }
 
+function sumGuestParts(parts: Array<number | null | undefined>): number | null {
+  let sum = 0;
+  let hasAny = false;
+  for (const part of parts) {
+    if (part === null || part === undefined) continue;
+    hasAny = true;
+    sum += part;
+  }
+  return hasAny ? sum : null;
+}
+
 export type BookingListItemDto = {
   id: string;
   channel: Channel;
@@ -63,12 +74,20 @@ export type BookingListItemDto = {
   status: BookingStatus;
   checkinDate: string;
   checkoutDate: string;
+  createdAt: string;
+  updatedAt: string;
   nights: number;
   guestName: string;
   guestCount: number | null;
   totalValue: number | null;
   currency: string | null;
+  cleaningFee: number | null;
+  taxes: number | null;
+  payout: number | null;
+  guestPaid: number | null;
   action: string | null;
+  assignedRentalId: string | null;
+  assignedRentalName: string | null;
 };
 
 export type BookingDetailDto = BookingListItemDto & {
@@ -130,8 +149,50 @@ export type BookingWithDetailRelations = Prisma.BookingGetPayload<{
 }>;
 
 export type BookingRow = Prisma.BookingGetPayload<Record<string, never>>;
+export type BookingListRow = Prisma.BookingGetPayload<{
+  include: {
+    assignment: {
+      include: {
+        room: {
+          select: {
+            id: true;
+            code: true;
+            displayName: true;
+          };
+        };
+      };
+    };
+  };
+}>;
 
-export function bookingListItemFromModel(booking: BookingRow): BookingListItemDto {
+function assignedRentalNameFromBooking(
+  booking: BookingRow | BookingListRow | BookingWithDetailRelations,
+): string | null {
+  if (!("assignment" in booking) || !booking.assignment) return null;
+  const assignmentWithRoom = booking.assignment as typeof booking.assignment & {
+    room?: { id?: string | null; code?: string | null; displayName?: string | null } | null;
+  };
+  return (
+    assignmentWithRoom.room?.displayName ??
+    assignmentWithRoom.room?.code ??
+    assignmentWithRoom.room?.id ??
+    null
+  );
+}
+
+function assignedRentalIdFromBooking(
+  booking: BookingRow | BookingListRow | BookingWithDetailRelations,
+): string | null {
+  if (!("assignment" in booking) || !booking.assignment) return null;
+  const assignmentWithRoom = booking.assignment as typeof booking.assignment & {
+    room?: { id?: string | null } | null;
+  };
+  return assignmentWithRoom.room?.id ?? booking.assignment.roomId ?? null;
+}
+
+export function bookingListItemFromModel(
+  booking: BookingRow | BookingListRow | BookingWithDetailRelations,
+): BookingListItemDto {
   const raw = asObject(booking.rawPayload);
   const guestObj = asObject(raw.guest ?? raw.customer ?? raw.guest_details);
 
@@ -141,6 +202,17 @@ export function bookingListItemFromModel(booking: BookingRow): BookingListItemDt
     "Guest";
   const guestCount =
     booking.guestTotal ??
+    sumGuestParts([booking.guestAdults, booking.guestChildren, booking.guestInfants]) ??
+    sumGuestParts([
+      pickNumber(guestObj, ["adults", "adult_count"]),
+      pickNumber(guestObj, ["children", "child_count"]),
+      pickNumber(guestObj, ["infants", "infant_count"]),
+    ]) ??
+    sumGuestParts([
+      pickNumber(raw, ["adults"]),
+      pickNumber(raw, ["children"]),
+      pickNumber(raw, ["infants"]),
+    ]) ??
     pickNumber(guestObj, ["total", "count", "guests", "guest_count"]) ??
     pickNumber(raw, ["guests", "guest_count", "total_guests"]);
   const totalValue =
@@ -148,6 +220,12 @@ export function bookingListItemFromModel(booking: BookingRow): BookingListItemDt
     pickNumber(raw, ["total", "total_price", "total_value", "amount_total", "reservation_total"]);
   const currency = booking.currency ?? pickString(raw, ["currency", "currency_code"]);
   const action = booking.action ?? pickString(raw, ["action", "action_type", "reason", "source_action"]);
+  const cleaningFee = centsToAmount(booking.cleaningFeeCents) ?? pickNumber(raw, ["cleaning_fee", "cleaningFee"]);
+  const taxes = centsToAmount(booking.taxCents) ?? pickNumber(raw, ["taxes", "tax"]);
+  const payout = centsToAmount(booking.payoutAmountCents) ?? pickNumber(raw, ["payout", "host_payout"]);
+  const guestPaid = centsToAmount(booking.guestPaidCents) ?? pickNumber(raw, ["guest_paid"]);
+  const assignedRentalId = assignedRentalIdFromBooking(booking);
+  const assignedRentalName = assignedRentalNameFromBooking(booking);
 
   return {
     id: booking.id,
@@ -156,12 +234,20 @@ export function bookingListItemFromModel(booking: BookingRow): BookingListItemDt
     status: booking.status,
     checkinDate: dateStr(booking.checkinDate),
     checkoutDate: dateStr(booking.checkoutDate),
+    createdAt: booking.createdAt.toISOString(),
+    updatedAt: booking.updatedAt.toISOString(),
     nights: booking.nights,
     guestName,
     guestCount,
     totalValue,
     currency,
+    cleaningFee,
+    taxes,
+    payout,
+    guestPaid,
     action,
+    assignedRentalId,
+    assignedRentalName,
   };
 }
 
