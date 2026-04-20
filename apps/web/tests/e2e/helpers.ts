@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /** Re-applies `packages/db` E2E fixtures (run from repo root via `pnpm --filter @stay-ops/web test:e2e`, cwd is `apps/web`). */
 export function reseedE2EFixtures(): void {
@@ -38,4 +38,10 @@ export async function loginAsStaff(page: Page): Promise<void> {
   await page.getByLabel("Password").fill(c.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/app\/calendar/);
+}
+
+/** Opens calendar route and waits for stable controls to render across desktop/mobile layouts. */
+export async function gotoCalendarAndWaitReady(page: Page): Promise<void> {
+  await page.goto("/app/calendar");
+  await expect(page.getByLabel("Select month")).toBeVisible({ timeout: 15_000 });
 }

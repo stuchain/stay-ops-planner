@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
+import { e2eCredentials, gotoCalendarAndWaitReady, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 /** Desktop path: dnd-kit + Playwright `dragTo` is flaky on Windows headless; queue uses the same mutation as drag. */
 async function selectE2ERoomA(select: Locator): Promise<void> {
@@ -37,8 +37,7 @@ test.describe("calendar allocation", () => {
   test("assign unassigned booking to E2E-A via queue when data exists", async ({ page }) => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
-    await page.goto("/app/calendar");
-    await expect(page.locator(".ops-month-title")).toBeVisible();
+    await gotoCalendarAndWaitReady(page);
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "E2E rooms missing (seed:e2e).");
 
     await assignE2EUnassignedToRoomA(page);
@@ -47,8 +46,7 @@ test.describe("calendar allocation", () => {
   test("reassign into overlapping stay returns CONFLICT_ASSIGNMENT", async ({ page }) => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
-    await page.goto("/app/calendar");
-    await expect(page.locator(".ops-month-title")).toBeVisible();
+    await gotoCalendarAndWaitReady(page);
     const monthYm = await page.getByLabel("Select month").inputValue();
     expect(monthYm).toMatch(/^\d{4}-\d{2}$/);
 

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
+import { e2eCredentials, gotoCalendarAndWaitReady, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 test.describe("maintenance blocks", () => {
   test.beforeEach(() => {
@@ -9,8 +9,7 @@ test.describe("maintenance blocks", () => {
   test("open edit on seeded block and cancel", async ({ page }) => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
-    await page.goto("/app/calendar");
-    await expect(page.locator(".ops-month-title")).toBeVisible();
+    await gotoCalendarAndWaitReady(page);
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "Run seed:e2e for E2E-A lane.");
 
     const chip = page.getByTestId("ops-room-lane-E2E-A").locator('[data-testid^="ops-block-chip-"]').first();
@@ -25,8 +24,7 @@ test.describe("maintenance blocks", () => {
   test("delete seeded maintenance block after confirm", async ({ page }) => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
-    await page.goto("/app/calendar");
-    await expect(page.locator(".ops-month-title")).toBeVisible();
+    await gotoCalendarAndWaitReady(page);
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "Run seed:e2e for E2E-A lane.");
 
     const chip = page.getByTestId("ops-room-lane-E2E-A").locator('[data-testid^="ops-block-chip-"]').first();
@@ -49,8 +47,7 @@ test.describe("maintenance blocks", () => {
   test("overlap error when creating invalid block via API", async ({ page }) => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
-    await page.goto("/app/calendar");
-    await expect(page.locator(".ops-month-title, .ops-month-title-inline").first()).toBeVisible();
+    await gotoCalendarAndWaitReady(page);
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "Run seed:e2e for overlap block on E2E-A.");
     const ym = await page.getByLabel("Select month").inputValue();
     test.skip(!ym || !/^\d{4}-\d{2}$/.test(ym), "Could not read calendar month from UI.");
