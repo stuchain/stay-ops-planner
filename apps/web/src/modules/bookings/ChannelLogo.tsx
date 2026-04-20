@@ -23,5 +23,12 @@ export function ChannelLogo({ channel, className }: Props) {
       </span>
     );
   }
+  if (normalized === "direct") {
+    return (
+      <span className={className} aria-hidden="true" title="Hosthub">
+        <Image src="/api/assets/channel-logo/hosthub" alt="" width={14} height={14} unoptimized />
+      </span>
+    );
+  }
   return null;
 }

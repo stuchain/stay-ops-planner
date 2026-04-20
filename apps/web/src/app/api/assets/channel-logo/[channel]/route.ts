@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 function logoFilenameForChannel(channel: string): string | null {
   if (channel === "airbnb") return "airbnb logo.png";
   if (channel === "booking") return "booking logo.png";
+  if (channel === "hosthub" || channel === "direct") return "hosthub logo.png";
   return null;
 }
 
