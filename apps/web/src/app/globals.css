@@ -2212,3 +2212,160 @@ body {
 .ops-excel-detail-btn:hover {
   background: rgba(0, 0, 0, 0.04);
 }
+
+.ops-excel-row--unassigned > td {
+  background-color: #fff7cf;
+}
+
+.ops-excel-row--unassigned > td.ops-excel-roomama-chips {
+  background-color: #fff3a8;
+}
+
+.ops-excel-roomama-chips {
+  display: flex;
+  gap: 0.18rem;
+  justify-content: center;
+  padding: 0.1rem 0.2rem;
+}
+
+.ops-excel-roomama-chip {
+  min-width: 1.2rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  border: 1px solid #c8a200;
+  background: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ops-excel-roomama-chip:hover {
+  background: #fff3a8;
+}
+
+.ops-excel-row--cancelled > td {
+  background-color: #b6bcc6 !important;
+  color: #2a2f3a;
+  text-decoration: line-through;
+}
+
+.ops-excel-row--cancelled .ops-excel-detail-btn,
+.ops-excel-row--cancelled .ops-excel-cell-display {
+  text-decoration: line-through;
+}
+
+/* Calendar sync warnings banner + modal */
+.ops-markers.ops-markers--calendar-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ops-markers-info-btn {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 1px solid #c9a200;
+  background: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.ops-markers-info-btn:hover {
+  background: #fff3a8;
+}
+
+.ops-warnings-modal {
+  max-width: 40rem;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.ops-warnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.ops-warnings-row {
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ops-warnings-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ops-warnings-severity {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.ops-warnings-severity--error {
+  background: #fde7e7;
+  color: #9a1d1d;
+}
+
+.ops-warnings-severity--warning {
+  background: #fff3cd;
+  color: #7a5d00;
+}
+
+.ops-warnings-severity--info {
+  background: #e8f0ff;
+  color: #1f4ea6;
+}
+
+.ops-warnings-severity--neutral {
+  background: #eef1f5;
+  color: #3d4a5c;
+}
+
+.ops-warnings-kind {
+  color: #5a6b82;
+  font-size: 0.78rem;
+}
+
+.ops-warnings-code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: #1f2e45;
+}
+
+.ops-warnings-msg {
+  font-size: 0.92rem;
+  color: #1f2e45;
+}
+
+.ops-warnings-booking-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ops-warnings-booking-id {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #5a6b82;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

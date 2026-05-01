@@ -21,6 +21,7 @@ import {
   type BookingSpanInMonth,
 } from "./monthSpan";
 import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
+import { SyncWarningsInfo } from "./SyncWarningsInfo";
 import { TimelineBookingBar } from "./TimelineBookingBar";
 
 function laneTestIdSuffix(room: CalendarRoom): string {
@@ -42,6 +43,7 @@ export type MonthGridProps = {
   /** When set, room rows are reorderable (desktop). */
   sortableRoomIds?: string[] | null;
   onBookingClick?: (bookingId: string) => void;
+  onMarkerBookingClick?: (bookingId: string) => void;
 };
 
 function dayOfMonthIso(iso: string): number {
@@ -341,6 +343,7 @@ export function MonthGrid({
   showNavigation = true,
   sortableRoomIds,
   onBookingClick,
+  onMarkerBookingClick,
 }: MonthGridProps) {
   const { active } = useDndContext();
   if (loading && !data) {
@@ -467,9 +470,7 @@ export function MonthGrid({
   return (
     <div className="ops-month-grid">
       {data.markers.length > 0 && (
-        <div className="ops-markers" role="status">
-          {data.markers.length} sync warning(s) found.
-        </div>
+        <SyncWarningsInfo markers={data.markers} onOpenBooking={onMarkerBookingClick} />
       )}
       {!loading && !error && !hasAnyItems && (
         <div className="ops-markers" role="status">

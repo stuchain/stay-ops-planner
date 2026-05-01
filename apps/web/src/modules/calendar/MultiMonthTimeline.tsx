@@ -4,7 +4,13 @@ import { type CSSProperties } from "react";
 import { useDndContext, useDroppable } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { CalendarBlockItem, CalendarBookingItem, CalendarMonthPayload } from "./calendarTypes";
+import type {
+  CalendarBlockItem,
+  CalendarBookingItem,
+  CalendarMarker,
+  CalendarMonthPayload,
+} from "./calendarTypes";
+import { SyncWarningsInfo } from "./SyncWarningsInfo";
 import { TimelineBookingBar } from "./TimelineBookingBar";
 import { isStayCheckoutAfterVisibleLastDay, type BookingSpanInMonth } from "./monthSpan";
 import {
@@ -41,6 +47,7 @@ function mergePayloads(payloads: CalendarMonthPayload[]): {
   rooms: CalendarMonthPayload["rooms"];
   bookings: CalendarBookingItem[];
   blocks: CalendarBlockItem[];
+  markers: CalendarMarker[];
   markerCount: number;
   dailyRatesByRoomDay: CalendarMonthPayload["dailyRatesByRoomDay"];
 } {
@@ -60,7 +67,7 @@ function mergePayloads(payloads: CalendarMonthPayload[]): {
   const bookingById = new Map<string, CalendarBookingItem>();
   const blockById = new Map<string, CalendarBlockItem>();
   const markerKey = new Set<string>();
-  let markerCount = 0;
+  const markers: CalendarMarker[] = [];
   const dailyRatesByRoomDay: CalendarMonthPayload["dailyRatesByRoomDay"] = {};
 
   for (const p of payloads) {
@@ -72,7 +79,7 @@ function mergePayloads(payloads: CalendarMonthPayload[]): {
       const k = `${m.kind}:${m.bookingId ?? ""}:${m.severity}:${m.message}:${m.code ?? ""}`;
       if (!markerKey.has(k)) {
         markerKey.add(k);
-        markerCount += 1;
+        markers.push(m);
       }
     }
     for (const [roomId, days] of Object.entries(p.dailyRatesByRoomDay ?? {})) {
@@ -85,7 +92,8 @@ function mergePayloads(payloads: CalendarMonthPayload[]): {
     rooms,
     bookings: [...bookingById.values()],
     blocks: [...blockById.values()],
-    markerCount,
+    markers,
+    markerCount: markers.length,
     dailyRatesByRoomDay,
   };
 }
@@ -260,6 +268,7 @@ export type MultiMonthTimelineProps = {
   onNextMonth: () => void;
   sortableRoomIds?: string[] | null;
   onBookingClick?: (bookingId: string) => void;
+  onMarkerBookingClick?: (bookingId: string) => void;
 };
 
 export function MultiMonthTimeline({
@@ -270,6 +279,7 @@ export function MultiMonthTimeline({
   onNextMonth,
   sortableRoomIds,
   onBookingClick,
+  onMarkerBookingClick,
 }: MultiMonthTimelineProps) {
   const { active } = useDndContext();
 
@@ -286,7 +296,7 @@ export function MultiMonthTimeline({
   }
 
   const merged = mergePayloads(monthsData);
-  const { range: spec, bookings, blocks, rooms, markerCount, dailyRatesByRoomDay } = merged;
+  const { range: spec, bookings, blocks, rooms, markers, markerCount, dailyRatesByRoomDay } = merged;
 
   const blocksByRoom = new Map<string, CalendarBlockItem[]>();
   for (const blk of blocks) {
@@ -380,9 +390,7 @@ export function MultiMonthTimeline({
   return (
     <div className="ops-month-grid">
       {markerCount > 0 && (
-        <div className="ops-markers" role="status">
-          {markerCount} sync warning(s) found.
-        </div>
+        <SyncWarningsInfo markers={markers} onOpenBooking={onMarkerBookingClick} />
       )}
       {!loading && !error && !hasAnyItems && (
         <div className="ops-markers" role="status">

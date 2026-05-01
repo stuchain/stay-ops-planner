@@ -478,6 +478,7 @@ export function CalendarClient() {
                 onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
                 sortableRoomIds={orderedRoomIds}
                 onBookingClick={(id) => setDetailBookingId(id)}
+                onMarkerBookingClick={(id) => setDetailBookingId(id)}
               />
             ) : (
               (() => {
@@ -497,6 +498,7 @@ export function CalendarClient() {
                     onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
                     sortableRoomIds={orderedRoomIds}
                     onBookingClick={(id) => setDetailBookingId(id)}
+                    onMarkerBookingClick={(id) => setDetailBookingId(id)}
                   />
                 );
               })()
@@ -517,6 +519,7 @@ export function CalendarClient() {
                 showNavigation={!isMobile}
                 sortableRoomIds={!isMobile ? orderedRoomIds : null}
                 onBookingClick={!isMobile ? (id) => setDetailBookingId(id) : undefined}
+                onMarkerBookingClick={(id) => setDetailBookingId(id)}
               />
             ))
           )}
