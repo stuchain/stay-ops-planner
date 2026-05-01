@@ -56,6 +56,103 @@ function centsToAmount(cents: number | null | undefined): number | null {
   return cents / 100;
 }
 
+/** Hosthub calendar-event style `{ cents, currency }` on `raw_payload`. */
+export function readCentsFromField(obj: Dict, field: string): number | null {
+  const v = obj[field];
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" && Number.isFinite(v)) return v / 100;
+  if (typeof v === "string") {
+    const parsed = Number(v.trim());
+    if (Number.isFinite(parsed)) return parsed;
+    return null;
+  }
+  if (typeof v === "object" && !Array.isArray(v)) {
+    const o = v as Dict;
+    const cents = asNumber(o.cents);
+    if (cents !== null) return cents / 100;
+    const amount = asNumber(o.amount ?? o.value);
+    if (amount !== null) return amount;
+  }
+  return null;
+}
+
+const CHANNEL_TAX_BUCKET_DEFS: Array<{ key: string; label: string }> = [
+  {
+    key: "tax_channel_collected_host_remitted",
+    label: "Extra taxes collected by channel (host remitted)",
+  },
+  {
+    key: "tax_channel_collected_channel_remitted",
+    label: "Extra taxes collected by channel (channel remitted)",
+  },
+  {
+    key: "tax_host_collected_host_remitted",
+    label: "Tax host collected (host remitted)",
+  },
+  { key: "tax_channel_sponsored", label: "Tax channel sponsored" },
+];
+
+export type BookingMoneyTaxBreakdownItem = { key: string; label: string; amount: number };
+export type BookingMoneyDailyBreakdownItem = { date: string; amount: number };
+export type BookingMoneyExtraIncludedItem = { label: string; amount: number };
+
+function buildBookingComHosthubMoneyExtras(raw: Dict): BookingMoneyExtraIncludedItem[] {
+  const out: BookingMoneyExtraIncludedItem[] = [];
+  const cleaning = readCentsFromField(raw, "cleaning_fee");
+  if (cleaning !== null && cleaning > 0) {
+    out.push({
+      label: `Cleaning fee (${cleaning.toFixed(2)} €) included in Cleaning fee.`,
+      amount: cleaning,
+    });
+  }
+  const other = readCentsFromField(raw, "other_fees");
+  if (other !== null && other > 0) {
+    out.push({
+      label: `Other fees (${other.toFixed(2)} €) included in Other fees.`,
+      amount: other,
+    });
+  }
+  return out;
+}
+
+function buildBookingComDailyBreakdown(
+  dateFrom: string | null,
+  nights: number,
+  bookingValue: number | null,
+): BookingMoneyDailyBreakdownItem[] {
+  if (!dateFrom || nights <= 0 || bookingValue === null) return [];
+  const start = new Date(`${dateFrom}T12:00:00.000Z`);
+  if (Number.isNaN(start.getTime())) return [];
+  const totalCents = Math.round(bookingValue * 100);
+  const baseCents = Math.floor(totalCents / nights);
+  const remainder = totalCents - baseCents * nights;
+  const rows: BookingMoneyDailyBreakdownItem[] = [];
+  for (let i = 0; i < nights; i += 1) {
+    const d = new Date(start);
+    d.setUTCDate(d.getUTCDate() + i);
+    const y = d.getUTCFullYear();
+    const m = `${d.getUTCMonth() + 1}`.padStart(2, "0");
+    const day = `${d.getUTCDate()}`.padStart(2, "0");
+    const nightCents = baseCents + (i < remainder ? 1 : 0);
+    rows.push({ date: `${y}-${m}-${day}`, amount: nightCents / 100 });
+  }
+  return rows;
+}
+
+function buildBookingComTaxBreakdown(raw: Dict): BookingMoneyTaxBreakdownItem[] {
+  return CHANNEL_TAX_BUCKET_DEFS.map(({ key, label }) => {
+    const amount = readCentsFromField(raw, key) ?? 0;
+    return { key, label, amount };
+  });
+}
+
+function extraTaxesByChannelFromRaw(raw: Dict): number | null {
+  const a = readCentsFromField(raw, "tax_channel_collected_host_remitted");
+  const b = readCentsFromField(raw, "tax_channel_collected_channel_remitted");
+  if (a === null && b === null) return null;
+  return (a ?? 0) + (b ?? 0);
+}
+
 function sumGuestParts(parts: Array<number | null | undefined>): number | null {
   let sum = 0;
   let hasAny = false;
@@ -117,6 +214,8 @@ export type BookingDetailDto = BookingListItemDto & {
   };
   money: {
     total: number | null;
+    /** Hosthub `total_value` (Booking.com); same as guest paid when channel-collected taxes excluded from total. */
+    totalValue: number | null;
     currency: string | null;
     cleaningFee: number | null;
     taxes: number | null;
@@ -129,6 +228,13 @@ export type BookingDetailDto = BookingListItemDto & {
     serviceFeeHostVat: number | null;
     extraTaxes: number | null;
     collectedByChannel: number | null;
+    /** Booking.com / Hosthub calendar-event fields (null when channel !== booking). */
+    bookingValue: number | null;
+    extraTaxesByChannel: number | null;
+    serviceFeeGuest: number | null;
+    taxBreakdown: BookingMoneyTaxBreakdownItem[];
+    dailyBreakdown: BookingMoneyDailyBreakdownItem[];
+    extrasIncluded: BookingMoneyExtraIncludedItem[];
   };
   notes: string | null;
   hosthub: {
@@ -261,11 +367,133 @@ export function bookingListItemFromModel(
   };
 }
 
+function bookingMoneyFromModel(booking: BookingWithDetailRelations): BookingDetailDto["money"] {
+  const raw = asObject(booking.rawPayload);
+  const taxesObj = asObject(booking.hosthubGrTaxesRaw);
+
+  const totalLegacy =
+    centsToAmount(booking.totalAmountCents) ??
+    pickNumber(raw, ["total", "total_price", "total_value", "amount_total", "reservation_total"]);
+  const currency = booking.currency ?? pickString(raw, ["currency", "currency_code"]);
+  const cleaningFeeLegacy = centsToAmount(booking.cleaningFeeCents) ?? pickNumber(raw, ["cleaning_fee", "cleaningFee"]);
+  const taxesLegacy = centsToAmount(booking.taxCents) ?? pickNumber(raw, ["taxes", "tax"]);
+  const payoutLegacy = centsToAmount(booking.payoutAmountCents) ?? pickNumber(raw, ["payout", "host_payout"]);
+  const guestPaidLegacy = centsToAmount(booking.guestPaidCents) ?? pickNumber(raw, ["guest_paid"]);
+
+  const emptyHosthub: Pick<
+    BookingDetailDto["money"],
+    | "bookingValue"
+    | "extraTaxesByChannel"
+    | "serviceFeeGuest"
+    | "taxBreakdown"
+    | "dailyBreakdown"
+    | "extrasIncluded"
+    | "totalValue"
+  > = {
+    totalValue: null,
+    bookingValue: null,
+    extraTaxesByChannel: null,
+    serviceFeeGuest: null,
+    taxBreakdown: [],
+    dailyBreakdown: [],
+    extrasIncluded: [],
+  };
+
+  if (booking.channel !== "booking" && booking.channel !== "airbnb") {
+    return {
+      total: totalLegacy,
+      totalValue: null,
+      currency,
+      cleaningFee: cleaningFeeLegacy,
+      taxes: taxesLegacy,
+      payout: payoutLegacy,
+      guestPaid: guestPaidLegacy,
+      otherFees: pickNumber(raw, ["other_fees", "otherFees"]),
+      paymentCharges: pickNumber(raw, ["payment_charges", "paymentCharges", "payment_fees"]),
+      serviceFeeHost:
+        pickNumber(raw, ["service_fee_host", "serviceFeeHost"]) ??
+        pickNumber(taxesObj, ["service_fee_host", "serviceFeeHost"]),
+      serviceFeeHostBase:
+        pickNumber(raw, ["service_fee_host_base", "serviceFeeHostBase"]) ??
+        pickNumber(taxesObj, ["service_fee_host_base", "serviceFeeHostBase"]),
+      serviceFeeHostVat:
+        pickNumber(raw, ["service_fee_host_vat", "serviceFeeHostVat"]) ??
+        pickNumber(taxesObj, ["service_fee_host_vat", "serviceFeeHostVat"]),
+      extraTaxes:
+        pickNumber(raw, ["extra_taxes", "extraTaxes"]) ?? pickNumber(taxesObj, ["extra_taxes", "extraTaxes"]),
+      collectedByChannel:
+        pickNumber(raw, ["collected_by_channel", "collectedByChannel"]) ??
+        pickNumber(taxesObj, ["collected_by_channel", "collectedByChannel"]),
+      ...emptyHosthub,
+    };
+  }
+
+  const isBookingCom = booking.channel === "booking";
+
+  const bookingValue = readCentsFromField(raw, "booking_value");
+  const totalValue = readCentsFromField(raw, "total_value");
+  const cleaningFee = readCentsFromField(raw, "cleaning_fee") ?? cleaningFeeLegacy;
+  const otherFees = readCentsFromField(raw, "other_fees") ?? pickNumber(raw, ["other_fees", "otherFees"]);
+  const payout = readCentsFromField(raw, "total_payout") ?? payoutLegacy;
+  const guestPaid = readCentsFromField(raw, "guest_paid") ?? guestPaidLegacy;
+  const paymentCharges = readCentsFromField(raw, "payment_charges") ?? pickNumber(raw, ["payment_charges", "paymentCharges"]);
+  const serviceFeeHost =
+    readCentsFromField(raw, "service_fee_host") ??
+    pickNumber(raw, ["service_fee_host", "serviceFeeHost"]) ??
+    pickNumber(taxesObj, ["service_fee_host", "serviceFeeHost"]);
+  const serviceFeeGuest = readCentsFromField(raw, "service_fee_guest");
+  const taxesFromPayload = readCentsFromField(raw, "taxes");
+  const extraTaxesByChannel = isBookingCom ? extraTaxesByChannelFromRaw(raw) : null;
+
+  const dateFrom = pickString(raw, ["date_from", "dateFrom"]);
+  const dailyBreakdown = isBookingCom
+    ? buildBookingComDailyBreakdown(dateFrom, booking.nights, bookingValue)
+    : [];
+  const taxBreakdown = buildBookingComTaxBreakdown(raw);
+  const extrasIncluded = buildBookingComHosthubMoneyExtras(raw);
+
+  const serviceFeeHostBase =
+    readCentsFromField(raw, "service_fee_host_base") ??
+    pickNumber(raw, ["service_fee_host_base", "serviceFeeHostBase"]) ??
+    pickNumber(taxesObj, ["service_fee_host_base", "serviceFeeHostBase"]);
+  const serviceFeeHostVat =
+    readCentsFromField(raw, "service_fee_host_vat") ??
+    pickNumber(raw, ["service_fee_host_vat", "serviceFeeHostVat"]) ??
+    pickNumber(taxesObj, ["service_fee_host_vat", "serviceFeeHostVat"]);
+  const extraTaxes =
+    pickNumber(raw, ["extra_taxes", "extraTaxes"]) ?? pickNumber(taxesObj, ["extra_taxes", "extraTaxes"]);
+  const collectedByChannel =
+    pickNumber(raw, ["collected_by_channel", "collectedByChannel"]) ??
+    pickNumber(taxesObj, ["collected_by_channel", "collectedByChannel"]);
+
+  return {
+    total: totalValue ?? totalLegacy,
+    totalValue: totalValue ?? null,
+    currency,
+    cleaningFee,
+    taxes: taxesFromPayload ?? taxesLegacy,
+    payout,
+    guestPaid,
+    otherFees,
+    paymentCharges,
+    serviceFeeHost,
+    serviceFeeHostBase,
+    serviceFeeHostVat,
+    extraTaxes,
+    collectedByChannel,
+    bookingValue,
+    extraTaxesByChannel,
+    serviceFeeGuest,
+    taxBreakdown,
+    dailyBreakdown,
+    extrasIncluded,
+  };
+}
+
 export function bookingDetailFromModel(booking: BookingWithDetailRelations): BookingDetailDto {
   const base = bookingListItemFromModel(booking);
   const raw = asObject(booking.rawPayload);
   const guestObj = asObject(raw.guest ?? raw.customer ?? raw.guest_details);
-  const taxesObj = asObject(booking.hosthubGrTaxesRaw);
 
   return {
     ...base,
@@ -301,32 +529,7 @@ export function bookingDetailFromModel(booking: BookingWithDetailRelations): Boo
         pickString(guestObj, ["children_ages", "child_ages", "childrenAges"]) ??
         pickString(raw, ["children_ages", "child_ages", "childrenAges"]),
     },
-    money: {
-      total:
-        centsToAmount(booking.totalAmountCents) ??
-        pickNumber(raw, ["total", "total_price", "total_value", "amount_total", "reservation_total"]),
-      currency: booking.currency ?? pickString(raw, ["currency", "currency_code"]),
-      cleaningFee: centsToAmount(booking.cleaningFeeCents) ?? pickNumber(raw, ["cleaning_fee", "cleaningFee"]),
-      taxes: centsToAmount(booking.taxCents) ?? pickNumber(raw, ["taxes", "tax"]),
-      payout: centsToAmount(booking.payoutAmountCents) ?? pickNumber(raw, ["payout", "host_payout"]),
-      guestPaid: centsToAmount(booking.guestPaidCents) ?? pickNumber(raw, ["guest_paid"]),
-      otherFees: pickNumber(raw, ["other_fees", "otherFees"]),
-      paymentCharges: pickNumber(raw, ["payment_charges", "paymentCharges", "payment_fees"]),
-      serviceFeeHost:
-        pickNumber(raw, ["service_fee_host", "serviceFeeHost"]) ??
-        pickNumber(taxesObj, ["service_fee_host", "serviceFeeHost"]),
-      serviceFeeHostBase:
-        pickNumber(raw, ["service_fee_host_base", "serviceFeeHostBase"]) ??
-        pickNumber(taxesObj, ["service_fee_host_base", "serviceFeeHostBase"]),
-      serviceFeeHostVat:
-        pickNumber(raw, ["service_fee_host_vat", "serviceFeeHostVat"]) ??
-        pickNumber(taxesObj, ["service_fee_host_vat", "serviceFeeHostVat"]),
-      extraTaxes:
-        pickNumber(raw, ["extra_taxes", "extraTaxes"]) ?? pickNumber(taxesObj, ["extra_taxes", "extraTaxes"]),
-      collectedByChannel:
-        pickNumber(raw, ["collected_by_channel", "collectedByChannel"]) ??
-        pickNumber(taxesObj, ["collected_by_channel", "collectedByChannel"]),
-    },
+    money: bookingMoneyFromModel(booking),
     notes: booking.notes ?? pickString(raw, ["notes", "note", "internal_notes"]),
     hosthub: {
       calendarEventRaw: booking.hosthubCalendarEventRaw,

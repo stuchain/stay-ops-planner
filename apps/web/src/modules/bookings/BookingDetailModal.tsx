@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BookingStatus } from "@stay-ops/db";
 import { ChannelLogo } from "./ChannelLogo";
 import type { BookingDetailDto } from "./details";
+import { PriceDetailsAirbnb } from "./PriceDetailsAirbnb";
+import { PriceDetailsHosthub } from "./PriceDetailsHosthub";
 
 type BookingDetail = BookingDetailDto;
 
@@ -39,14 +41,6 @@ function fmtDateTimeLocal(value: string): string {
     minute: "2-digit",
     hour12: false,
   }).format(date);
-}
-
-function prettyJson(value: unknown): string {
-  try {
-    return JSON.stringify(value ?? {}, null, 2);
-  } catch {
-    return "{}";
-  }
 }
 
 function statusLabel(status: BookingStatus): string {
@@ -366,77 +360,59 @@ export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingD
               </details>
 
               <details className="ops-booking-modal-section" open>
-                <summary>Price Details</summary>
-                <div className="ops-booking-grid-2">
-                  <div className="ops-detail-row"><span className="ops-detail-key">Booking value</span><span className="ops-detail-value">{fmtMoney(detail.money.total, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Total payout</span><span className="ops-detail-value">{fmtMoney(detail.money.payout, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Cleaning fee</span><span className="ops-detail-value">{fmtMoney(detail.money.cleaningFee, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Other fees</span><span className="ops-detail-value">{fmtMoney(detail.money.otherFees, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Payment charges</span><span className="ops-detail-value">{fmtMoney(detail.money.paymentCharges, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Service fee host</span><span className="ops-detail-value">{fmtMoney(detail.money.serviceFeeHost, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Service fee host base</span><span className="ops-detail-value">{fmtMoney(detail.money.serviceFeeHostBase, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Service fee host VAT</span><span className="ops-detail-value">{fmtMoney(detail.money.serviceFeeHostVat, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Extra taxes</span><span className="ops-detail-value">{fmtMoney(detail.money.extraTaxes, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Collected by channel</span><span className="ops-detail-value">{fmtMoney(detail.money.collectedByChannel, detail.money.currency)}</span></div>
-                  <div className="ops-detail-row"><span className="ops-detail-key">Guest paid</span><span className="ops-detail-value">{fmtMoney(detail.money.guestPaid, detail.money.currency)}</span></div>
-                </div>
-              </details>
-
-              <details className="ops-booking-modal-section">
-                <summary>Hosthub notes</summary>
-                {detail.notesTimeline.length === 0 ? (
-                  <p className="ops-muted">No notes returned from Hosthub.</p>
+                <summary>Price details</summary>
+                {detail.channel === "booking" ? (
+                  <PriceDetailsHosthub money={detail.money} nights={detail.nights} />
+                ) : detail.channel === "airbnb" ? (
+                  <PriceDetailsAirbnb money={detail.money} />
                 ) : (
-                  <ul className="ops-drawer-list">
-                    {detail.notesTimeline.map((note, idx) => (
-                      <li key={`${note.id ?? "note"}-${idx}`} className="ops-drawer-row">
-                        <strong>{note.content ?? "(empty)"}</strong>
-                        <div className="ops-muted">
-                          {note.created ?? "-"} | {note.status ?? "-"}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </details>
-
-              <details className="ops-booking-modal-section">
-                <summary>All Hosthub fields</summary>
-                {detail.payloadSections.length === 0 ? (
-                  <p className="ops-muted">No payload fields available.</p>
-                ) : (
-                  <div className="ops-payload-sections">
-                    {detail.payloadSections.map((section) => (
-                      <div key={section.id} className="ops-payload-section">
-                        <h4>{section.title}</h4>
-                        <div className="ops-payload-grid">
-                          {section.fields.map((field, fieldIndex) => (
-                            <div key={`${section.id}-${field.key}-${fieldIndex}`} className="ops-payload-row">
-                              <div className="ops-payload-label">{field.label}</div>
-                              <div className="ops-payload-value">{field.value}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="ops-booking-grid-2">
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Booking value</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.total, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Total payout</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.payout, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Cleaning fee</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.cleaningFee, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Other fees</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.otherFees, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Payment charges</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.paymentCharges, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Service fee host</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.serviceFeeHost, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Service fee host base</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.serviceFeeHostBase, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Service fee host VAT</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.serviceFeeHostVat, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Extra taxes</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.extraTaxes, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Collected by channel</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.collectedByChannel, detail.money.currency)}</span>
+                    </div>
+                    <div className="ops-detail-row">
+                      <span className="ops-detail-key">Guest paid</span>
+                      <span className="ops-detail-value">{fmtMoney(detail.money.guestPaid, detail.money.currency)}</span>
+                    </div>
                   </div>
                 )}
-              </details>
-
-              <details className="ops-booking-modal-section">
-                <summary>Raw payload and Hosthub raw</summary>
-                <section className="ops-booking-modal-section">
-                  <h3>Raw payload</h3>
-                  <pre className="ops-pre">{prettyJson(detail.rawPayload)}</pre>
-                </section>
-                <section className="ops-booking-modal-section">
-                  <h3>Hosthub event raw</h3>
-                  <pre className="ops-pre">{prettyJson(detail.hosthub.calendarEventRaw)}</pre>
-                </section>
-                <section className="ops-booking-modal-section">
-                  <h3>Hosthub GR taxes raw</h3>
-                  <pre className="ops-pre">{prettyJson(detail.hosthub.grTaxesRaw)}</pre>
-                </section>
               </details>
 
               <section className="ops-booking-modal-section">
