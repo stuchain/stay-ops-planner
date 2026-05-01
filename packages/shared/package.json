@@ -10,6 +10,31 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./observability": {
+      "types": "./dist/observability/index.d.ts",
+      "import": "./dist/observability/index.js",
+      "default": "./dist/observability/index.js"
+    },
+    "./observability/redact": {
+      "types": "./dist/observability/redact.d.ts",
+      "import": "./dist/observability/redact.js",
+      "default": "./dist/observability/redact.js"
+    },
+    "./observability/hash-user-id": {
+      "types": "./dist/observability/hashUserId.d.ts",
+      "import": "./dist/observability/hashUserId.js",
+      "default": "./dist/observability/hashUserId.js"
+    },
+    "./retry": {
+      "types": "./dist/retry/index.d.ts",
+      "import": "./dist/retry/index.js",
+      "default": "./dist/retry/index.js"
+    },
+    "./log": {
+      "types": "./dist/log/log.d.ts",
+      "import": "./dist/log/log.js",
+      "default": "./dist/log/log.js"
     }
   },
   "scripts": {

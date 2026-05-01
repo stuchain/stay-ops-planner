@@ -66,3 +66,10 @@ export {
   computeWebhookDedupeKey,
   type HosthubWebhookBodyStub,
 } from "./webhook/dedupeKey.js";
+export {
+  isTransientPrismaError,
+  isTransientHosthubError,
+  isTransientRedisOrNetworkError,
+  isTransientSyncError,
+  pickPrismaErrorCode,
+} from "./retry/isTransient.js";

@@ -20,6 +20,7 @@
   "dependencies": {
     "@stay-ops/audit": "workspace:*",
     "@stay-ops/db": "workspace:*",
+    "@stay-ops/shared": "workspace:*",
     "bullmq": "^5.34.5",
     "zod": "^3.24.1"
   },

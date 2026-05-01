@@ -55,6 +55,10 @@ export async function processSyncHosthubJob(job: Job): Promise<void> {
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      const isPayloadError = /invalid JSON body|could not extract reservation/i.test(msg);
+      if (!isPayloadError) {
+        throw e;
+      }
       const run = await startSyncRun(prisma, "hosthub_webhook");
       await recordImportError(prisma, run.id, "MISSING_REQUIRED_FIELD", msg, {
         dedupeKey: data.dedupeKey,

@@ -1,4 +1,5 @@
 import { writeAuditSnapshot } from "@stay-ops/audit";
+import { log, withRetry } from "@stay-ops/shared";
 import type { Prisma } from "@stay-ops/db";
 import { BookingStatus, ensureTurnoverCleaningTask, guessRentalIndexFromTitle, PrismaClient } from "@stay-ops/db";
 import type { HosthubReservationDto } from "../hosthub/types.dto.js";
@@ -7,6 +8,7 @@ import { revalidateAssignmentIfNeeded } from "../allocation/revalidateAssignment
 import { mapHosthubBookingStatus } from "./bookingStatus.js";
 import { mapHosthubListingChannel } from "./mapChannel.js";
 import { nightsBetweenCheckinCheckout, parseDateOnlyUtc } from "./dates.js";
+import { isTransientPrismaError, pickPrismaErrorCode } from "../retry/isTransient.js";
 
 type Dict = Record<string, unknown>;
 
@@ -252,7 +254,30 @@ export async function applyHosthubReservation(
     hosthubGrTaxesRaw?: Prisma.InputJsonValue | null;
   },
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    await upsertListingAndBooking(tx, dto, rawPayload, extra);
-  });
+  await withRetry(
+    () =>
+      prisma.$transaction(async (tx) => {
+        await upsertListingAndBooking(tx, dto, rawPayload, extra);
+      }),
+    {
+      maxAttempts: 3,
+      isTransient: isTransientPrismaError,
+      onRetry: ({ attempt, delayMs, err }) => {
+        log("warn", "retry_attempt", {
+          op: "applyHosthubReservation",
+          attempt,
+          delayMs,
+          code: pickPrismaErrorCode(err),
+        });
+      },
+      onExhausted: ({ attempts, elapsedMs, cause }) => {
+        log("error", "retry_exhausted", {
+          op: "applyHosthubReservation",
+          attempts,
+          elapsedMs,
+          code: pickPrismaErrorCode(cause),
+        });
+      },
+    },
+  );
 }
