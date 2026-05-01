@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@stay-ops/db";
+import type { BookingStatus, Channel } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
@@ -13,8 +14,6 @@ import {
   type LedgerRow,
   type Overrides,
 } from "@/modules/excel/ledger";
-
-const prisma = new PrismaClient();
 
 const ManualPostSchema = z
   .object({
@@ -57,11 +56,22 @@ function bookingToLedgerInput(b: BookingWithLedgerRelations): BookingForLedger {
 function rowPayload(
   entry: { id: string; bookingId: string | null; manualName: string | null; manualMonth: number | null; overrides: unknown },
   auto: LedgerRow,
-): { entryId: string; bookingId: string | null; manual: boolean; auto: LedgerRow; overrides: Overrides | null } {
+  bookingMeta: { channel: Channel; status: BookingStatus } | null,
+): {
+  entryId: string;
+  bookingId: string | null;
+  manual: boolean;
+  channel: Channel | null;
+  status: BookingStatus | null;
+  auto: LedgerRow;
+  overrides: Overrides | null;
+} {
   return {
     entryId: entry.id,
     bookingId: entry.bookingId,
     manual: entry.bookingId == null,
+    channel: bookingMeta?.channel ?? null,
+    status: bookingMeta?.status ?? null,
     auto,
     overrides: (entry.overrides as Overrides | null) ?? null,
   };
@@ -116,7 +126,7 @@ export async function POST(request: NextRequest) {
       name: manualName.trim().toUpperCase(),
       guestCount: null,
     };
-    return NextResponse.json({ data: rowPayload(entry, auto) }, { status: 201 });
+    return NextResponse.json({ data: rowPayload(entry, auto, null) }, { status: 201 });
   }
 
   const { year, bookingId } = parsed.data;
@@ -157,5 +167,8 @@ export async function POST(request: NextRequest) {
   }
 
   const auto = buildAutoRow(bookingToLedgerInput(booking));
-  return NextResponse.json({ data: rowPayload(entry, auto) }, { status: 200 });
+  return NextResponse.json(
+    { data: rowPayload(entry, auto, { channel: booking.channel, status: booking.status }) },
+    { status: 200 },
+  );
 }

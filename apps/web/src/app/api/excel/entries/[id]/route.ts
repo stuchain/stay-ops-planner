@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { Prisma, PrismaClient } from "@stay-ops/db";
+import type { BookingStatus, Channel } from "@stay-ops/db";
+import { Prisma } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
@@ -15,8 +17,6 @@ import {
   type LedgerRow,
   type Overrides,
 } from "@/modules/excel/ledger";
-
-const prisma = new PrismaClient();
 
 const PatchBodySchema = z
   .object({
@@ -46,11 +46,22 @@ function bookingToLedgerInput(b: BookingWithLedgerRelations): BookingForLedger {
 function rowPayload(
   entry: { id: string; bookingId: string | null; manualName: string | null; manualMonth: number | null; overrides: unknown },
   auto: LedgerRow,
-): { entryId: string; bookingId: string | null; manual: boolean; auto: LedgerRow; overrides: Overrides | null } {
+  bookingMeta: { channel: Channel; status: BookingStatus } | null,
+): {
+  entryId: string;
+  bookingId: string | null;
+  manual: boolean;
+  channel: Channel | null;
+  status: BookingStatus | null;
+  auto: LedgerRow;
+  overrides: Overrides | null;
+} {
   return {
     entryId: entry.id,
     bookingId: entry.bookingId,
     manual: entry.bookingId == null,
+    channel: bookingMeta?.channel ?? null,
+    status: bookingMeta?.status ?? null,
     auto,
     overrides: (entry.overrides as Overrides | null) ?? null,
   };
@@ -104,6 +115,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     });
 
     let auto: LedgerRow;
+    let bookingMeta: { channel: Channel; status: BookingStatus } | null = null;
     if (updated.bookingId) {
       const booking = await prisma.booking.findUnique({
         where: { id: updated.bookingId },
@@ -116,13 +128,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         auto = emptyManualAutoRow();
       } else {
         auto = buildAutoRow(bookingToLedgerInput(booking));
+        bookingMeta = { channel: booking.channel, status: booking.status };
       }
     } else {
       const name = updated.manualName?.trim().toUpperCase() ?? "";
       auto = { ...emptyManualAutoRow(), name, guestCount: null };
     }
 
-    return NextResponse.json({ data: rowPayload(updated, auto) });
+    return NextResponse.json({ data: rowPayload(updated, auto, bookingMeta) });
   } catch (err) {
     if (!isMissingExcelLedgerTableError(err)) throw err;
     return NextResponse.json(
@@ -167,7 +180,11 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
       },
     });
     const auto = booking ? buildAutoRow(bookingToLedgerInput(booking)) : emptyManualAutoRow();
-    return NextResponse.json({ data: { ...rowPayload(updated, auto), overridesCleared: true } });
+    const bookingMeta =
+      booking != null ? { channel: booking.channel, status: booking.status } : null;
+    return NextResponse.json({
+      data: { ...rowPayload(updated, auto, bookingMeta), overridesCleared: true },
+    });
   } catch (err) {
     if (!isMissingExcelLedgerTableError(err)) throw err;
     return NextResponse.json(
