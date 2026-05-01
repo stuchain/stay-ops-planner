@@ -1692,6 +1692,95 @@ body {
   font-size: 1rem;
 }
 
+/* Hosthub-style Booking.com price breakdown (booking detail modal) */
+.ops-price-hosthub .ops-price-section-title {
+  margin: 0.85rem 0 0.35rem;
+  padding: 0.15rem 0.1rem 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5a6b82;
+}
+
+.ops-price-hosthub .ops-price-section-title:first-child {
+  margin-top: 0;
+}
+
+.ops-price-subtotal {
+  background: #eef4f9;
+  margin: 0 -0.05rem;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+  border-radius: 6px;
+}
+
+.ops-price-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.55rem;
+  border: none;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: #35be95;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ops-price-chip:hover {
+  filter: brightness(1.05);
+}
+
+.ops-price-chip:focus-visible {
+  outline: 2px solid #0e2b57;
+  outline-offset: 2px;
+}
+
+.ops-price-value-with-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.ops-price-sublist {
+  margin: -0.15rem 0 0.45rem;
+  padding: 0.45rem 0.65rem 0.5rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e6edf8;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+.ops-price-sublist-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.2rem 0;
+  color: #1f2e45;
+}
+
+.ops-price-deduction {
+  color: #5a6778;
+}
+
+.ops-price-extras-block .ops-detail-value {
+  text-align: left;
+}
+
+.ops-price-extras {
+  margin: 0;
+  padding-left: 1.1rem;
+  text-align: left;
+  list-style: disc;
+  color: #1f2e45;
+}
+
 .ops-booking-grid-2 > :last-child {
   border-bottom: none;
 }
@@ -1834,4 +1923,261 @@ body {
     grid-template-columns: 1fr;
     gap: 0.15rem;
   }
+}
+
+/* --- Excel tax ledger (/app/excel) --- */
+.ops-excel-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 100vh;
+  padding: 0 0 5rem;
+}
+
+.ops-excel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ops-excel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ops-excel-year select {
+  margin-left: 0.25rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 8px;
+  border: 1px solid #c9d4e6;
+  background: #fff;
+}
+
+.ops-excel-scroll {
+  overflow-x: auto;
+  border: 1px solid #dfe4ec;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(20, 34, 56, 0.06);
+}
+
+.ops-excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  min-width: 78rem;
+}
+
+.ops-excel-table th,
+.ops-excel-table td {
+  border: 1px solid #dfe4ec;
+  padding: 0.2rem 0.35rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ops-excel-table th {
+  background: #eef3fa;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.ops-excel-month-row td {
+  background: #e8f0fc;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+}
+
+.ops-excel-month-title {
+  letter-spacing: 0.02em;
+}
+
+.ops-excel-month-subcell {
+  font-weight: 600;
+  font-size: 0.72rem;
+  color: #3d4f66;
+}
+
+.ops-excel-seq {
+  text-align: right;
+  color: #5a6b82;
+  width: 2.25rem;
+}
+
+.ops-excel-cell {
+  position: relative;
+  max-width: 10rem;
+}
+
+.ops-excel-cell--override {
+  background: rgba(255, 243, 205, 0.55);
+}
+
+.ops-excel-cell-display {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  font: inherit;
+  padding: 0.1rem 0.15rem;
+  cursor: text;
+  color: inherit;
+}
+
+.ops-excel-cell-display:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.ops-excel-cell-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  font: inherit;
+  padding: 0.1rem 0.2rem;
+}
+
+.ops-excel-revert {
+  margin-left: 0.15rem;
+  padding: 0 0.2rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #64748b;
+  vertical-align: middle;
+}
+
+.ops-excel-revert:hover {
+  color: #0f172a;
+}
+
+.ops-excel-totals {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), #f8fafc);
+  box-shadow: 0 -4px 12px rgba(20, 34, 56, 0.08);
+  font-weight: 600;
+}
+
+.ops-excel-totals td {
+  border-top: 2px solid #c9d4e6;
+}
+
+.ops-excel-totals-label {
+  text-align: right;
+  padding-right: 0.5rem;
+}
+
+.ops-excel-toast {
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.88rem;
+}
+
+.ops-excel-toast--error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.ops-excel-listings {
+  margin: 0.75rem 0 1rem;
+  max-width: 960px;
+}
+
+.ops-excel-listings summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.35rem 0;
+}
+
+.ops-excel-listings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin-top: 0.5rem;
+}
+
+.ops-excel-listings-table th,
+.ops-excel-listings-table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+.ops-excel-listings-table th {
+  background: #f9fafb;
+}
+
+.ops-excel-listings-table select {
+  min-width: 4.5rem;
+}
+
+.ops-excel-rental-header-input {
+  width: 100%;
+  min-width: 4rem;
+  font: inherit;
+  padding: 0.2rem 0.35rem;
+}
+
+.ops-excel-rental-header-btn {
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  padding: 0.1rem 0;
+}
+
+.ops-excel-rental-header-btn:disabled {
+  cursor: default;
+  text-decoration: none;
+  opacity: 0.6;
+}
+
+.ops-settings-listings-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.ops-excel-detail-head {
+  width: 1.6rem;
+  padding: 0;
+}
+
+.ops-excel-detail-cell {
+  width: 1.6rem;
+  padding: 0 0.2rem;
+  text-align: center;
+}
+
+.ops-excel-detail-btn {
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  border: 1px solid var(--ops-border, #d1d5db);
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ops-excel-detail-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
