@@ -1969,13 +1969,13 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
-  min-width: 78rem;
+  min-width: 72rem;
 }
 
 .ops-excel-table th,
 .ops-excel-table td {
   border: 1px solid #dfe4ec;
-  padding: 0.2rem 0.35rem;
+  padding: 0.16rem 0.28rem;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -1992,7 +1992,7 @@ body {
   background: #e8f0fc;
   font-weight: 700;
   text-align: center;
-  padding: 0.35rem 0.5rem;
+  padding: 0.3rem 0.4rem;
 }
 
 .ops-excel-month-title {
@@ -2013,7 +2013,7 @@ body {
 
 .ops-excel-cell {
   position: relative;
-  max-width: 10rem;
+  max-width: 8.75rem;
 }
 
 .ops-excel-cell--override {
@@ -2030,10 +2030,41 @@ body {
   padding: 0.1rem 0.15rem;
   cursor: text;
   color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ops-excel-cell-display:hover {
   background: rgba(59, 130, 246, 0.08);
+}
+
+.ops-excel-cell-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-excel-cell--name .ops-excel-cell-display:hover,
+.ops-excel-cell--name .ops-excel-cell-display:focus-visible {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  width: max-content;
+  max-width: min(32rem, 70vw);
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+  background: #fff;
+  border: 1px solid #c9d4e6;
+  border-radius: 4px;
+  box-shadow: 0 8px 20px rgba(20, 34, 56, 0.12);
+}
+
+.ops-excel-cell-input--name {
+  min-width: min(26rem, 70vw);
 }
 
 .ops-excel-cell-input {

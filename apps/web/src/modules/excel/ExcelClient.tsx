@@ -222,7 +222,9 @@ function EditableCell(props: {
   onRevert: (rowIdx: number, field: keyof LedgerRow) => Promise<void>;
 }) {
   const { row, field, numeric, disabled, saving, rowIdx, onSave, onRevert } = props;
+  const isNameField = field === "name";
   const displayed = applyOverrides(row.auto, row.overrides)[field];
+  const displayText = formatDisplayValue(field, displayed as never);
   const autoVal = row.auto[field];
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -264,12 +266,14 @@ function EditableCell(props: {
 
   return (
     <td
-      className={`ops-excel-cell ${showRevert ? "ops-excel-cell--override" : ""}`}
+      className={`ops-excel-cell ${showRevert ? "ops-excel-cell--override" : ""} ${
+        isNameField ? "ops-excel-cell--name" : ""
+      }`}
       data-field={field}
     >
       {editing ? (
         <input
-          className="ops-excel-cell-input"
+          className={`ops-excel-cell-input ${isNameField ? "ops-excel-cell-input--name" : ""}`}
           autoFocus
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -292,10 +296,11 @@ function EditableCell(props: {
         <button
           type="button"
           className="ops-excel-cell-display"
+          title={displayText}
           disabled={disabled || saving}
           onClick={startEdit}
         >
-          {formatDisplayValue(field, displayed as never)}
+          <span className={isNameField ? "ops-excel-cell-text" : undefined}>{displayText}</span>
         </button>
       )}
       {showRevert ? (
