@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { HosthubListingsSection } from "@/modules/settings/HosthubListingsSection";
 
 type ApiError = { error?: { message?: string } };
 type HosthubTokenStatus = { configured: boolean; updatedAt: string | null; name: string | null };
@@ -279,6 +280,15 @@ export function SettingsView() {
             <button type="button" className="ops-btn ops-btn-primary" disabled={saving} onClick={() => void syncNow()}>
               Sync now
             </button>
+          </section>
+
+          <section className="ops-markers">
+            <h2>Καταλύματα Hosthub</h2>
+            <p className="ops-muted">
+              Map each Hosthub listing to a tax rental slot (1–4). Changes apply to the Excel tax ledger after you
+              reload that page.
+            </p>
+            <HosthubListingsSection />
           </section>
         </>
       )}
