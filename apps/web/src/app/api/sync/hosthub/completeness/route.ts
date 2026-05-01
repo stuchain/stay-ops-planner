@@ -1,10 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { Channel, PrismaClient } from "@stay-ops/db";
+import { Channel } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireSession } from "@/modules/auth/guard";
-
-const prisma = new PrismaClient();
 
 type CompletenessField = {
   key: string;

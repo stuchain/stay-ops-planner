@@ -1,7 +1,5 @@
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { decryptSecret, encryptSecret } from "@/modules/secrets/crypto";
-
-const prisma = new PrismaClient();
 
 const PROVIDER = "hosthub";
 const SECRET_KEY = "apiToken";

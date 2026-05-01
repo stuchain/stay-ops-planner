@@ -1,8 +1,7 @@
-import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
+import { BookingStatus, Channel } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { extractDailyRatesFromHosthubJson } from "./hosthubDailyRates";
 import { zonedMonthRangeUtc } from "./monthBounds";
-
-const prisma = new PrismaClient();
 
 export type CalendarBookingItem = {
   kind: "booking";

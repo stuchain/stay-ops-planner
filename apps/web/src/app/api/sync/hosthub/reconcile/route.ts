@@ -1,13 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { runHosthubReconcile } from "@stay-ops/sync";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireSession } from "@/modules/auth/guard";
 import { resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
 import { syncJsonError } from "@/modules/sync/errors";
-
-const prisma = new PrismaClient();
 const RECONCILE_LOCK_KEY = BigInt("848424015");
 
 export async function POST(request: NextRequest) {

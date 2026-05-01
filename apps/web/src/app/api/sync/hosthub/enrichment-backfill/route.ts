@@ -1,12 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { runHosthubEnrichmentBackfill } from "@stay-ops/sync";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireSession } from "@/modules/auth/guard";
-
-const prisma = new PrismaClient();
 const BACKFILL_LOCK_KEY = BigInt("848424016");
 
 const BodySchema = z.object({

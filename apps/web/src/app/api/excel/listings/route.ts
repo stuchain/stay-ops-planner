@@ -1,11 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
-
-const prisma = new PrismaClient();
 
 function startOfYearUtc(year: number): Date {
   return new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));

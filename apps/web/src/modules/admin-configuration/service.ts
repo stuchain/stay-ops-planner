@@ -1,13 +1,11 @@
 import {
   Prisma,
-  PrismaClient,
   type AlertConfigChannel,
   type AlertConfigEventType,
   type OperationalThresholdKey,
 } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { writeAuditSnapshot } from "@stay-ops/audit";
-
-const prisma = new PrismaClient();
 
 export type AdminAlertTemplateRecord = {
   id: string;

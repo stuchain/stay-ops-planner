@@ -1,12 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { BookingStatus, PrismaClient } from "@stay-ops/db";
+import { BookingStatus } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { bookingDetailFromModel, mergeEditablePayload } from "@/modules/bookings/details";
-
-const prisma = new PrismaClient();
 
 const PatchBodySchema = z
   .object({

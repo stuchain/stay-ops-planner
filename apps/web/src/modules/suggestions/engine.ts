@@ -1,4 +1,5 @@
-import { BookingStatus, PrismaClient, TURNOVER_MINUTES } from "@stay-ops/db";
+import { BookingStatus, TURNOVER_MINUTES } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { effectiveGuestCount, roomAcceptsParty } from "@/modules/bookings/effectiveGuestCount";
 import type { SuggestionReasonCode, SuggestionScoreBreakdown } from "./types";
 
@@ -7,8 +8,6 @@ export const SUGGESTION_ENGINE_VERSION = 1;
 const AVAILABILITY_WEIGHT = 60;
 const CLEANING_FIT_WEIGHT = 30;
 const TIE_BREAKER_WEIGHT = 10;
-
-const prisma = new PrismaClient();
 
 type SuggestionContext = {
   bookingId: string;

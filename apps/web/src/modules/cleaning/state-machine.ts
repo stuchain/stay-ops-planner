@@ -1,8 +1,6 @@
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { CleaningTaskNotFoundError, InvalidStateTransitionError } from "./errors";
 import { writeAuditSnapshot } from "@stay-ops/audit";
-
-const prisma = new PrismaClient();
 
 /** Linear workflow only: todo -> in_progress -> done. */
 const NEXT: Record<string, string> = {

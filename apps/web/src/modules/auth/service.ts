@@ -1,10 +1,8 @@
 import { z } from "zod";
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { AuthError, type AuthErrorCode, jsonError } from "./errors";
 import { comparePassword } from "./password";
 import { createSessionToken, verifySessionToken } from "./session";
-
-const prisma = new PrismaClient();
 
 export const LoginBodySchema = z.object({
   email: z.string().email(),

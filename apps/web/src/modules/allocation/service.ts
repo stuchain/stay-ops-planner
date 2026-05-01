@@ -4,14 +4,12 @@ import {
   ensureTurnoverCleaningTask,
   findStayConflict,
   Prisma,
-  PrismaClient,
   TURNOVER_TASK_TYPE,
 } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { AllocationError } from "./errors";
 import { throwIfStayConflict } from "./stayConflict";
 import { writeAuditSnapshot } from "@stay-ops/audit";
-
-const prisma = new PrismaClient();
 
 const ASSIGNABLE: BookingStatus[] = [BookingStatus.confirmed, BookingStatus.needs_reassignment];
 

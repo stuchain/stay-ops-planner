@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { Prisma, PrismaClient } from "@stay-ops/db";
+import { Prisma } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import {
   computeWebhookDedupeKey,
   enqueueHosthubInbound,
@@ -9,8 +10,6 @@ import {
   verifyHosthubWebhookSignature,
 } from "@stay-ops/sync";
 import { syncJsonError } from "./errors";
-
-const prisma = new PrismaClient();
 
 export async function handleHosthubWebhookPost(request: Request): Promise<Response> {
   const rawBody = await request.text();

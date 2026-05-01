@@ -1,12 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { getOrCreateExcelRentalConfig } from "@/modules/excel/rentalConfig";
-
-const prisma = new PrismaClient();
 
 const PatchBodySchema = z
   .object({

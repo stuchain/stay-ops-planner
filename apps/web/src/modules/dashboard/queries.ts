@@ -1,6 +1,5 @@
-import { BookingStatus, PrismaClient } from "@stay-ops/db";
-
-const prisma = new PrismaClient();
+import { BookingStatus } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 
 function isoHoursAgo(hours: number): Date {
   return new Date(Date.now() - hours * 60 * 60 * 1000);

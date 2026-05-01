@@ -3,10 +3,10 @@ import {
   computeTurnoverPlannedWindowUTC,
   createServiceCleaningTask,
   Prisma,
-  PrismaClient,
   SERVICE_MINUTES,
   validateCleaningSchedule,
 } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { CleaningBookingNotFoundError, CleaningTaskNotFoundError } from "./errors";
 
 function cleaningTaskSnapshot(t: {
@@ -32,8 +32,6 @@ function cleaningTaskSnapshot(t: {
     durationMinutes: t.durationMinutes,
   };
 }
-
-const prisma = new PrismaClient();
 
 export type ListCleaningTasksQuery = {
   date?: string;

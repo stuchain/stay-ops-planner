@@ -1,6 +1,4 @@
-import { PrismaClient } from "@stay-ops/db";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 const PAGE_SIZE_MAX = 50;
 
 type AuditEventRow = {

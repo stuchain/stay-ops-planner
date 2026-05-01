@@ -1,12 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { BookingStatus, Channel, Prisma, PrismaClient } from "@stay-ops/db";
+import { BookingStatus, Channel, Prisma } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { bookingListItemFromModel } from "@/modules/bookings/details";
-
-const prisma = new PrismaClient();
 
 const SortFieldSchema = z.enum(["updatedAt", "createdAt", "checkinDate", "checkoutDate", "totalValue"]);
 const SortOrderSchema = z.enum(["asc", "desc"]);

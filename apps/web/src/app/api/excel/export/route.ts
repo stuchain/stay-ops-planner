@@ -1,15 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { PrismaClient } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { computeTotals } from "@/modules/excel/ledger";
 import { getOrCreateExcelRentalConfig } from "@/modules/excel/rentalConfig";
 import { displayedRow, loadLedgerRowsForYear } from "@/modules/excel/yearData";
-
-const prisma = new PrismaClient();
 
 const YearQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100).optional(),

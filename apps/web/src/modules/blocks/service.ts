@@ -1,8 +1,7 @@
-import { findStayConflict, PrismaClient } from "@stay-ops/db";
+import { findStayConflict } from "@stay-ops/db";
+import { prisma } from "@/lib/prisma";
 import { throwIfStayConflict } from "../allocation/stayConflict";
 import { writeAuditSnapshot } from "@stay-ops/audit";
-
-const prisma = new PrismaClient();
 
 export class BlockNotFoundError extends Error {
   readonly code = "NOT_FOUND" as const;
