@@ -45,7 +45,6 @@ function fmtDateTimeLocal(value: string): string {
 
 function statusLabel(status: BookingStatus): string {
   if (status === "needs_reassignment") return "Needs reassignment";
-  if (status === "no_show") return "No show";
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 

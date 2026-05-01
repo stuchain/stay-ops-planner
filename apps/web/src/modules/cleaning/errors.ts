@@ -29,17 +29,21 @@ export class InvalidStateTransitionError extends Error {
   }
 }
 
-export function cleaningErrorEnvelope(err: {
-  code: string;
-  message: string;
-  status: number;
-  details?: unknown;
-}) {
+export function cleaningErrorEnvelope(
+  err: {
+    code: string;
+    message: string;
+    status: number;
+    details?: unknown;
+  },
+  traceId = "",
+) {
   return {
     error: {
       code: err.code,
       message: err.message,
       details: err.details ?? undefined,
+      traceId,
     },
   };
 }

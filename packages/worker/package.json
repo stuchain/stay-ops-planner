@@ -10,6 +10,7 @@
     "test": "node -e \"process.exit(0)\""
   },
   "dependencies": {
+    "@sentry/node": "9",
     "@stay-ops/shared": "workspace:*",
     "@stay-ops/sync": "workspace:*",
     "bullmq": "^5.34.5"

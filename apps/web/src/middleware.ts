@@ -3,8 +3,19 @@ import type { NextRequest } from "next/server";
 import { jsonError } from "@/modules/auth/errors";
 import { clearSessionCookie } from "@/modules/auth/session";
 import { getSessionContextFromRequest } from "@/modules/auth/guard";
+import { newTraceId, TRACE_HEADER } from "@/lib/traceId";
+
+function nextWithTrace(request: NextRequest, traceId: string): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(TRACE_HEADER, traceId);
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  res.headers.set(TRACE_HEADER, traceId);
+  return res;
+}
 
 export function middleware(request: NextRequest) {
+  const traceId = newTraceId();
+
   const { pathname } = request.nextUrl;
   const method = request.method.toUpperCase();
 
@@ -17,17 +28,27 @@ export function middleware(request: NextRequest) {
   const isHosthubWebhook =
     isApi && pathname === "/api/sync/hosthub/webhook" && method === "POST";
 
-  if (!isApi && !isApp) return NextResponse.next();
-  if (isHealth || isLogin || isHosthubWebhook) return NextResponse.next();
+  if (!isApi && !isApp) {
+    const res = NextResponse.next();
+    res.headers.set(TRACE_HEADER, traceId);
+    return res;
+  }
+  if (isHealth || isLogin || isHosthubWebhook) {
+    return nextWithTrace(request, traceId);
+  }
 
   const { context, tokenPresent } = getSessionContextFromRequest(request);
-  if (context) return NextResponse.next();
+  if (context) {
+    return nextWithTrace(request, traceId);
+  }
 
   // API paths respond with JSON 401.
   if (isApi) {
-    const response = NextResponse.json(jsonError("UNAUTHORIZED", "Authentication required"), {
-      status: 401,
-    });
+    const response = NextResponse.json(
+      jsonError("UNAUTHORIZED", "Authentication required", undefined, traceId),
+      { status: 401 },
+    );
+    response.headers.set(TRACE_HEADER, traceId);
     if (tokenPresent) clearSessionCookie(response);
     return response;
   }
@@ -38,6 +59,7 @@ export function middleware(request: NextRequest) {
   loginUrl.searchParams.set("next", nextPath);
 
   const response = NextResponse.redirect(loginUrl);
+  response.headers.set(TRACE_HEADER, traceId);
   if (tokenPresent) clearSessionCookie(response);
   return response;
 }
@@ -47,4 +69,3 @@ export const config = {
   matcher: ["/app/:path*", "/api/:path*"],
   runtime: "nodejs",
 };
-

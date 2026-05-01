@@ -1,0 +1,53 @@
+name: Sentry release and sourcemaps
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CI: "true"
+      DATABASE_URL: postgresql://stayops:stayops@localhost:5432/stayops
+      SESSION_SECRET: ci-sentry-build-session-secret-at-least-32-chars
+      APP_TIMEZONE: Etc/UTC
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Resolve SENTRY_RELEASE (semver from apps/web)
+        run: |
+          VER=$(node -p "require('./apps/web/package.json').version")
+          echo "SENTRY_RELEASE=stay-ops-web@${VER}" >> "$GITHUB_ENV"
+
+      - name: Require Sentry upload secrets on tag builds
+        if: github.ref_type == 'tag'
+        run: |
+          test -n "${{ secrets.SENTRY_AUTH_TOKEN }}"
+          test -n "${{ secrets.SENTRY_ORG }}"
+          test -n "${{ secrets.SENTRY_PROJECT }}"
+
+      - name: Build @stay-ops/shared
+        run: pnpm --filter @stay-ops/shared build
+
+      - name: Build @stay-ops/web (Sentry webpack plugin uploads when secrets set)
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ env.SENTRY_RELEASE }}
+        run: pnpm --filter @stay-ops/web build

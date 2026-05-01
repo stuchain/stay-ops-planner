@@ -8,9 +8,11 @@ import {
 } from "@stay-ops/sync";
 import { Worker } from "bullmq";
 import { loadHosthubLocalEnv } from "./loadHosthubLocalEnv.js";
+import { initWorkerSentry, Sentry } from "./sentry.js";
 
 loadHosthubLocalEnv();
 parseEnv(process.env);
+initWorkerSentry();
 
 const redisUrlRaw = process.env.REDIS_URL?.trim();
 if (!redisUrlRaw) {
@@ -29,6 +31,10 @@ async function main() {
 
   worker.on("failed", (job, err) => {
     console.error("sync job failed", job?.name, job?.id, err);
+    void Sentry.captureException(err, {
+      tags: { queue: SYNC_HOSTHUB_QUEUE_NAME, job: job?.name ?? "unknown" },
+      extra: { jobId: job?.id },
+    });
   });
 
   console.info("stay-ops worker: listening on queue", SYNC_HOSTHUB_QUEUE_NAME);

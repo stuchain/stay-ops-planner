@@ -25,12 +25,13 @@ export class AllocationError extends Error {
   }
 }
 
-export function allocationErrorEnvelope(err: AllocationError) {
+export function allocationErrorEnvelope(err: AllocationError, traceId = "") {
   return {
     error: {
       code: err.code,
       message: err.message,
       details: err.details ?? undefined,
+      traceId,
     },
   };
 }

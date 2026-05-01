@@ -2369,3 +2369,55 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Error boundary / ErrorState */
+.ops-error-boundary-root {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.ops-error-state {
+  max-width: 32rem;
+  padding: 1.5rem 1.25rem;
+  border: 1px solid #e0e4ea;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.ops-error-state-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  color: #1f2e45;
+}
+
+.ops-error-state-desc {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: #3d4a5c;
+  line-height: 1.45;
+}
+
+.ops-error-state-trace {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: #5a6b82;
+}
+
+.ops-error-state-trace-label {
+  font-weight: 600;
+}
+
+.ops-error-state-trace-id {
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.ops-error-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}

@@ -402,7 +402,6 @@ function bookingMoneyFromModel(booking: BookingWithDetailRelations): BookingDeta
   if (booking.channel !== "booking" && booking.channel !== "airbnb") {
     return {
       total: totalLegacy,
-      totalValue: null,
       currency,
       cleaningFee: cleaningFeeLegacy,
       taxes: taxesLegacy,

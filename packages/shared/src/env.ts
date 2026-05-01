@@ -34,6 +34,18 @@ export const EnvSchema = z.object({
   HOSTHUB_WEBHOOK_SIGNATURE_HEADER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  /** Server-side Sentry DSN (omit to disable sending). */
+  SENTRY_DSN: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  /** Client-side DSN (public; omit to disable browser sending). */
+  NEXT_PUBLIC_SENTRY_DSN: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  /** Overrides NODE_ENV for Sentry environment tag (e.g. staging). */
+  SENTRY_ENVIRONMENT: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** Semantic release id attached to every event (CI should set this). */
+  SENTRY_RELEASE: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** Optional extra entropy for `hashUserId` (recommended in production). */
+  SENTRY_USER_ID_PEPPER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** When `1`, production builds should configure Sentry DSN (enforced in CI workflows, not parseEnv). */
+  STAYOPS_SENTRY_REQUIRED: z.preprocess(emptyToUndefined, z.enum(["0", "1"]).optional()),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
