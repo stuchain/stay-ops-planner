@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import type { BookingStatus, Channel } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import type { BookingWithLedgerRelations } from "@/modules/excel/bookingLedgerTypes";
 import { isMissingExcelLedgerTableError } from "@/modules/excel/dbErrors";
 import {
@@ -79,10 +80,10 @@ function rowPayload(
 
 export async function POST(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

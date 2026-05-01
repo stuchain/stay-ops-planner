@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { Channel } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireSession } from "@/modules/auth/guard";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 type CompletenessField = {
   key: string;
@@ -55,10 +56,10 @@ async function buildChannelCompleteness(channel: Channel) {
 
 export async function GET(request: NextRequest) {
   try {
-    requireSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

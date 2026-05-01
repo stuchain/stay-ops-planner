@@ -3,6 +3,7 @@ export type ApiErrorEnvelope = {
     code: string;
     message: string;
     details?: unknown;
+    traceId: string;
   };
 };
 
@@ -10,6 +11,7 @@ export type AuthErrorCode =
   | "VALIDATION_ERROR"
   | "INVALID_CREDENTIALS"
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "ACCOUNT_DISABLED";
 
 export class AuthError extends Error {
@@ -30,12 +32,18 @@ export class AuthError extends Error {
   }
 }
 
-export function jsonError(code: string, message: string, details?: unknown): ApiErrorEnvelope {
+export function jsonError(
+  code: string,
+  message: string,
+  details?: unknown,
+  traceId = "",
+): ApiErrorEnvelope {
   return {
     error: {
       code,
       message,
       details: details ?? undefined,
+      traceId,
     },
   };
 }

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { respondAuthError } from "@/lib/apiError";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
@@ -23,10 +24,10 @@ const CreateTemplateSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireAdminSession(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
@@ -38,10 +39,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let sessionUserId = "";
   try {
-    sessionUserId = requireAdminSession(request).userId;
+    sessionUserId = (await requireAdminSession(request)).userId;
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

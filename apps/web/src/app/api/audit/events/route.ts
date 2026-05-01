@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { listAuditEvents } from "@/modules/audit/queries";
 
 const FromDateOnly = z
@@ -41,10 +42,10 @@ function defaultTo(): Date {
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

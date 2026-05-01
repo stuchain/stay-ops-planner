@@ -1,8 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
+import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { ManualBlockService } from "@/modules/blocks/service";
@@ -27,10 +29,10 @@ const PostBodySchema = z
 export async function POST(request: NextRequest) {
   let sessionUserId = "";
   try {
-    sessionUserId = requireAdminSession(request).userId;
+    sessionUserId = (await requireOperatorOrAdmin(request)).userId;
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
@@ -73,7 +75,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (err) {
     if (err instanceof AllocationError) {
-      return NextResponse.json(allocationErrorEnvelope(err), { status: err.status });
+      return attachTraceToResponse(
+        request,
+        NextResponse.json(allocationErrorEnvelope(err, readTraceId(request)), { status: err.status }),
+      );
     }
     throw err;
   }

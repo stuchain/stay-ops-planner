@@ -4,11 +4,23 @@ import type { NextResponse } from "next/server";
 export const SESSION_COOKIE_NAME = "stay_ops_session";
 export const SESSION_TTL_SECONDS = 24 * 60 * 60; // exactly 24h
 
+/** Persisted user role; embedded in session token for middleware (JWT only). API handlers re-load from DB. */
+export type SessionRole = "viewer" | "operator" | "admin";
+
 type SessionPayload = {
   sub: string;
+  /** Added in Epic 4; omitted in legacy tokens (treated as operator). */
+  role?: SessionRole;
   iat: number; // unix seconds
   exp: number; // unix seconds
 };
+
+const SESSION_ROLES: readonly SessionRole[] = ["viewer", "operator", "admin"];
+
+function parseSessionRole(value: unknown): SessionRole | undefined {
+  if (typeof value !== "string") return undefined;
+  return SESSION_ROLES.includes(value as SessionRole) ? (value as SessionRole) : undefined;
+}
 
 function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -29,10 +41,10 @@ function signPayloadBase64(payloadBase64Url: string): string {
   return base64UrlEncode(sig);
 }
 
-export function createSessionToken(userId: string, nowMs = Date.now()) {
+export function createSessionToken(userId: string, role: SessionRole, nowMs = Date.now()) {
   const iat = Math.floor(nowMs / 1000);
   const exp = iat + SESSION_TTL_SECONDS;
-  const payload: SessionPayload = { sub: userId, iat, exp };
+  const payload: SessionPayload = { sub: userId, role, iat, exp };
 
   const payloadJson = JSON.stringify(payload);
   const payloadBase64Url = base64UrlEncode(Buffer.from(payloadJson, "utf8"));
@@ -86,8 +98,11 @@ export function verifySessionToken(token: string, nowMs = Date.now()) {
   const nowUnixSeconds = Math.floor(nowMs / 1000);
   if (p.exp <= nowUnixSeconds) return null;
 
+  const role = parseSessionRole(p.role) ?? "operator";
+
   return {
     userId: p.sub,
+    role,
     expiresAt: new Date(p.exp * 1000),
     expUnixSeconds: p.exp,
   };

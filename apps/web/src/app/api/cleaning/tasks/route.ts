@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
@@ -9,7 +10,7 @@ import {
   listCleaningTasks,
 } from "@/modules/cleaning/taskSchedule";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 const QuerySchema = z
   .object({
@@ -56,10 +57,10 @@ function taskDto(t: {
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
@@ -81,10 +82,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let sessionUserId: string;
   try {
-    sessionUserId = requireAdminSession(request).userId;
+    sessionUserId = (await requireOperatorOrAdmin(request)).userId;
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

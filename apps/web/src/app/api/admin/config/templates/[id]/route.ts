@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { respondAuthError } from "@/lib/apiError";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
@@ -18,10 +19,10 @@ const PatchTemplateSchema = z
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   let sessionUserId = "";
   try {
-    sessionUserId = requireAdminSession(request).userId;
+    sessionUserId = (await requireAdminSession(request)).userId;
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

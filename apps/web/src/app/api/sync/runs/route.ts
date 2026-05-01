@@ -1,15 +1,16 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireSession } from "@/modules/auth/guard";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 /**
  * Recent sync runs for operators (no raw booking payloads).
  */
 export async function GET(request: NextRequest) {
   try {
-    requireSession(request);
+    await requireOperatorOrAdmin(request);
     const runs = await prisma.syncRun.findMany({
       orderBy: { startedAt: "desc" },
       take: 30,
@@ -26,9 +27,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: { runs } }, { status: 200 });
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), {
-        status: err.status,
-      });
+      return respondAuthError(request, err);
     }
     throw err;
   }

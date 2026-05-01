@@ -1,28 +1,35 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { log, withRetry } from "@stay-ops/shared";
+import { attachTraceToResponse, apiError } from "@/lib/apiError";
+import { newTraceId, readTraceId } from "@/lib/traceId";
 import { prisma } from "@/lib/prisma";
-import { runHosthubReconcile } from "@stay-ops/sync";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireSession } from "@/modules/auth/guard";
+import { isTransientSyncError, runHosthubReconcile } from "@stay-ops/sync";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
 import { syncJsonError } from "@/modules/sync/errors";
 const RECONCILE_LOCK_KEY = BigInt("848424015");
 
 export async function POST(request: NextRequest) {
   try {
-    requireSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return apiError(request, err.code, err.message, err.status, err.details);
     }
     throw err;
   }
 
   const token = await resolveHosthubApiToken();
   if (!token) {
-    return NextResponse.json(
-      syncJsonError("SERVICE_UNAVAILABLE", "Hosthub token is not configured"),
-      { status: 503 },
+    const tid = readTraceId(request) || newTraceId();
+    return attachTraceToResponse(
+      request,
+      NextResponse.json(syncJsonError("SERVICE_UNAVAILABLE", "Hosthub token is not configured", undefined, tid), {
+        status: 503,
+      }),
+      tid,
     );
   }
 
@@ -36,9 +43,12 @@ export async function POST(request: NextRequest) {
     select: { id: true, startedAt: true },
   });
   if (running) {
-    return NextResponse.json(
-      { data: { status: "running", runId: running.id, startedAt: running.startedAt.toISOString() } },
-      { status: 202 },
+    return attachTraceToResponse(
+      request,
+      NextResponse.json(
+        { data: { status: "running", runId: running.id, startedAt: running.startedAt.toISOString() } },
+        { status: 202 },
+      ),
     );
   }
 
@@ -47,12 +57,37 @@ export async function POST(request: NextRequest) {
   `;
   const acquired = Boolean(lockRows[0]?.acquired);
   if (!acquired) {
-    return NextResponse.json({ data: { status: "running" } }, { status: 202 });
+    return attachTraceToResponse(request, NextResponse.json({ data: { status: "running" } }, { status: 202 }));
   }
 
+  const traceId = readTraceId(request) || undefined;
+
   try {
-    await runHosthubReconcile(prisma, { apiToken: token });
-    return NextResponse.json({ data: { status: "completed" } }, { status: 200 });
+    await withRetry(() => runHosthubReconcile(prisma, { apiToken: token }), {
+      maxAttempts: 2,
+      timeoutBudgetMs: 60_000,
+      isTransient: isTransientSyncError,
+      traceId,
+      onRetry: ({ attempt, delayMs, err, traceId: tid }) => {
+        log("warn", "retry_attempt", {
+          route: "/api/sync/hosthub/reconcile",
+          attempt,
+          delayMs,
+          traceId: tid,
+          message: err instanceof Error ? err.message : String(err),
+        });
+      },
+      onExhausted: ({ attempts, elapsedMs, cause, traceId: tid }) => {
+        log("error", "retry_exhausted", {
+          route: "/api/sync/hosthub/reconcile",
+          attempts,
+          elapsedMs,
+          traceId: tid,
+          message: cause instanceof Error ? cause.message : String(cause),
+        });
+      },
+    });
+    return attachTraceToResponse(request, NextResponse.json({ data: { status: "completed" } }, { status: 200 }));
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(${RECONCILE_LOCK_KEY})`;
   }

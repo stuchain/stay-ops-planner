@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { requireAppPolicy } from "@/modules/auth/appAuth";
 import { SyncHeartbeat } from "@/modules/sync/SyncHeartbeat";
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await requireAppPolicy("app_shell");
+
   return (
     <div className="ops-shell">
       <SyncHeartbeat />

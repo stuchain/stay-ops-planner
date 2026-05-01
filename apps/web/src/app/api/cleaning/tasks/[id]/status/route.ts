@@ -8,8 +8,10 @@ import {
 } from "@/modules/cleaning/errors";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { transitionCleaningTaskStatus } from "@/modules/cleaning/state-machine";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { attachTraceToResponse, apiError } from "@/lib/apiError";
+import { readTraceId } from "@/lib/traceId";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 const PatchBodySchema = z
   .object({
@@ -19,22 +21,19 @@ const PatchBodySchema = z
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const session = requireAdminSession(request);
+    const session = await requireOperatorOrAdmin(request);
     const { id } = await ctx.params;
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid request body"), { status: 400 });
+      return apiError(request, "VALIDATION_ERROR", "Invalid request body", 400);
     }
 
     const parsed = PatchBodySchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        jsonError("VALIDATION_ERROR", "Invalid request body", parsed.error.flatten()),
-        { status: 400 },
-      );
+      return apiError(request, "VALIDATION_ERROR", "Invalid request body", 400, parsed.error.flatten());
     }
 
     try {
@@ -44,22 +43,32 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         actorUserId: session.userId,
         auditMeta: auditMetaFromRequest(request),
       });
-      return NextResponse.json({ data: { ok: true } }, { status: 200 });
+      return attachTraceToResponse(request, NextResponse.json({ data: { ok: true } }, { status: 200 }));
     } catch (err) {
+      const tid = readTraceId(request);
       if (err instanceof CleaningTaskNotFoundError) {
-        return NextResponse.json(
-          { error: { code: err.code, message: err.message } },
-          { status: err.status },
+        return attachTraceToResponse(
+          request,
+          NextResponse.json(
+            cleaningErrorEnvelope(
+              { code: err.code, message: err.message, status: err.status },
+              tid,
+            ),
+            { status: err.status },
+          ),
         );
       }
       if (err instanceof InvalidStateTransitionError) {
-        return NextResponse.json(cleaningErrorEnvelope(err), { status: err.status });
+        return attachTraceToResponse(
+          request,
+          NextResponse.json(cleaningErrorEnvelope(err, tid), { status: err.status }),
+        );
       }
       throw err;
     }
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return apiError(request, err.code, err.message, err.status, err.details);
     }
     throw err;
   }

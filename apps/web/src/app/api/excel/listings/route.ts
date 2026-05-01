@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 function startOfYearUtc(year: number): Date {
   return new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
@@ -19,10 +20,10 @@ const YearQuerySchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

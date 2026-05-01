@@ -5,12 +5,13 @@ import { PrismaClient } from "@stay-ops/db";
 import { CookieJar } from "../cookieJar";
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
-process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops";
 
-const email = "sync-api@example.com";
+const operatorEmail = "sync-api@example.com";
+const adminEmail = "sync-admin@example.com";
 const password = "password1234";
 
 async function truncate(prisma: PrismaClient) {
+  // Do not truncate `users` — other integration files share the same DB and rely on seeded accounts.
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
       "integration_secrets",
@@ -23,8 +24,7 @@ async function truncate(prisma: PrismaClient) {
       "manual_blocks",
       "bookings",
       "source_listings",
-      "rooms",
-      "users"
+      "rooms"
     RESTART IDENTITY CASCADE;
   `);
 }
@@ -48,11 +48,19 @@ describe("api /api/sync/hosthub/reconcile", () => {
 
   beforeEach(async () => {
     await truncate(prisma);
+    await prisma.user.deleteMany({
+      where: { email: { in: [adminEmail, operatorEmail, "sync-viewer@example.com"] } },
+    });
     const passwordHash = await bcrypt.hash(password, 12);
-    await prisma.user.create({ data: { email, passwordHash, isActive: true } });
+    await prisma.user.create({
+      data: { email: adminEmail, passwordHash, isActive: true, role: "admin" },
+    });
+    await prisma.user.create({
+      data: { email: operatorEmail, passwordHash, isActive: true, role: "operator" },
+    });
   });
 
-  async function loginJar(): Promise<CookieJar> {
+  async function loginJar(email: string): Promise<CookieJar> {
     const jar = new CookieJar();
     const loginRes = await POST_LOGIN(
       new Request("http://localhost/api/auth/login", {
@@ -71,8 +79,27 @@ describe("api /api/sync/hosthub/reconcile", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 403 for viewer", async () => {
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.create({
+      data: { email: "sync-viewer@example.com", passwordHash, isActive: true, role: "viewer" },
+    });
+    const jar = await loginJar("sync-viewer@example.com");
+    const res = await POST_RECONCILE(
+      new NextRequest("http://localhost/api/sync/hosthub/reconcile", {
+        method: "POST",
+        headers: { cookie: jar.getCookieHeader(), "x-request-id": "req-reconcile-viewer" },
+      }),
+    );
+    expect(res.status).toBe(403);
+    const json = (await res.json()) as { error: { code: string; traceId: string } };
+    expect(json.error.code).toBe("FORBIDDEN");
+    expect(json.error.traceId).toBeTruthy();
+    expect(res.headers.get("x-request-id")).toBeTruthy();
+  });
+
   it("returns 503 when token is not configured", async () => {
-    const jar = await loginJar();
+    const jar = await loginJar(operatorEmail);
     const res = await POST_RECONCILE(
       new NextRequest("http://localhost/api/sync/hosthub/reconcile", {
         method: "POST",
@@ -83,14 +110,13 @@ describe("api /api/sync/hosthub/reconcile", () => {
   });
 
   it("returns 202 when a hosthub poll run is already in progress", async () => {
-    const jar = await loginJar();
-
+    const adminJar = await loginJar(adminEmail);
     const saveTokenRes = await PUT_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
         method: "PUT",
         headers: {
           "content-type": "application/json",
-          cookie: jar.getCookieHeader(),
+          cookie: adminJar.getCookieHeader(),
         },
         body: JSON.stringify({ token: "dummy-token-for-test" }),
       }),
@@ -105,10 +131,11 @@ describe("api /api/sync/hosthub/reconcile", () => {
       },
     });
 
+    const operatorJar = await loginJar(operatorEmail);
     const res = await POST_RECONCILE(
       new NextRequest("http://localhost/api/sync/hosthub/reconcile", {
         method: "POST",
-        headers: { cookie: jar.getCookieHeader() },
+        headers: { cookie: operatorJar.getCookieHeader() },
       }),
     );
     expect(res.status).toBe(202);

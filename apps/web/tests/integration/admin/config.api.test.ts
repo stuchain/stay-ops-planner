@@ -5,7 +5,6 @@ import { PrismaClient } from "@stay-ops/db";
 import { CookieJar } from "../cookieJar";
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
-process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops";
 
 const email = "admin-config@example.com";
 const password = "password1234";
@@ -55,7 +54,7 @@ describe("api /api/admin/config", () => {
   beforeEach(async () => {
     await truncate(prisma);
     const passwordHash = await bcrypt.hash(password, 12);
-    await prisma.user.create({ data: { email, passwordHash, isActive: true } });
+    await prisma.user.create({ data: { email, passwordHash, isActive: true, role: "admin" } });
   });
 
   async function loginJar(): Promise<CookieJar> {
@@ -75,6 +74,31 @@ describe("api /api/admin/config", () => {
   it("requires auth for template list", async () => {
     const res = await GET_TEMPLATES(new NextRequest("http://localhost/api/admin/config/templates"));
     expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for operator on admin template list", async () => {
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.create({
+      data: { email: "operator-only@example.com", passwordHash, isActive: true, role: "operator" },
+    });
+    const jar = new CookieJar();
+    const loginRes = await POST_LOGIN(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+        body: JSON.stringify({ email: "operator-only@example.com", password }),
+      }),
+    );
+    expect(loginRes.status).toBe(200);
+    jar.applySetCookieHeader(loginRes);
+    const res = await GET_TEMPLATES(
+      new NextRequest("http://localhost/api/admin/config/templates", { headers: { cookie: jar.getCookieHeader() } }),
+    );
+    expect(res.status).toBe(403);
+    const json = (await res.json()) as { error: { code: string; traceId: string } };
+    expect(json.error.code).toBe("FORBIDDEN");
+    expect(json.error.traceId).toBeTruthy();
+    expect(res.headers.get("x-request-id")).toBeTruthy();
   });
 
   it("supports template create/list/update", async () => {

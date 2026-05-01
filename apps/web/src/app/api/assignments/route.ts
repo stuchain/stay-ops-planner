@@ -1,11 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
+import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { assignBookingToRoom } from "@/modules/allocation/service";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 const PostBodySchema = z.object({
   bookingId: z.string().min(1),
@@ -32,7 +34,7 @@ function assignmentDto(a: {
 
 export async function POST(request: NextRequest) {
   try {
-    const ctx = requireAdminSession(request);
+    const ctx = await requireOperatorOrAdmin(request);
     let body: unknown;
     try {
       body = await request.json();
@@ -66,13 +68,16 @@ export async function POST(request: NextRequest) {
       );
     } catch (err) {
       if (err instanceof AllocationError) {
-        return NextResponse.json(allocationErrorEnvelope(err), { status: err.status });
+        return attachTraceToResponse(
+          request,
+          NextResponse.json(allocationErrorEnvelope(err, readTraceId(request)), { status: err.status }),
+        );
       }
       throw err;
     }
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

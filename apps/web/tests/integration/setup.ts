@@ -6,3 +6,8 @@ process.env.APP_TIMEZONE ??= "Etc/UTC";
 process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? "postgresql://stayops:stayops@localhost:5432/stayops_test";
 
+// `apps/web/src/lib/prisma.ts` caches a global PrismaClient; reset it so DATABASE_URL changes
+// from other test files (or prior runs) cannot leave routes pointed at the wrong database.
+const prismaGlobal = globalThis as unknown as { prisma?: unknown };
+delete prismaGlobal.prisma;
+

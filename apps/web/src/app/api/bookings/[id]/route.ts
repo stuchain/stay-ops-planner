@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { BookingStatus } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { attachTraceToResponse, apiError } from "@/lib/apiError";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { bookingDetailFromModel, mergeEditablePayload } from "@/modules/bookings/details";
 
 const PatchBodySchema = z
@@ -31,10 +32,10 @@ const PatchBodySchema = z
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return apiError(request, err.code, err.message, err.status, err.details);
     }
     throw err;
   }
@@ -48,18 +49,18 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     },
   });
   if (!booking) {
-    return NextResponse.json(jsonError("NOT_FOUND", "Booking not found"), { status: 404 });
+    return apiError(request, "NOT_FOUND", "Booking not found", 404);
   }
 
-  return NextResponse.json({ data: bookingDetailFromModel(booking) });
+  return attachTraceToResponse(request, NextResponse.json({ data: bookingDetailFromModel(booking) }));
 }
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return apiError(request, err.code, err.message, err.status, err.details);
     }
     throw err;
   }
@@ -68,13 +69,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid request body"), { status: 400 });
+    return apiError(request, "VALIDATION_ERROR", "Invalid request body", 400);
   }
   const parsed = PatchBodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid request body", parsed.error.flatten()), {
-      status: 400,
-    });
+    return apiError(request, "VALIDATION_ERROR", "Invalid request body", 400, parsed.error.flatten());
   }
 
   const { id } = await ctx.params;
@@ -83,7 +82,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     select: { id: true, rawPayload: true },
   });
   if (!existing) {
-    return NextResponse.json(jsonError("NOT_FOUND", "Booking not found"), { status: 404 });
+    return apiError(request, "NOT_FOUND", "Booking not found", 404);
   }
 
   const updateData: Record<string, unknown> = {};
@@ -103,7 +102,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     updateData.rawPayload = mergeEditablePayload(existing.rawPayload, parsed.data.editable as Record<string, unknown>);
   }
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json(jsonError("VALIDATION_ERROR", "No changes provided"), { status: 400 });
+    return apiError(request, "VALIDATION_ERROR", "No changes provided", 400);
   }
 
   const updated = await prisma.booking.update({
@@ -115,11 +114,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     },
   });
 
-  return NextResponse.json({
-    data: {
-      booking: bookingDetailFromModel(updated),
-      syncMode: "pull_only",
-      hosthubWriteback: false,
-    },
-  });
+  return attachTraceToResponse(
+    request,
+    NextResponse.json({
+      data: {
+        booking: bookingDetailFromModel(updated),
+        syncMode: "pull_only",
+        hosthubWriteback: false,
+      },
+    }),
+  );
 }

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
@@ -6,7 +7,7 @@ import { CleaningTaskNotFoundError } from "@/modules/cleaning/errors";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { updateCleaningTaskSchedule } from "@/modules/cleaning/taskSchedule";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 const PatchBodySchema = z
   .object({
@@ -18,7 +19,7 @@ const PatchBodySchema = z
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const session = requireAdminSession(request);
+    const session = await requireOperatorOrAdmin(request);
     const { id } = await ctx.params;
 
     let body: unknown;
@@ -69,7 +70,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

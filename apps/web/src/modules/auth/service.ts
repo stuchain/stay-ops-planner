@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { Prisma } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { AuthError, type AuthErrorCode, jsonError } from "./errors";
 import { comparePassword } from "./password";
-import { createSessionToken, verifySessionToken } from "./session";
+import { createSessionToken, verifySessionToken, type SessionRole } from "./session";
 
 export const LoginBodySchema = z.object({
   email: z.string().email(),
@@ -17,13 +18,27 @@ type UserRowByEmail = {
   email: string;
   password_hash: string;
   is_active: boolean;
+  role: string;
 };
 
 type UserRowById = {
   id: string;
   email: string;
   is_active: boolean;
+  role: string;
 };
+
+function toSessionRole(value: string): SessionRole {
+  if (value === "viewer" || value === "operator" || value === "admin") return value;
+  return "operator";
+}
+
+function isMissingRoleColumnError(err: unknown): boolean {
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (err.code !== "P2010") return false;
+  const meta = err.meta as { code?: string; message?: string } | undefined;
+  return meta?.code === "42703" && typeof meta.message === "string" && meta.message.includes("\"role\"");
+}
 
 function invalidCredentials(): AuthError {
   return new AuthError({
@@ -50,12 +65,25 @@ function accountDisabled(): AuthError {
 }
 
 export async function loginWithEmailPassword(body: LoginBody) {
-  const userRows = await prisma.$queryRaw<UserRowByEmail[]>`
-    SELECT id, email, password_hash, is_active
-    FROM users
-    WHERE email = ${body.email}
-    LIMIT 1
-  `;
+  let userRows: UserRowByEmail[];
+  try {
+    userRows = await prisma.$queryRaw<UserRowByEmail[]>`
+      SELECT id, email, password_hash, is_active, role::text as role
+      FROM users
+      WHERE email = ${body.email}
+      LIMIT 1
+    `;
+  } catch (err) {
+    if (!isMissingRoleColumnError(err)) throw err;
+    // Transitional fallback while DB migrations are catching up.
+    const legacyRows = await prisma.$queryRaw<Array<Omit<UserRowByEmail, "role">>>`
+      SELECT id, email, password_hash, is_active
+      FROM users
+      WHERE email = ${body.email}
+      LIMIT 1
+    `;
+    userRows = legacyRows.map((row) => ({ ...row, role: "operator" }));
+  }
 
   const user = userRows[0];
   if (!user) throw invalidCredentials();
@@ -64,11 +92,12 @@ export async function loginWithEmailPassword(body: LoginBody) {
   const ok = await comparePassword(body.password, user.password_hash);
   if (!ok) throw invalidCredentials();
 
-  const { token, expiresAt } = createSessionToken(user.id);
+  const role = toSessionRole(user.role);
+  const { token, expiresAt } = createSessionToken(user.id, role);
 
   return {
     token,
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, email: user.email, role },
     sessionExpiresAt: expiresAt.toISOString(),
   };
 }
@@ -77,19 +106,31 @@ export async function getMeFromSessionToken(token: string) {
   const session = verifySessionToken(token);
   if (!session) throw unauthorized();
 
-  const userRows = await prisma.$queryRaw<UserRowById[]>`
-    SELECT id, email, is_active
-    FROM users
-    WHERE id = ${session.userId}
-    LIMIT 1
-  `;
+  let userRows: UserRowById[];
+  try {
+    userRows = await prisma.$queryRaw<UserRowById[]>`
+      SELECT id, email, is_active, role::text as role
+      FROM users
+      WHERE id = ${session.userId}
+      LIMIT 1
+    `;
+  } catch (err) {
+    if (!isMissingRoleColumnError(err)) throw err;
+    const legacyRows = await prisma.$queryRaw<Array<Omit<UserRowById, "role">>>`
+      SELECT id, email, is_active
+      FROM users
+      WHERE id = ${session.userId}
+      LIMIT 1
+    `;
+    userRows = legacyRows.map((row) => ({ ...row, role: "operator" }));
+  }
 
   const user = userRows[0];
   if (!user) throw unauthorized();
   if (!user.is_active) throw accountDisabled();
 
   return {
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, email: user.email, role: toSessionRole(user.role) },
     sessionExpiresAt: session.expiresAt.toISOString(),
   };
 }

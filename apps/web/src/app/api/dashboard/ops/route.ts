@@ -1,17 +1,18 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { getOperationalDashboardSummary } from "@/modules/dashboard/queries";
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
     const summary = await getOperationalDashboardSummary();
     return NextResponse.json({ data: summary }, { status: 200 });
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

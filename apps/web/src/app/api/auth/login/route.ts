@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { attachTraceToResponse, apiError, respondAuthError } from "@/lib/apiError";
 import { LoginBodySchema, loginWithEmailPassword } from "@/modules/auth/service";
-import { AuthError, jsonError } from "@/modules/auth/errors";
+import { AuthError } from "@/modules/auth/errors";
 import { setSessionCookie } from "@/modules/auth/session";
 
 export async function POST(request: Request) {
@@ -8,18 +9,12 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      jsonError("VALIDATION_ERROR", "Invalid request body"),
-      { status: 400 },
-    );
+    return apiError(request, "VALIDATION_ERROR", "Invalid request body", 400);
   }
 
   const parsed = LoginBodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      jsonError("VALIDATION_ERROR", "Invalid request body", parsed.error.flatten()),
-      { status: 400 },
-    );
+    return apiError(request, "VALIDATION_ERROR", "Invalid request body", 400, parsed.error.flatten());
   }
 
   try {
@@ -36,12 +31,10 @@ export async function POST(request: Request) {
 
     setSessionCookie(response, result.token, new Date(result.sessionExpiresAt));
 
-    return response;
+    return attachTraceToResponse(request, response);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), {
-        status: err.status,
-      });
+      return respondAuthError(request, err);
     }
     throw err;
   }

@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { BookingStatus, Channel } from "@stay-ops/db";
 import { listUnassignedBookings } from "@/modules/allocation/service";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 const DateOnly = z
   .string()
@@ -20,10 +21,10 @@ const QuerySchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

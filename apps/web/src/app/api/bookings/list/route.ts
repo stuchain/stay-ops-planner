@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { BookingStatus, Channel, Prisma } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { attachTraceToResponse, apiError } from "@/lib/apiError";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { bookingListItemFromModel } from "@/modules/bookings/details";
 
 const SortFieldSchema = z.enum(["updatedAt", "createdAt", "checkinDate", "checkoutDate", "totalValue"]);
@@ -66,19 +67,17 @@ function parseQuery(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return apiError(request, err.code, err.message, err.status, err.details);
     }
     throw err;
   }
 
   const parsed = parseQuery(request);
   if (!parsed.success) {
-    return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid query", parsed.error.flatten()), {
-      status: 400,
-    });
+    return apiError(request, "VALIDATION_ERROR", "Invalid query", 400, parsed.error.flatten());
   }
 
   const q = parsed.data;
@@ -168,10 +167,13 @@ export async function GET(request: NextRequest) {
     rows = rows.filter((row) => row.totalValue !== null && row.totalValue <= q.valueMax!);
   }
 
-  return NextResponse.json({
-    data: {
-      items: rows,
-      total: rows.length,
-    },
-  });
+  return attachTraceToResponse(
+    request,
+    NextResponse.json({
+      data: {
+        items: rows,
+        total: rows.length,
+      },
+    }),
+  );
 }

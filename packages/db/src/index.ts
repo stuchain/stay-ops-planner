@@ -6,6 +6,7 @@ export {
   AlertConfigChannel,
   AlertConfigEventType,
   OperationalThresholdKey,
+  UserRole,
 } from "@prisma/client";
 export {
   assertNoOverlap,

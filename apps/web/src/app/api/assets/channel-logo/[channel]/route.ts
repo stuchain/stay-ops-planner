@@ -1,6 +1,9 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
+import { AuthError } from "@/modules/auth/errors";
+import { requireSession } from "@/modules/auth/guard";
 
 function logoFilenameForChannel(channel: string): string | null {
   if (channel === "airbnb") return "airbnb logo.png";
@@ -26,10 +29,16 @@ async function resolveContentPath(filename: string): Promise<string | null> {
   return null;
 }
 
-export async function GET(
-  _request: NextRequest,
-  context: { params: Promise<{ channel: string }> },
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ channel: string }> }) {
+  try {
+    await requireSession(request);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return respondAuthError(request, err);
+    }
+    throw err;
+  }
+
   const params = await context.params;
   const channel = params.channel?.toLowerCase() ?? "";
   const filename = logoFilenameForChannel(channel);

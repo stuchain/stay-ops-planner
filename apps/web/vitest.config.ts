@@ -27,6 +27,8 @@ export default defineConfig({
           include: ["tests/integration/**/*.test.ts"],
           setupFiles: ["tests/integration/setup.ts"],
           fileParallelism: false,
+          /** Many suites TRUNCATE shared tables; avoid cross-file deadlocks on one DB. */
+          maxWorkers: 1,
           hookTimeout: 30_000,
         },
       },

@@ -1,8 +1,11 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { log } from "@/lib/logger";
+import { readTraceId } from "@/lib/traceId";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { getCalendarMonthAggregate } from "@/modules/calendar/monthAggregate";
 import { parseYearMonthParam } from "@/modules/calendar/monthBounds";
 
@@ -18,10 +21,10 @@ function roomLabel(room: { code: string | null; name: string | null; id: string 
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
@@ -48,7 +51,10 @@ export async function GET(request: NextRequest) {
       timeZone,
     });
   } catch (err) {
-    console.error("[api/bookings/overview]", err);
+    log("error", "bookings_overview_failed", {
+      traceId: readTraceId(request),
+      err: err instanceof Error ? err.message : String(err),
+    });
     const message =
       process.env.NODE_ENV === "development" && err instanceof Error
         ? err.message

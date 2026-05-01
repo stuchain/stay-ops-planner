@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, beforeEach } from "vitest";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@stay-ops/db";
 import type { NextRequest } from "next/server";
@@ -9,7 +9,6 @@ const email = "admin@example.com";
 const password = "password1234";
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
-process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops";
 
 describe("auth.middleware", () => {
   const prisma = new PrismaClient();
@@ -20,13 +19,6 @@ describe("auth.middleware", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    await prisma.user.upsert({
-      where: { email },
-      update: { passwordHash, isActive: true },
-      create: { email, passwordHash, isActive: true },
-    });
 
     const middlewareModule = await import("../../src/middleware.ts");
     middlewareFn = middlewareModule.middleware;
@@ -39,6 +31,15 @@ describe("auth.middleware", () => {
     POST_LOGOUT = logoutModule.POST;
   });
 
+  beforeEach(async () => {
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.upsert({
+      where: { email },
+      update: { passwordHash, isActive: true, role: "admin" },
+      create: { email, passwordHash, isActive: true, role: "admin" },
+    });
+  });
+
   it("returns JSON 401 for protected API routes without a session", async () => {
     const req = new NextRequestClass("http://localhost/api/auth/me", {
       method: "GET",
@@ -48,9 +49,12 @@ describe("auth.middleware", () => {
     const res = middlewareFn(req);
     expect(res.status).toBe(401);
 
-    const json = (await res.json()) as { error: { code: string; message: string } };
+    const rid = res.headers.get("x-request-id");
+    expect(rid).toBeTruthy();
+    const json = (await res.json()) as { error: { code: string; message: string; traceId: string } };
     expect(json.error.code).toBe("UNAUTHORIZED");
     expect(json.error.message).toBe("Authentication required");
+    expect(json.error.traceId).toBe(rid);
   });
 
   it("redirects /app/* to login when unauthenticated", async () => {

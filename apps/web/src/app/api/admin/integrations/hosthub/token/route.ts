@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { respondAuthError } from "@/lib/apiError";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { deleteHosthubToken, getHosthubTokenStatus, setHosthubToken } from "@/modules/integrations/hosthubToken";
@@ -12,12 +13,12 @@ const PutSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireAdminSession(request);
     const data = await getHosthubTokenStatus();
     return NextResponse.json({ data }, { status: 200 });
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
@@ -25,10 +26,10 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireAdminSession(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
@@ -57,12 +58,12 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireAdminSession(request);
     const data = await deleteHosthubToken();
     return NextResponse.json({ data }, { status: 200 });
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

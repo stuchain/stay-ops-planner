@@ -1,10 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { attachTraceToResponse, apiError } from "@/lib/apiError";
+import { readTraceId } from "@/lib/traceId";
+import { log } from "@/lib/logger";
 import { parseYearMonthParam } from "@/modules/calendar/monthBounds";
 import { getCalendarMonthAggregate } from "@/modules/calendar/monthAggregate";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
 const QuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/, "Expected YYYY-MM"),
@@ -12,10 +15,10 @@ const QuerySchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return apiError(request, err.code, err.message, err.status, err.details);
     }
     throw err;
   }
@@ -24,14 +27,11 @@ export async function GET(request: NextRequest) {
   const raw = { month: url.searchParams.get("month") ?? "" };
   const parsed = QuerySchema.safeParse(raw);
   if (!parsed.success) {
-    return NextResponse.json(
-      jsonError("VALIDATION_ERROR", "Invalid query", parsed.error.flatten()),
-      { status: 400 },
-    );
+    return apiError(request, "VALIDATION_ERROR", "Invalid query", 400, parsed.error.flatten());
   }
 
   if (!parseYearMonthParam(parsed.data.month)) {
-    return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid month"), { status: 400 });
+    return apiError(request, "VALIDATION_ERROR", "Invalid month", 400);
   }
 
   const timeZone = process.env.APP_TIMEZONE?.trim() || "Etc/UTC";
@@ -41,13 +41,24 @@ export async function GET(request: NextRequest) {
       yearMonth: parsed.data.month,
       timeZone,
     });
-    return NextResponse.json({ data });
+    return attachTraceToResponse(request, NextResponse.json({ data }));
   } catch (err) {
-    console.error("[api/calendar/month]", err);
+    log("error", "calendar_month_failed", {
+      traceId: readTraceId(request),
+      err: err instanceof Error ? err.message : String(err),
+    });
     const message =
       process.env.NODE_ENV === "development" && err instanceof Error
         ? err.message
         : "Could not load calendar data.";
-    return NextResponse.json(jsonError("INTERNAL_ERROR", message), { status: 500 });
+    return apiError(
+      request,
+      "INTERNAL_ERROR",
+      message,
+      500,
+      undefined,
+      { route: "/api/calendar/month", method: "GET" },
+      err,
+    );
   }
 }

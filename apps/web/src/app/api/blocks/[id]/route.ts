@@ -1,9 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
+import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import {
   BlockNotFoundError,
@@ -43,10 +45,10 @@ function blockToDto(block: {
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   let sessionUserId = "";
   try {
-    sessionUserId = requireAdminSession(request).userId;
+    sessionUserId = (await requireOperatorOrAdmin(request)).userId;
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
@@ -79,7 +81,10 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return NextResponse.json({ data: blockToDto(block) }, { status: 200 });
   } catch (err) {
     if (err instanceof AllocationError) {
-      return NextResponse.json(allocationErrorEnvelope(err), { status: err.status });
+      return attachTraceToResponse(
+        request,
+        NextResponse.json(allocationErrorEnvelope(err, readTraceId(request)), { status: err.status }),
+      );
     }
     if (err instanceof BlockNotFoundError) {
       return NextResponse.json(jsonError("NOT_FOUND", err.message, { blockId: err.blockId }), {
@@ -96,10 +101,10 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   let sessionUserId = "";
   try {
-    sessionUserId = requireAdminSession(request).userId;
+    sessionUserId = (await requireOperatorOrAdmin(request)).userId;
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }

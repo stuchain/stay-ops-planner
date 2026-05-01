@@ -10,11 +10,14 @@
 - `REDIS_URL` (Upstash Redis URL)
 - `SESSION_SECRET` (>=32 chars, random)
 - `APP_TIMEZONE` (default `Etc/UTC`)
-- `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (initial operator bootstrap only)
+- `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (initial **admin** bootstrap; seed upserts `role = admin`)
+- `WEBHOOK_SECRET` (required in **non-development** for `POST /api/sync/hosthub/webhook`; fail-closed if missing)
 - Optional sync env:
   - `HOSTHUB_API_URL`
   - `HOSTHUB_API_TOKEN`
   - `HOSTHUB_WEBHOOK_SECRET`
+- RBAC: see [rbac-policy-matrix.md](../architecture/rbac-policy-matrix.md) for which APIs require `admin` vs `operator`.
+- Observability (Sentry): `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, optional `SENTRY_USER_ID_PEPPER`. See [sentry-release.md](./sentry-release.md) for CI semver releases and sourcemaps.
 
 ## Deploy order
 1. Validate env vars in platform config.

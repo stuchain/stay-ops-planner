@@ -1,13 +1,14 @@
 import type { NextRequest } from "next/server";
+import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
-import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { AuthError } from "@/modules/auth/errors";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { rankBookingSuggestions } from "@/modules/suggestions/engine";
 import type { SuggestionResponseItem } from "@/modules/suggestions/types";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
     const { id } = await ctx.params;
     const suggestions: SuggestionResponseItem[] = await rankBookingSuggestions(id);
     return NextResponse.json({
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     });
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json(jsonError(err.code, err.message, err.details), { status: err.status });
+      return respondAuthError(request, err);
     }
     throw err;
   }
