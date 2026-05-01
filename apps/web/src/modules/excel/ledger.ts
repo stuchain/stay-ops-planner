@@ -151,6 +151,8 @@ export function formatStayRange(from: Date, to: Date): string {
 }
 
 function resolveRentalIndex(b: BookingForLedger): number | null {
+  // Direct bookings are never auto-mapped from Hosthub listing; user assigns tax room in Excel.
+  if (b.channel === "direct") return null;
   const r = b.sourceListingRentalIndex;
   if (r != null && r >= 1 && r <= 4) return r;
   return null;

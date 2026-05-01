@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "@stay-ops/db";
+import type { BookingStatus, Channel, Prisma, PrismaClient } from "@stay-ops/db";
 import {
   applyOverrides,
   buildAutoRow,
@@ -14,6 +14,10 @@ export type ExcelApiRow = {
   bookingId: string | null;
   manual: boolean;
   sortCheckin: string | null;
+  /** Booking channel; null for manual ledger rows. */
+  channel: Channel | null;
+  /** Booking lifecycle status; null for manual ledger rows. */
+  status: BookingStatus | null;
   auto: LedgerRow;
   overrides: Overrides | null;
 };
@@ -99,6 +103,8 @@ export async function loadLedgerRowsForYear(prisma: PrismaClient, year: number):
       bookingId: b.id,
       manual: false,
       sortCheckin: b.checkinDate.toISOString().slice(0, 10),
+      channel: b.channel,
+      status: b.status,
       auto,
       overrides,
     };
@@ -115,6 +121,8 @@ export async function loadLedgerRowsForYear(prisma: PrismaClient, year: number):
       bookingId: null,
       manual: true,
       sortCheckin,
+      channel: null,
+      status: null,
       auto,
       overrides,
     };

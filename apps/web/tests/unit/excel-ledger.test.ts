@@ -124,7 +124,7 @@ describe("buildAutoRow", () => {
     expect(r.rental4).toBeNull();
   });
 
-  it("Nentwig Olaf — direct / solo, Onar", () => {
+  it("Nentwig Olaf — direct / solo ignores Hosthub listing tax room until assigned", () => {
     const b = bookingFixture({
       channel: "direct" as Channel,
       guestName: "Nentwig Olaf",
@@ -141,8 +141,8 @@ describe("buildAutoRow", () => {
     expect(r.guestCount).toBe(2);
     expect(r.soloAmount).toBe(1680);
     expect(r.payoutAmount).toBe(1680);
-    expect(r.rentalIndex).toBe(1);
-    expect(r.rental1).toBe(1680);
+    expect(r.rentalIndex).toBeNull();
+    expect(r.rental1).toBeNull();
   });
 
   it("uses Hosthub rental binding only — Iris listing + Cosmos planner room stays slot 3", () => {

@@ -357,7 +357,11 @@ export function ExcelClient() {
   }, [load]);
 
   const displayedRows = useMemo(() => rows.map((r) => applyOverrides(r.auto, r.overrides)), [rows]);
-  const totals = useMemo(() => computeTotals(displayedRows), [displayedRows]);
+  const totalsRows = useMemo(
+    () => displayedRows.filter((_, i) => rows[i]?.status !== "cancelled"),
+    [displayedRows, rows],
+  );
+  const totals = useMemo(() => computeTotals(totalsRows), [totalsRows]);
 
   const ensureEntryId = useCallback(
     async (rowIdx: number): Promise<string | null> => {
@@ -386,7 +390,13 @@ export function ExcelClient() {
           const next = [...prev];
           const cur = next[rowIdx];
           if (!cur) return prev;
-          next[rowIdx] = { ...cur, entryId: id };
+          const payload = j.data as Partial<ExcelApiRow> | undefined;
+          next[rowIdx] = {
+            ...cur,
+            entryId: id,
+            channel: payload?.channel ?? cur.channel,
+            status: payload?.status ?? cur.status,
+          };
           return next;
         });
       }
@@ -431,8 +441,64 @@ export function ExcelClient() {
             ...cur,
             overrides: nextOverrides,
             entryId: nextEntryId ?? cur.entryId,
+            channel: d?.channel ?? cur.channel,
+            status: d?.status ?? cur.status,
           };
           return n;
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [ensureEntryId, rows],
+  );
+
+  const assignRoomAma = useCallback(
+    async (rowIdx: number, n: 1 | 2 | 3 | 4, displayed: LedgerRow) => {
+      setSaving(true);
+      setToast(null);
+      try {
+        let entryId = rows[rowIdx]?.entryId ?? null;
+        if (!entryId) {
+          entryId = await ensureEntryId(rowIdx);
+        }
+        if (!entryId) {
+          return;
+        }
+        const amt = displayed.soloAmount ?? displayed.payoutAmount ?? null;
+        const patch: Partial<Overrides> = { rentalIndex: n };
+        if (amt != null) {
+          patch.rental1 = n === 1 ? amt : null;
+          patch.rental2 = n === 2 ? amt : null;
+          patch.rental3 = n === 3 ? amt : null;
+          patch.rental4 = n === 4 ? amt : null;
+        }
+        const res = await fetch(`/api/excel/entries/${entryId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ overrides: patch }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setToast({ kind: "error", message: j?.error?.message ?? j?.message ?? "PATCH failed" });
+          return;
+        }
+        const d = j.data as Partial<ExcelApiRow> | undefined;
+        const nextOverrides = (d?.overrides as Overrides | null) ?? null;
+        const nextEntryId = d?.entryId ?? null;
+        setRows((prev) => {
+          const arr = [...prev];
+          const cur = arr[rowIdx];
+          if (!cur) return prev;
+          arr[rowIdx] = {
+            ...cur,
+            overrides: nextOverrides,
+            entryId: nextEntryId ?? cur.entryId,
+            channel: d?.channel ?? cur.channel,
+            status: d?.status ?? cur.status,
+          };
+          return arr;
         });
       } finally {
         setSaving(false);
@@ -569,8 +635,21 @@ export function ExcelClient() {
                   );
                 }
                 const { row, rowIdx, seq } = seg;
+                const displayed = applyOverrides(row.auto, row.overrides);
+                const isCancelled = row.status === "cancelled";
+                const isDirectUnassigned =
+                  !isCancelled &&
+                  row.channel === "direct" &&
+                  displayed.rentalIndex == null &&
+                  !row.manual;
+                const rowClass = [
+                  isCancelled ? "ops-excel-row--cancelled" : "",
+                  isDirectUnassigned ? "ops-excel-row--unassigned" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
                 return (
-                  <tr key={seg.key}>
+                  <tr key={seg.key} className={rowClass || undefined}>
                     <td className="ops-excel-seq">{seq}</td>
                     <td className="ops-excel-detail-cell">
                       {row.bookingId ? (
@@ -585,18 +664,35 @@ export function ExcelClient() {
                         </button>
                       ) : null}
                     </td>
-                    {COLS.map((c) => (
-                      <EditableCell
-                        key={c.key}
-                        rowIdx={rowIdx}
-                        row={row}
-                        field={c.key}
-                        numeric={c.numeric}
-                        saving={saving}
-                        onSave={onSave}
-                        onRevert={onRevert}
-                      />
-                    ))}
+                    {COLS.map((c) =>
+                      c.key === "rentalIndex" && isDirectUnassigned ? (
+                        <td key={c.key} className="ops-excel-cell ops-excel-roomama-chips">
+                          {([1, 2, 3, 4] as const).map((slot) => (
+                            <button
+                              key={slot}
+                              type="button"
+                              className="ops-excel-roomama-chip"
+                              disabled={saving}
+                              aria-label={`Ανάθεση tax room ${slot}`}
+                              onClick={() => void assignRoomAma(rowIdx, slot, displayed)}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </td>
+                      ) : (
+                        <EditableCell
+                          key={c.key}
+                          rowIdx={rowIdx}
+                          row={row}
+                          field={c.key}
+                          numeric={c.numeric}
+                          saving={saving}
+                          onSave={onSave}
+                          onRevert={onRevert}
+                        />
+                      ),
+                    )}
                   </tr>
                 );
               })}

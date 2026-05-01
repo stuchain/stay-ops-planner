@@ -73,7 +73,7 @@ export function TimelineBookingBar({
   const { start, endExclusive, barStart, layoutEndExclusive, checkoutDayInMonth } = span;
   const nightCount = endExclusive - start;
   const showCheckoutNib = checkoutDayInMonth != null;
-  const checkoutDayFrac = 0.2;
+  const checkoutDayFrac = 0.25;
   const innerCols = Math.max(1, layoutEndExclusive - barStart);
   const checkoutInnerCol =
     checkoutDayInMonth != null ? checkoutDayInMonth - barStart + 1 : null;
@@ -121,7 +121,7 @@ export function TimelineBookingBar({
           style={{
             gridColumn: "1 / 2",
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 4fr)",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 3fr)",
             alignItems: "stretch",
           }}
         >
@@ -140,7 +140,7 @@ export function TimelineBookingBar({
             style={{
               gridColumn: "1 / 2",
               display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) minmax(0, 4fr)",
+              gridTemplateColumns: "minmax(0, 1fr) minmax(0, 3fr)",
               alignItems: "stretch",
             }}
           >
