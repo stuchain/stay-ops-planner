@@ -32,3 +32,4 @@ export {
   CleaningWindowInvalidError,
   validateCleaningSchedule,
 } from "./cleaning/scheduleValidator.js";
+export { guessRentalIndexFromTitle } from "./excelRentalIndex.js";

@@ -1,6 +1,6 @@
 import { writeAuditSnapshot } from "@stay-ops/audit";
 import type { Prisma } from "@stay-ops/db";
-import { BookingStatus, ensureTurnoverCleaningTask, PrismaClient } from "@stay-ops/db";
+import { BookingStatus, ensureTurnoverCleaningTask, guessRentalIndexFromTitle, PrismaClient } from "@stay-ops/db";
 import type { HosthubReservationDto } from "../hosthub/types.dto.js";
 import { applyCancellationSideEffects } from "../allocation/cancellation.js";
 import { revalidateAssignmentIfNeeded } from "../allocation/revalidateAssignment.js";
@@ -107,6 +107,16 @@ async function upsertListingAndBooking(
     },
     update: { title: listingName },
   });
+
+  if (listing.rentalIndex == null) {
+    const guessed = guessRentalIndexFromTitle(listing.title ?? listingName);
+    if (guessed != null) {
+      await tx.sourceListing.update({
+        where: { id: listing.id },
+        data: { rentalIndex: guessed },
+      });
+    }
+  }
 
   await tx.room.upsert({
     where: { code: listing.externalListingId },

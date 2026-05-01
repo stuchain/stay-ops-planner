@@ -82,6 +82,8 @@ model SourceListing {
   channel            Channel
   externalListingId  String   @map("external_listing_id")
   title              String?
+  /// Tax ledger rental bucket 1–4 (Onar/Cosmos/Iris/Helios); set from Hosthub listing, editable in admin.
+  rentalIndex        Int?     @map("rental_index")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -89,6 +91,19 @@ model SourceListing {
 
   @@unique([channel, externalListingId], map: "source_listings_channel_external_listing_id_key")
   @@map("source_listings")
+}
+
+/// Singleton row (id=1): labels for the four rental columns on the Excel tax ledger.
+model ExcelRentalConfig {
+  id        Int      @id @default(1)
+  label1    String   @default("Onar")
+  label2    String   @default("Cosmos")
+  label3    String   @default("Iris")
+  label4    String   @default("Helios")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("excel_rental_config")
 }
 
 /// Canonical booking row; `raw_payload` stores provider JSON for Phase 3 mapping.
@@ -126,11 +141,30 @@ model Booking {
   sourceListing SourceListing? @relation(fields: [sourceListingId], references: [id], onDelete: SetNull)
   assignment    Assignment?
   cleaningTasks CleaningTask[]
+  excelLedgerEntries ExcelLedgerEntry[]
 
   @@index([checkinDate, checkoutDate])
   @@index([status])
   @@unique([channel, externalBookingId], map: "bookings_channel_external_booking_id_key")
   @@map("bookings")
+}
+
+/// Per-year tax ledger overrides for the Excel page (manual cells + per-cell overrides of auto-filled values).
+model ExcelLedgerEntry {
+  id         String   @id @default(cuid())
+  year       Int
+  bookingId  String?  @map("booking_id")
+  manualName String?  @map("manual_name")
+  manualMonth Int?    @map("manual_month")
+  overrides  Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@unique([year, bookingId], map: "excel_ledger_entries_year_booking_id_key")
+  @@index([year], map: "excel_ledger_entries_year_idx")
+  @@map("excel_ledger_entries")
 }
 
 /// At most one assignment per booking in v1 (`booking_id` unique).
