@@ -45,6 +45,11 @@ for /f "tokens=5" %%p in ('netstat -aon ^| findstr /r /c:":3000 .*LISTENING"') d
 echo [stay-ops] Cleaning stale workspace node processes...
 powershell -NoProfile -Command "$workspace = (Resolve-Path '.').Path; $procs = Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -like \"*$workspace*\" }; foreach ($p in $procs) { Write-Host ('[stay-ops] Killing node PID ' + $p.ProcessId); Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }"
 
+echo [stay-ops] Clearing Next.js cache (.next)...
+if exist "apps\web\.next" (
+  rmdir /s /q "apps\web\.next"
+)
+
 echo [stay-ops] Starting Docker dependencies (postgres, redis)...
 docker compose up -d postgres redis
 if errorlevel 1 (
@@ -52,14 +57,8 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [stay-ops] Launching dev app in a new terminal...
-powershell -NoProfile -Command "Start-Process -FilePath 'cmd.exe' -WorkingDirectory '%ROOT_DIR%' -ArgumentList '/k','corepack pnpm dev' -WindowStyle Normal"
-if errorlevel 1 (
-  echo [stay-ops] ERROR: Failed to launch dev command.
-  exit /b 1
-)
-
-timeout /t 3 /nobreak >nul
+echo [stay-ops] Preparing browser...
+ping 127.0.0.1 -n 4 >nul
 
 set "BRAVE_1=%ProgramFiles%\BraveSoftware\Brave-Browser\Application\brave.exe"
 set "BRAVE_2=%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe"
@@ -75,5 +74,6 @@ if exist "%BRAVE_1%" (
   start "" "%APP_URL%"
 )
 
-echo [stay-ops] Done. Dev server is starting in "Stay Ops Dev".
-exit /b 0
+echo [stay-ops] Starting dev server in this terminal...
+call corepack pnpm dev
+exit /b %errorlevel%
