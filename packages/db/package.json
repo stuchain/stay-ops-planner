@@ -17,10 +17,13 @@
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
+    "create-user": "node scripts/create-user.mjs",
+    "check-user": "node ./scripts/check-user.mjs",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
     "cleanup:e2e": "node ./scripts/cleanup-e2e.mjs",
     "clear:assignments": "node ./scripts/clear-assignments.mjs",
     "retention:prune": "node ./scripts/retention-prune.mjs",
+    "smoke:epic7-auth": "tsx --tsconfig ../../apps/web/tsconfig.json ../../apps/web/scripts/epic7-auth-smoke.ts",
     "build": "prisma generate && tsc",
     "lint": "eslint .",
     "test": "node -e \"process.exit(0)\""
