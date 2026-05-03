@@ -6,13 +6,7 @@ import { z } from "zod";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 
-function startOfYearUtc(year: number): Date {
-  return new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
-}
-
-function endOfYearUtc(year: number): Date {
-  return new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
-}
+import { bookingOverlapsUtcCalendarYearWhere } from "./bookingOverlapYearWhere";
 
 const YearQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
@@ -35,13 +29,12 @@ export async function GET(request: NextRequest) {
     });
   }
   const { year } = parsed.data;
-  const gte = startOfYearUtc(year);
-  const lte = endOfYearUtc(year);
+  const overlap = bookingOverlapsUtcCalendarYearWhere(year);
 
   const counts = await prisma.booking.groupBy({
     by: ["sourceListingId"],
     where: {
-      checkinDate: { gte, lte },
+      ...overlap,
       sourceListingId: { not: null },
     },
     _count: { _all: true },

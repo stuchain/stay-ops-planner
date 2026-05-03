@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { respondAuthError } from "@/lib/apiError";
+import { SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runHosthubEnrichmentBackfill } from "@stay-ops/sync";
@@ -12,7 +13,7 @@ const BodySchema = z.object({
   limit: z.number().int().min(1).max(50_000).optional(),
 });
 
-export async function POST(request: NextRequest) {
+async function postEnrichmentBackfill(request: NextRequest) {
   try {
     await requireOperatorOrAdmin(request);
   } catch (err) {
@@ -45,4 +46,13 @@ export async function POST(request: NextRequest) {
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(${BACKFILL_LOCK_KEY})`;
   }
+}
+
+export async function POST(request: NextRequest) {
+  return withRateLimit(
+    "POST:/api/sync/hosthub/enrichment-backfill",
+    SYNC_USER_RATE_RULES,
+    request,
+    (req) => postEnrichmentBackfill(req as NextRequest),
+  );
 }

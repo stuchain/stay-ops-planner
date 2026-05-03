@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { respondAuthError } from "@/lib/apiError";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession } from "@/modules/auth/guard";
+import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { deleteHosthubToken, getHosthubTokenStatus, setHosthubToken } from "@/modules/integrations/hosthubToken";
 
 const PutSchema = z.object({
@@ -13,7 +13,7 @@ const PutSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
     const data = await getHosthubTokenStatus();
     return NextResponse.json({ data }, { status: 200 });
   } catch (err) {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return respondAuthError(request, err);
@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    await requireAdminSession(request);
+    await requireOperatorOrAdmin(request);
     const data = await deleteHosthubToken();
     return NextResponse.json({ data }, { status: 200 });
   } catch (err) {

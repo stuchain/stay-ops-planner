@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
+import { withIdempotency } from "@/lib/idempotency";
+import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
@@ -26,7 +28,7 @@ const PostBodySchema = z
     path: ["startDate"],
   });
 
-export async function POST(request: NextRequest) {
+async function postBlock(request: NextRequest) {
   let sessionUserId = "";
   try {
     sessionUserId = (await requireOperatorOrAdmin(request)).userId;
@@ -82,4 +84,10 @@ export async function POST(request: NextRequest) {
     }
     throw err;
   }
+}
+
+export async function POST(request: NextRequest) {
+  return withRateLimit("POST:/api/blocks", DEFAULT_USER_RATE_RULES, request, (req) =>
+    withIdempotency("POST:/api/blocks", req as NextRequest, postBlock),
+  );
 }

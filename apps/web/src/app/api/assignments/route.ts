@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
+import { withIdempotency } from "@/lib/idempotency";
+import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { assignBookingToRoom } from "@/modules/allocation/service";
@@ -32,7 +34,7 @@ function assignmentDto(a: {
   };
 }
 
-export async function POST(request: NextRequest) {
+async function postAssignment(request: NextRequest) {
   try {
     const ctx = await requireOperatorOrAdmin(request);
     let body: unknown;
@@ -57,14 +59,17 @@ export async function POST(request: NextRequest) {
         actorUserId: ctx.userId,
         auditMeta: auditMetaFromRequest(request),
       });
-      return NextResponse.json(
-        {
-          data: {
-            assignment: assignmentDto(result.assignment),
-            auditRef: result.auditRef,
+      return attachTraceToResponse(
+        request,
+        NextResponse.json(
+          {
+            data: {
+              assignment: assignmentDto(result.assignment),
+              auditRef: result.auditRef,
+            },
           },
-        },
-        { status: 201 },
+          { status: 201 },
+        ),
       );
     } catch (err) {
       if (err instanceof AllocationError) {
@@ -81,4 +86,10 @@ export async function POST(request: NextRequest) {
     }
     throw err;
   }
+}
+
+export async function POST(request: NextRequest) {
+  return withRateLimit("POST:/api/assignments", DEFAULT_USER_RATE_RULES, request, (req) =>
+    withIdempotency("POST:/api/assignments", req as NextRequest, postAssignment),
+  );
 }

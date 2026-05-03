@@ -6,14 +6,21 @@ import { withIdempotency } from "@/lib/idempotency";
 import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
-import { assignBookingToRoom } from "@/modules/allocation/service";
+import { bulkAssignBookings } from "@/modules/allocation/service";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
+import { log } from "@stay-ops/shared";
+
+const ItemSchema = z.object({
+  bookingId: z.string().min(1),
+  roomId: z.string().min(1),
+});
 
 const PostBodySchema = z
   .object({
-    expectedVersion: z.number().int().nonnegative().optional(),
+    items: z.array(ItemSchema).min(1).max(200),
+    dryRun: z.boolean().optional(),
   })
   .strict();
 
@@ -35,45 +42,65 @@ function assignmentDto(a: {
   };
 }
 
-async function postSuggestionApply(
-  request: NextRequest,
-  ctx: { params: Promise<{ id: string; roomId: string }> },
-) {
+function parseDryRun(request: NextRequest, bodyDry?: boolean): boolean {
+  if (request.nextUrl.searchParams.get("dryRun") === "true") return true;
+  return Boolean(bodyDry);
+}
+
+async function postAssignmentsBulk(request: NextRequest) {
   try {
-    const session = await requireOperatorOrAdmin(request);
-    const { id, roomId } = await ctx.params;
-    let body: unknown = undefined;
+    const ctx = await requireOperatorOrAdmin(request);
+    let body: unknown;
     try {
-      const raw = await request.text();
-      body = raw.trim().length > 0 ? JSON.parse(raw) : {};
+      body = await request.json();
     } catch {
       return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid request body"), { status: 400 });
     }
-    const parsed = PostBodySchema.safeParse(body ?? {});
+
+    const parsed = PostBodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         jsonError("VALIDATION_ERROR", "Invalid request body", parsed.error.flatten()),
         { status: 400 },
       );
     }
+
+    const dryRun = parseDryRun(request, parsed.data.dryRun);
+
     try {
-      const result = await assignBookingToRoom({
-        bookingId: id,
-        roomId,
-        actorUserId: session.userId,
+      const out = await bulkAssignBookings({
+        items: parsed.data.items,
+        actorUserId: ctx.userId,
         auditMeta: auditMetaFromRequest(request),
-        expectedVersion: parsed.data.expectedVersion,
+        dryRun,
       });
+
+      if (out.dryRun) {
+        log("info", "dry_run", {
+          route: "/api/assignments/bulk",
+          dryRun: true,
+          traceId: readTraceId(request),
+          processed: out.summary.totals.processed,
+        });
+        return attachTraceToResponse(
+          request,
+          NextResponse.json({ data: { dryRun: true, summary: out.summary } }, { status: 200 }),
+        );
+      }
+
       return attachTraceToResponse(
         request,
         NextResponse.json(
           {
             data: {
-              assignment: assignmentDto(result.assignment),
-              auditRef: result.auditRef,
+              dryRun: false,
+              assignments: out.results.map((r) => ({
+                assignment: assignmentDto(r.assignment),
+                auditRef: r.auditRef,
+              })),
             },
           },
-          { status: 200 },
+          { status: 201 },
         ),
       );
     } catch (err) {
@@ -93,13 +120,8 @@ async function postSuggestionApply(
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  routeCtx: { params: Promise<{ id: string; roomId: string }> },
-) {
-  const { id, roomId } = await routeCtx.params;
-  const scope = `POST:/api/bookings/${id}/suggestions/${roomId}/apply`;
-  return withRateLimit(scope, DEFAULT_USER_RATE_RULES, request, (req) =>
-    withIdempotency(scope, req as NextRequest, (r) => postSuggestionApply(r, routeCtx)),
+export async function POST(request: NextRequest) {
+  return withRateLimit("POST:/api/assignments/bulk", DEFAULT_USER_RATE_RULES, request, (req) =>
+    withIdempotency("POST:/api/assignments/bulk", req as NextRequest, postAssignmentsBulk),
   );
 }

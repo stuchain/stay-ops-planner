@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 import { respondAuthError } from "@/lib/apiError";
+import { withIdempotency } from "@/lib/idempotency";
+import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ data: { tasks: rows.map(taskDto) } });
 }
 
-export async function POST(request: NextRequest) {
+async function postCleaningTask(request: NextRequest) {
   let sessionUserId: string;
   try {
     sessionUserId = (await requireOperatorOrAdmin(request)).userId;
@@ -142,4 +144,10 @@ export async function POST(request: NextRequest) {
     }
     throw err;
   }
+}
+
+export async function POST(request: NextRequest) {
+  return withRateLimit("POST:/api/cleaning/tasks", DEFAULT_USER_RATE_RULES, request, (req) =>
+    withIdempotency("POST:/api/cleaning/tasks", req as NextRequest, postCleaningTask),
+  );
 }
