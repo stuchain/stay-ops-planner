@@ -20,6 +20,9 @@ const prisma = new PrismaClient();
 async function truncate() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "idempotency_keys",
+      "login_attempts",
+      "rate_limit_counters",
       "audit_events",
       "assignments",
       "cleaning_tasks",

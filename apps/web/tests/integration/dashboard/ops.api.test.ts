@@ -13,6 +13,9 @@ process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayop
 async function truncate(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "idempotency_keys",
+      "login_attempts",
+      "rate_limit_counters",
       "import_errors",
       "sync_runs",
       "audit_events",

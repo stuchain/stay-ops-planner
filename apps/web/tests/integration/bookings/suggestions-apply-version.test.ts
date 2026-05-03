@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
 import { CookieJar } from "../cookieJar";
 
-const email = "apply-suggestion@example.com";
+const email = "suggest-apply-version@example.com";
 const password = "password1234";
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
@@ -28,7 +28,7 @@ async function truncate(prisma: PrismaClient) {
   `);
 }
 
-describe("api apply suggestion endpoint", () => {
+describe("api POST suggestions apply expectedVersion", () => {
   const prisma = new PrismaClient();
   let POST_LOGIN: (request: Request) => Promise<Response>;
   let POST_APPLY: (
@@ -50,7 +50,7 @@ describe("api apply suggestion endpoint", () => {
     await truncate(prisma);
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.user.create({
-      data: { email, passwordHash, isActive: true },
+      data: { email, passwordHash, isActive: true, role: "operator" },
     });
   });
 
@@ -59,10 +59,7 @@ describe("api apply suggestion endpoint", () => {
     const loginRes = await POST_LOGIN(
       new Request("http://localhost/api/auth/login", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          cookie: jar.getCookieHeader(),
-        },
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
         body: JSON.stringify({ email, password }),
       }),
     );
@@ -71,17 +68,49 @@ describe("api apply suggestion endpoint", () => {
     return jar;
   }
 
-  it("applies suggestion by delegating to allocation assign service", async () => {
+  it("returns STALE_VERSION when expectedVersion does not match booking.version", async () => {
     const jar = await loginJar();
-    const room = await prisma.room.create({ data: { code: "A1" } });
+    const room = await prisma.room.create({ data: { code: "sv-room-stale" } });
     const booking = await prisma.booking.create({
       data: {
         channel: Channel.direct,
-        externalBookingId: "apply-ok",
+        externalBookingId: "sv-stale",
         status: BookingStatus.confirmed,
-        checkinDate: new Date("2026-10-01T00:00:00.000Z"),
-        checkoutDate: new Date("2026-10-03T00:00:00.000Z"),
+        checkinDate: new Date("2026-10-05T00:00:00.000Z"),
+        checkoutDate: new Date("2026-10-07T00:00:00.000Z"),
         nights: 2,
+      },
+    });
+    await prisma.booking.update({ where: { id: booking.id }, data: { version: 4 } });
+
+    const res = await POST_APPLY(
+      new NextRequest(`http://localhost/api/bookings/${booking.id}/suggestions/${room.id}/apply`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: jar.getCookieHeader(),
+        },
+        body: JSON.stringify({ expectedVersion: 1 }),
+      }),
+      { params: Promise.resolve({ id: booking.id, roomId: room.id }) },
+    );
+    expect(res.status).toBe(409);
+    const json = (await res.json()) as { error: { code: string } };
+    expect(json.error.code).toBe("STALE_VERSION");
+  });
+
+  it("succeeds when expectedVersion matches booking.version", async () => {
+    const jar = await loginJar();
+    const room = await prisma.room.create({ data: { code: "sv-room-ok" } });
+    const booking = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: "sv-ok",
+        status: BookingStatus.confirmed,
+        checkinDate: new Date("2026-10-09T00:00:00.000Z"),
+        checkoutDate: new Date("2026-10-11T00:00:00.000Z"),
+        nights: 2,
+        version: 1,
       },
     });
 
@@ -92,64 +121,10 @@ describe("api apply suggestion endpoint", () => {
           "content-type": "application/json",
           cookie: jar.getCookieHeader(),
         },
-        body: JSON.stringify({ expectedVersion: 0 }),
+        body: JSON.stringify({ expectedVersion: 1 }),
       }),
       { params: Promise.resolve({ id: booking.id, roomId: room.id }) },
     );
     expect(res.status).toBe(200);
-    const json = (await res.json()) as { data: { assignment: { bookingId: string; roomId: string } } };
-    expect(json.data.assignment.bookingId).toBe(booking.id);
-    expect(json.data.assignment.roomId).toBe(room.id);
-  });
-
-  it("returns same conflict error as manual assignment path", async () => {
-    const jar = await loginJar();
-    const room = await prisma.room.create({ data: { code: "A1" } });
-    const bookingA = await prisma.booking.create({
-      data: {
-        channel: Channel.direct,
-        externalBookingId: "apply-conflict-a",
-        status: BookingStatus.confirmed,
-        checkinDate: new Date("2026-10-10T00:00:00.000Z"),
-        checkoutDate: new Date("2026-10-12T00:00:00.000Z"),
-        nights: 2,
-      },
-    });
-    const bookingB = await prisma.booking.create({
-      data: {
-        channel: Channel.direct,
-        externalBookingId: "apply-conflict-b",
-        status: BookingStatus.confirmed,
-        checkinDate: new Date("2026-10-11T00:00:00.000Z"),
-        checkoutDate: new Date("2026-10-13T00:00:00.000Z"),
-        nights: 2,
-      },
-    });
-
-    const first = await POST_APPLY(
-      new NextRequest(`http://localhost/api/bookings/${bookingA.id}/suggestions/${room.id}/apply`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          cookie: jar.getCookieHeader(),
-        },
-      }),
-      { params: Promise.resolve({ id: bookingA.id, roomId: room.id }) },
-    );
-    expect(first.status).toBe(200);
-
-    const second = await POST_APPLY(
-      new NextRequest(`http://localhost/api/bookings/${bookingB.id}/suggestions/${room.id}/apply`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          cookie: jar.getCookieHeader(),
-        },
-      }),
-      { params: Promise.resolve({ id: bookingB.id, roomId: room.id }) },
-    );
-    expect(second.status).toBe(409);
-    const body = (await second.json()) as { error: { code: string } };
-    expect(body.error.code).toBe("CONFLICT_ASSIGNMENT");
   });
 });

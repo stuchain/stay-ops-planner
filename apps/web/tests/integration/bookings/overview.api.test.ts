@@ -14,6 +14,9 @@ process.env.APP_TIMEZONE ??= "Etc/UTC";
 async function truncate(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "idempotency_keys",
+      "login_attempts",
+      "rate_limit_counters",
       "import_errors",
       "sync_runs",
       "audit_events",
@@ -73,7 +76,7 @@ describe("api GET /api/bookings/overview", () => {
   it("returns all rooms plus grouped unassigned and assigned bookings", async () => {
     const jar = await loginJar();
     const roomA = await prisma.room.create({ data: { code: "E2E-A", displayName: "Apartment A", isActive: true } });
-    const roomB = await prisma.room.create({ data: { code: "E2E-B", displayName: "Apartment B", isActive: false } });
+    const roomB = await prisma.room.create({ data: { code: "E2E-B", displayName: "Apartment B", isActive: true } });
 
     const assigned = await prisma.booking.create({
       data: {

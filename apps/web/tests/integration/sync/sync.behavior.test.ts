@@ -6,6 +6,7 @@ import type { Job } from "bullmq";
 import { UnrecoverableError } from "bullmq";
 import { Worker, Queue } from "bullmq";
 import { PrismaClient, BookingStatus, Channel } from "@stay-ops/db";
+import { isDryRunRollback } from "@stay-ops/shared";
 import {
   applyHosthubReservation,
   bullmqConnectionFromUrl,
@@ -23,6 +24,9 @@ const prisma = new PrismaClient();
 async function truncateSyncDomain() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "idempotency_keys",
+      "login_attempts",
+      "rate_limit_counters",
       "webhook_inbound_events",
       "import_errors",
       "sync_runs",
@@ -55,6 +59,27 @@ describe("sync pipeline — booking upsert and cancellation", () => {
   });
   beforeEach(async () => {
     await truncateSyncDomain();
+  });
+
+  it("applyHosthubReservation dryRun rolls back and leaves DB counts unchanged", async () => {
+    const dto = { ...baseReservation, reservationId: "sync-dryrun-b1" };
+    const raw = { ...dto };
+    const before = {
+      bookings: await prisma.booking.count(),
+      listings: await prisma.sourceListing.count(),
+      rooms: await prisma.room.count(),
+      audits: await prisma.auditEvent.count(),
+    };
+    try {
+      await applyHosthubReservation(prisma, dto, raw, undefined, { dryRun: true });
+      expect.fail("expected DryRunRollback");
+    } catch (e: unknown) {
+      expect(isDryRunRollback(e)).toBe(true);
+    }
+    expect(await prisma.booking.count()).toBe(before.bookings);
+    expect(await prisma.sourceListing.count()).toBe(before.listings);
+    expect(await prisma.room.count()).toBe(before.rooms);
+    expect(await prisma.auditEvent.count()).toBe(before.audits);
   });
 
   it("upserts once and maps cancellation to BookingStatus.cancelled", async () => {
@@ -265,10 +290,26 @@ describe("sync inbound job — malformed payload records import_errors", () => {
 });
 
 describe("sync webhook + queue — idempotent dedupe", () => {
+  /** `handleHosthubWebhookPost` skips signature when NODE_ENV is development and WEBHOOK_SECRET is unset (see hosthubWebhook.ts). Vitest defaults NODE_ENV=test, which otherwise returns 503 without a configured secret. */
+  const savedNodeEnv = process.env.NODE_ENV;
+  const savedWebhookSecret = process.env.WEBHOOK_SECRET;
+
   beforeAll(async () => {
+    process.env.NODE_ENV = "development";
+    delete process.env.WEBHOOK_SECRET;
     await prisma.$connect();
   });
   afterAll(async () => {
+    if (savedNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = savedNodeEnv;
+    }
+    if (savedWebhookSecret === undefined) {
+      delete process.env.WEBHOOK_SECRET;
+    } else {
+      process.env.WEBHOOK_SECRET = savedWebhookSecret;
+    }
     await prisma.$disconnect();
   });
 

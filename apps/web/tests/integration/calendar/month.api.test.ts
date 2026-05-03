@@ -17,6 +17,9 @@ process.env.APP_TIMEZONE ??= "Etc/UTC";
 async function truncate(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "idempotency_keys",
+      "login_attempts",
+      "rate_limit_counters",
       "import_errors",
       "sync_runs",
       "audit_events",

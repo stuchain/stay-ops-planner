@@ -38,6 +38,9 @@ function uniqueSuffix(): string {
 async function truncateDomain() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "idempotency_keys",
+      "login_attempts",
+      "rate_limit_counters",
       "webhook_inbound_events",
       "import_errors",
       "sync_runs",

@@ -61,5 +61,28 @@ describe("auth.login", () => {
     const json = (await meRes.json()) as { data: { user: { email: string } } };
     expect(json.data.user.email).toBe(email);
   });
+
+  it("accepts login when submitted email casing differs from the stored row", async () => {
+    const storedEmail = "CaSeTest-Login@example.com";
+    const submittedEmail = "casetest-login@example.com";
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.upsert({
+      where: { email: storedEmail },
+      update: { passwordHash, isActive: true },
+      create: { email: storedEmail, passwordHash, isActive: true },
+    });
+
+    const loginRes = await POST_LOGIN(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: submittedEmail, password }),
+      }),
+    );
+
+    expect(loginRes.status).toBe(200);
+    const json = (await loginRes.json()) as { data: { user: { email: string } } };
+    expect(json.data.user.email).toBe(storedEmail);
+  });
 });
 

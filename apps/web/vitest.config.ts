@@ -29,6 +29,11 @@ export default defineConfig({
           fileParallelism: false,
           /** Many suites TRUNCATE shared tables; avoid cross-file deadlocks on one DB. */
           maxWorkers: 1,
+          /** One fork so TRUNCATE-heavy suites never race across files (Vitest may still parallelize files otherwise). */
+          pool: "forks",
+          poolOptions: {
+            forks: { singleFork: true },
+          },
           hookTimeout: 30_000,
         },
       },

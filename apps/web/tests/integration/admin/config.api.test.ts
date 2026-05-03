@@ -12,6 +12,9 @@ const password = "password1234";
 async function truncate(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "idempotency_keys",
+      "login_attempts",
+      "rate_limit_counters",
       "audit_events",
       "alert_template_configs",
       "operational_threshold_configs",
