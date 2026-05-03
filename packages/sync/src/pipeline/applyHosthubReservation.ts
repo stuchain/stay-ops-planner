@@ -1,7 +1,13 @@
 import { writeAuditSnapshot } from "@stay-ops/audit";
-import { log, withRetry } from "@stay-ops/shared";
+import { DryRunRollback, PlanRecorder, log, withRetry } from "@stay-ops/shared";
 import type { Prisma } from "@stay-ops/db";
-import { BookingStatus, ensureTurnoverCleaningTask, guessRentalIndexFromTitle, PrismaClient } from "@stay-ops/db";
+import {
+  BookingStatus,
+  ensureTurnoverCleaningTask,
+  guessRentalIndexFromTitle,
+  PrismaClient,
+  TURNOVER_TASK_TYPE,
+} from "@stay-ops/db";
 import type { HosthubReservationDto } from "../hosthub/types.dto.js";
 import { applyCancellationSideEffects } from "../allocation/cancellation.js";
 import { revalidateAssignmentIfNeeded } from "../allocation/revalidateAssignment.js";
@@ -65,15 +71,24 @@ function bookingAuditShape(b: {
   };
 }
 
+export type ApplyHosthubReservationRunOptions = {
+  dryRun?: boolean;
+  recorder?: PlanRecorder;
+};
+
 async function upsertListingAndBooking(
   tx: Prisma.TransactionClient,
   dto: HosthubReservationDto,
   rawPayload: Prisma.InputJsonValue,
-  extra?: {
-    hosthubNotesRaw?: Prisma.InputJsonValue | null;
-    hosthubGrTaxesRaw?: Prisma.InputJsonValue | null;
-  },
+  extra:
+    | {
+        hosthubNotesRaw?: Prisma.InputJsonValue | null;
+        hosthubGrTaxesRaw?: Prisma.InputJsonValue | null;
+      }
+    | undefined,
+  syncCtx: { dryRun: boolean; recorder?: PlanRecorder },
 ) {
+  const { dryRun, recorder } = syncCtx;
   const channel = mapHosthubListingChannel(dto.listingChannel);
   const checkinDate = parseDateOnlyUtc(dto.checkIn);
   const checkoutDate = parseDateOnlyUtc(dto.checkOut);
@@ -95,6 +110,15 @@ async function upsertListingAndBooking(
     (existingBooking.checkinDate.getTime() !== checkinDate.getTime() ||
       existingBooking.checkoutDate.getTime() !== checkoutDate.getTime());
 
+  const existingListing = await tx.sourceListing.findUnique({
+    where: {
+      channel_externalListingId: {
+        channel,
+        externalListingId: dto.listingId,
+      },
+    },
+  });
+
   const listing = await tx.sourceListing.upsert({
     where: {
       channel_externalListingId: {
@@ -110,6 +134,16 @@ async function upsertListingAndBooking(
     update: { title: listingName },
   });
 
+  recorder?.push({
+    entityType: "source_listing",
+    entityId: listing.id,
+    action: existingListing ? "update" : "create",
+    before: existingListing
+      ? { id: existingListing.id, title: existingListing.title, externalListingId: existingListing.externalListingId }
+      : null,
+    after: { id: listing.id, title: listing.title, externalListingId: listing.externalListingId },
+  });
+
   if (listing.rentalIndex == null) {
     const guessed = guessRentalIndexFromTitle(listing.title ?? listingName);
     if (guessed != null) {
@@ -117,10 +151,21 @@ async function upsertListingAndBooking(
         where: { id: listing.id },
         data: { rentalIndex: guessed },
       });
+      recorder?.push({
+        entityType: "source_listing",
+        entityId: listing.id,
+        action: "update",
+        before: { rentalIndex: listing.rentalIndex },
+        after: { rentalIndex: guessed },
+      });
     }
   }
 
-  await tx.room.upsert({
+  const existingRoom = await tx.room.findUnique({
+    where: { code: listing.externalListingId },
+  });
+
+  const roomRow = await tx.room.upsert({
     where: { code: listing.externalListingId },
     create: {
       code: listing.externalListingId,
@@ -130,6 +175,26 @@ async function upsertListingAndBooking(
     update: {
       displayName: listing.title ?? listing.externalListingId,
       isActive: true,
+    },
+  });
+
+  recorder?.push({
+    entityType: "room",
+    entityId: roomRow.id,
+    action: existingRoom ? "update" : "create",
+    before: existingRoom
+      ? {
+          id: existingRoom.id,
+          code: existingRoom.code,
+          displayName: existingRoom.displayName,
+          isActive: existingRoom.isActive,
+        }
+      : null,
+    after: {
+      id: roomRow.id,
+      code: roomRow.code,
+      displayName: roomRow.displayName,
+      isActive: roomRow.isActive,
     },
   });
 
@@ -204,8 +269,19 @@ async function upsertListingAndBooking(
     },
   });
 
+  recorder?.push({
+    entityType: "booking",
+    entityId: booking.id,
+    action: existingBooking ? "update" : "create",
+    before: existingBooking ? bookingAuditShape(existingBooking) : null,
+    after: bookingAuditShape(booking),
+  });
+
   if (stayDatesChanged) {
-    await revalidateAssignmentIfNeeded(tx, booking.id);
+    await revalidateAssignmentIfNeeded(tx, booking.id, {
+      skipAudit: dryRun,
+      recorder: dryRun ? recorder : undefined,
+    });
   }
 
   const afterRevalidate = await tx.booking.findUnique({
@@ -222,14 +298,38 @@ async function upsertListingAndBooking(
       roomId: afterRevalidate.assignment.roomId,
       checkoutDate: afterRevalidate.checkoutDate,
     });
+    if (recorder) {
+      const turnover = await tx.cleaningTask.findFirst({
+        where: { bookingId: afterRevalidate.id, taskType: TURNOVER_TASK_TYPE },
+      });
+      if (turnover) {
+        recorder.push({
+          entityType: "cleaning_task",
+          entityId: turnover.id,
+          action: "upsert",
+          before: null,
+          after: {
+            id: turnover.id,
+            taskType: turnover.taskType,
+            status: turnover.status,
+            roomId: turnover.roomId,
+            plannedStart: turnover.plannedStart?.toISOString() ?? null,
+            plannedEnd: turnover.plannedEnd?.toISOString() ?? null,
+          },
+        });
+      }
+    }
   }
 
   if (booking.status === BookingStatus.cancelled) {
-    await applyCancellationSideEffects(tx, booking.id);
+    await applyCancellationSideEffects(tx, booking.id, null, {
+      skipAudit: dryRun,
+      recorder: dryRun ? recorder : undefined,
+    });
   }
 
   const finalBooking = await tx.booking.findUnique({ where: { id: booking.id } });
-  if (finalBooking) {
+  if (finalBooking && !dryRun) {
     await writeAuditSnapshot(tx, {
       actorUserId: null,
       entityType: "booking",
@@ -253,11 +353,19 @@ export async function applyHosthubReservation(
     hosthubNotesRaw?: Prisma.InputJsonValue | null;
     hosthubGrTaxesRaw?: Prisma.InputJsonValue | null;
   },
+  runOpts?: ApplyHosthubReservationRunOptions,
 ): Promise<void> {
+  const dryRun = runOpts?.dryRun ?? false;
+  const recorder = runOpts?.recorder ?? (dryRun ? new PlanRecorder() : undefined);
+  const syncCtx = { dryRun, recorder };
+
   await withRetry(
     () =>
       prisma.$transaction(async (tx) => {
-        await upsertListingAndBooking(tx, dto, rawPayload, extra);
+        await upsertListingAndBooking(tx, dto, rawPayload, extra, syncCtx);
+        if (dryRun && recorder) {
+          throw new DryRunRollback(recorder.snapshot());
+        }
       }),
     {
       maxAttempts: 3,

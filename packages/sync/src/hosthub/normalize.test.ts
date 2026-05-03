@@ -3,6 +3,7 @@ import {
   coerceHosthubDateField,
   normalizeHosthubReservationPagePayload,
   normalizeHosthubReservationRecord,
+  parseHosthubGenericDataList,
 } from "./normalize.js";
 
 describe("coerceHosthubDateField", () => {
@@ -47,6 +48,34 @@ describe("normalizeHosthubReservationRecord", () => {
       checkIn: "2026-06-10",
       checkOut: "2026-06-14",
       listingChannel: "Booking.com",
+    });
+  });
+
+  it("prefers listing.rental.id when top-level rental is absent", () => {
+    const row = normalizeHosthubReservationRecord({
+      id: "evt-2",
+      type: "Booking",
+      date_from: "2026-08-01",
+      date_to: "2026-08-05",
+      listing: { rental: { id: "rent-nested" }, listingId: "channel-listing-9" },
+      source: { name: "Airbnb" },
+    });
+    expect(row).toMatchObject({
+      listingId: "rent-nested",
+    });
+  });
+
+  it("uses listing.rental_id when nested rental object has no id", () => {
+    const row = normalizeHosthubReservationRecord({
+      id: "evt-3",
+      type: "Booking",
+      date_from: "2026-09-01",
+      date_to: "2026-09-03",
+      listing: { rental_id: "rent-from-listing" },
+      source: { name: "Booking.com" },
+    });
+    expect(row).toMatchObject({
+      listingId: "rent-from-listing",
     });
   });
 
@@ -113,6 +142,19 @@ describe("normalizeHosthubReservationRecord", () => {
       cancelled_at: "2026-01-15T10:00:00Z",
     });
     expect(cancelledAt?.status).toBe("cancelled");
+  });
+});
+
+describe("parseHosthubGenericDataList", () => {
+  it("reads rentals-style envelope with navigation.next", () => {
+    const out = parseHosthubGenericDataList({
+      object: "Rental",
+      data: [{ id: "r1", name: "Cosmos" }],
+      navigation: { next: "https://app.hosthub.com/api/2019-03-01/rentals?cursor_gt=abc" },
+    });
+    expect(out).not.toBeNull();
+    expect(out?.data).toHaveLength(1);
+    expect(out?.nextPageUrl).toContain("cursor_gt=abc");
   });
 });
 

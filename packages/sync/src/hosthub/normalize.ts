@@ -18,14 +18,54 @@ function objectAtPath(r: Record<string, unknown>, key: string): Record<string, u
   return null;
 }
 
+function pickRentalIdFromObject(obj: Record<string, unknown>): string | undefined {
+  return pickString(obj, "id", "rentalId", "rental_id");
+}
+
+/**
+ * Prefer Hosthub **rental** id so calendar rows align with `GET /rentals` + channel backfill keys.
+ * Some payloads nest `rental` under `listing` or only expose `rental_id` on the listing object.
+ */
 function pickListingId(r: Record<string, unknown>): string | undefined {
-  const rental = r.rental;
-  if (rental !== null && typeof rental === "object" && !Array.isArray(rental)) {
-    const id = pickString(rental as Record<string, unknown>, "id", "rentalId", "rental_id");
+  const rentalTop = r.rental;
+  if (rentalTop !== null && typeof rentalTop === "object" && !Array.isArray(rentalTop)) {
+    const id = pickRentalIdFromObject(rentalTop as Record<string, unknown>);
     if (id) {
       return id;
     }
   }
+
+  const listing = objectAtPath(r, "listing");
+  if (listing) {
+    const nestedRental = objectAtPath(listing, "rental");
+    if (nestedRental) {
+      const id = pickRentalIdFromObject(nestedRental);
+      if (id) {
+        return id;
+      }
+    }
+    const fromListing = pickString(
+      listing,
+      "rental_id",
+      "rentalId",
+      "property_id",
+      "propertyId",
+      "rental_uuid",
+      "rentalUuid",
+    );
+    if (fromListing) {
+      return fromListing;
+    }
+  }
+
+  const property = objectAtPath(r, "property");
+  if (property) {
+    const id = pickRentalIdFromObject(property);
+    if (id) {
+      return id;
+    }
+  }
+
   return pickString(
     r,
     "listingId",
@@ -344,6 +384,22 @@ function extractNextCursor(o: Record<string, unknown>): string | null | undefine
     }
   }
   return undefined;
+}
+
+/** Rentals, channels, and other Hosthub list envelopes that use `data` + `navigation.next`. */
+export function parseHosthubGenericDataList(body: unknown): {
+  data: unknown[];
+  nextPageUrl: string | null;
+} | null {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return null;
+  }
+  const o = body as Record<string, unknown>;
+  const arr = extractReservationArray(o);
+  if (!arr) {
+    return null;
+  }
+  return { data: arr, nextPageUrl: extractNextPageUrl(o) };
 }
 
 function extractNextPageUrl(o: Record<string, unknown>): string | null {

@@ -131,6 +131,17 @@ describe("HosthubClient", () => {
     expect(url).toBe("https://example.test/api/calendar-events?updated_gte=1712345678");
   });
 
+  it("first page adds is_visible when provided", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(validPage), { status: 200 }),
+    );
+    const c = client(fetchFn);
+    await c.listCalendarEventsPage({ nextPageUrl: null, isVisible: "all" });
+    const url = new URL(String(fetchFn.mock.calls[0]?.[0]));
+    expect(url.pathname).toBe("/api/calendar-events");
+    expect(url.searchParams.get("is_visible")).toBe("all");
+  });
+
   it("follows navigation.next URL verbatim on second request", async () => {
     const nextUrl = "https://example.test/api/calendar-events?cursor_gt=abc";
     const page1 = {

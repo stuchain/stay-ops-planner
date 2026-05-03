@@ -1,5 +1,5 @@
 import { HosthubReservationPageSchema, type HosthubReservationPage } from "./types.dto.js";
-import { normalizeHosthubReservationPagePayload } from "./normalize.js";
+import { normalizeHosthubReservationPagePayload, parseHosthubGenericDataList } from "./normalize.js";
 import {
   errorFromHttpStatus,
   hosthubError,
@@ -57,6 +57,28 @@ export type HosthubRequestLog = (info: {
   durationMs: number;
   requestId?: string;
 }) => void;
+
+export type HosthubDataListPage = {
+  data: Record<string, unknown>[];
+  nextPageUrl: string | null;
+};
+
+function parseHosthubDataListResponse(body: unknown): HosthubClientResult<HosthubDataListPage> {
+  const parsed = parseHosthubGenericDataList(body);
+  if (!parsed) {
+    return {
+      ok: false,
+      error: hosthubError("HOSTHUB_PARSE_ERROR", "Unrecognized Hosthub list response shape (expected data array)"),
+    };
+  }
+  const data: Record<string, unknown>[] = [];
+  for (const item of parsed.data) {
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      data.push(item as Record<string, unknown>);
+    }
+  }
+  return { ok: true, value: { data, nextPageUrl: parsed.nextPageUrl } };
+}
 
 function parseHosthubListResponse(body: unknown): HosthubClientResult<HosthubReservationPage> {
   const normalized = normalizeHosthubReservationPagePayload(body);
@@ -151,10 +173,13 @@ export class HosthubClient {
 
   /**
    * Idempotent GET: first page uses `updated_gte` (Unix); further pages use Hosthub `navigation.next` URL verbatim.
+   * `isVisible` is applied on the **first** request only (Hosthub `is_visible`: `true` | `false` | `all`).
    */
   async listCalendarEventsPage(args: {
     nextPageUrl: string | null;
     updatedGte?: number | null;
+    /** First page only: Hosthub query `is_visible` (e.g. `all` to include hidden/deleted events). */
+    isVisible?: string | null;
   }): Promise<HosthubClientResult<HosthubReservationPage>> {
     let fetchUrl: string;
     let pathForLog: string;
@@ -171,11 +196,85 @@ export class HosthubClient {
       if (gte != null && Number.isFinite(gte)) {
         url.searchParams.set("updated_gte", String(Math.floor(gte)));
       }
+      const vis = args.isVisible?.trim();
+      if (vis) {
+        url.searchParams.set("is_visible", vis);
+      }
       fetchUrl = url.toString();
-      pathForLog = this.listReservationsPath + (url.search || "");
+      pathForLog = this.pathForLogFromUrl(fetchUrl);
     }
 
     return this.getJson(fetchUrl, pathForLog, parseHosthubListResponse);
+  }
+
+  /**
+   * `GET /rentals/{rentalId}/calendar-events` — same query params as the global calendar list (vendor §10.2).
+   * Use when `HOSTHUB_RECONCILE_PER_RENTAL_CALENDAR` is enabled to complement `/calendar-events`.
+   */
+  async listRentalCalendarEventsPage(args: {
+    rentalId: string;
+    nextPageUrl: string | null;
+    updatedGte?: number | null;
+    /** First page only: Hosthub `is_visible` (`all` | `true` | `false`). */
+    isVisible?: string | null;
+  }): Promise<HosthubClientResult<HosthubReservationPage>> {
+    const rid = encodeURIComponent(args.rentalId.trim());
+    let fetchUrl: string;
+    let pathForLog: string;
+
+    if (args.nextPageUrl) {
+      fetchUrl = this.resolveRequestUrl(args.nextPageUrl);
+      pathForLog = this.pathForLogFromUrl(fetchUrl);
+    } else {
+      const path = `${this.basePathPrefix}/rentals/${rid}/calendar-events`;
+      const url = new URL(path, this.baseOrigin);
+      const gte = args.updatedGte;
+      if (gte != null && Number.isFinite(gte)) {
+        url.searchParams.set("updated_gte", String(Math.floor(gte)));
+      }
+      const vis = args.isVisible?.trim();
+      if (vis) {
+        url.searchParams.set("is_visible", vis);
+      }
+      fetchUrl = url.toString();
+      pathForLog = this.pathForLogFromUrl(fetchUrl);
+    }
+
+    return this.getJson(fetchUrl, pathForLog, parseHosthubListResponse);
+  }
+
+  /** `GET /rentals` — paginated via `navigation.next` (same pattern as calendar-events). */
+  async listRentalsPage(args: { nextPageUrl: string | null }): Promise<HosthubClientResult<HosthubDataListPage>> {
+    let fetchUrl: string;
+    let pathForLog: string;
+    if (args.nextPageUrl) {
+      fetchUrl = this.resolveRequestUrl(args.nextPageUrl);
+      pathForLog = this.pathForLogFromUrl(fetchUrl);
+    } else {
+      const path = `${this.basePathPrefix}/rentals`;
+      fetchUrl = new URL(path, this.baseOrigin).toString();
+      pathForLog = "/rentals";
+    }
+    return this.getJson(fetchUrl, pathForLog, parseHosthubDataListResponse);
+  }
+
+  /** `GET /rentals/{rentalId}/channels` — paginated via `navigation.next`. */
+  async listRentalChannelsPage(args: {
+    rentalId: string;
+    nextPageUrl: string | null;
+  }): Promise<HosthubClientResult<HosthubDataListPage>> {
+    const rid = encodeURIComponent(args.rentalId.trim());
+    let fetchUrl: string;
+    let pathForLog: string;
+    if (args.nextPageUrl) {
+      fetchUrl = this.resolveRequestUrl(args.nextPageUrl);
+      pathForLog = this.pathForLogFromUrl(fetchUrl);
+    } else {
+      const path = `${this.basePathPrefix}/rentals/${rid}/channels`;
+      fetchUrl = new URL(path, this.baseOrigin).toString();
+      pathForLog = `/rentals/${rid}/channels`;
+    }
+    return this.getJson(fetchUrl, pathForLog, parseHosthubDataListResponse);
   }
 
   async getCalendarEventNotes(calendarEventId: string): Promise<HosthubClientResult<unknown>> {

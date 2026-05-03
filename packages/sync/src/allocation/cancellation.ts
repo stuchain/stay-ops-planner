@@ -1,6 +1,7 @@
 import { writeAuditSnapshot } from "@stay-ops/audit";
 import type { Prisma } from "@stay-ops/db";
 import { BookingStatus } from "@stay-ops/db";
+import type { PlanRecorder } from "@stay-ops/shared";
 
 /** v1 pending cleaning statuses cancelled when the booking is cancelled. */
 export const CLEANING_PENDING_STATUSES = ["todo", "in_progress"] as const;
@@ -9,10 +10,16 @@ export const CLEANING_PENDING_STATUSES = ["todo", "in_progress"] as const;
  * When a booking is cancelled, release its assignment and cancel open cleaning work.
  * Safe to call repeatedly (idempotent side effects).
  */
+export type ApplyCancellationSideEffectsOptions = {
+  skipAudit?: boolean;
+  recorder?: PlanRecorder;
+};
+
 export async function applyCancellationSideEffects(
   tx: Prisma.TransactionClient,
   bookingId: string,
   actorUserId?: string | null,
+  opts?: ApplyCancellationSideEffectsOptions,
 ): Promise<void> {
   const booking = await tx.booking.findUnique({ where: { id: bookingId } });
   if (!booking || booking.status !== BookingStatus.cancelled) {
@@ -33,15 +40,24 @@ export async function applyCancellationSideEffects(
       version: assignment.version,
     };
     await tx.assignment.delete({ where: { id: assignment.id } });
-    await writeAuditSnapshot(tx, {
-      actorUserId: actorUserId ?? null,
-      action: "assignment.released_on_cancel",
+    opts?.recorder?.push({
       entityType: "assignment",
       entityId: assignment.id,
+      action: "delete",
       before: beforeAssignment,
       after: null,
-      meta: { bookingId },
     });
+    if (!opts?.skipAudit) {
+      await writeAuditSnapshot(tx, {
+        actorUserId: actorUserId ?? null,
+        action: "assignment.released_on_cancel",
+        entityType: "assignment",
+        entityId: assignment.id,
+        before: beforeAssignment,
+        after: null,
+        meta: { bookingId },
+      });
+    }
   }
 
   const pendingTasks = await tx.cleaningTask.findMany({
@@ -72,14 +88,23 @@ export async function applyCancellationSideEffects(
       plannedStart: t.plannedStart?.toISOString() ?? null,
       plannedEnd: t.plannedEnd?.toISOString() ?? null,
     };
-    await writeAuditSnapshot(tx, {
-      actorUserId: actorUserId ?? null,
-      action: "cleaning_task.cancelled_on_booking_cancel",
+    opts?.recorder?.push({
       entityType: "cleaning_task",
       entityId: t.id,
+      action: "update",
       before: beforeTask,
       after: { ...beforeTask, status: "cancelled" },
-      meta: { bookingId },
     });
+    if (!opts?.skipAudit) {
+      await writeAuditSnapshot(tx, {
+        actorUserId: actorUserId ?? null,
+        action: "cleaning_task.cancelled_on_booking_cancel",
+        entityType: "cleaning_task",
+        entityId: t.id,
+        before: beforeTask,
+        after: { ...beforeTask, status: "cancelled" },
+        meta: { bookingId },
+      });
+    }
   }
 }

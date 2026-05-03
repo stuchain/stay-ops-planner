@@ -13,6 +13,19 @@ describe("mapHosthubListingChannel", () => {
   it("maps booking variants", () => {
     expect(mapHosthubListingChannel("Booking.com")).toBe(Channel.booking);
     expect(mapHosthubListingChannel("booking.com")).toBe(Channel.booking);
+    expect(mapHosthubListingChannel("BOOKING.COM")).toBe(Channel.booking);
+    expect(mapHosthubListingChannel("booking")).toBe(Channel.booking);
+    expect(mapHosthubListingChannel("Hotel booking")).toBe(Channel.booking);
+  });
+  it("does not map direct+booking phrases to booking.com (avoids distinct row collapse)", () => {
+    expect(mapHosthubListingChannel("Direct booking")).toBe(Channel.direct);
+    expect(mapHosthubListingChannel("Direct bookings")).toBe(Channel.direct);
+    expect(mapHosthubListingChannel("Website bookings")).toBe(Channel.direct);
+    expect(mapHosthubListingChannel("directbooking")).toBe(Channel.direct);
+    expect(mapHosthubListingChannel("direct_booking")).toBe(Channel.direct);
+  });
+  it("keeps Booking.com even when the label also mentions website", () => {
+    expect(mapHosthubListingChannel("Booking.com website")).toBe(Channel.booking);
   });
   it("defaults unknown to direct", () => {
     expect(mapHosthubListingChannel(undefined)).toBe(Channel.direct);

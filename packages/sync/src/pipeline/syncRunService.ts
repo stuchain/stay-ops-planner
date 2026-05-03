@@ -6,6 +6,8 @@ export type SyncRunStatsJson = {
   upserted: number;
   errors: number;
   skipped: number;
+  /** Rows touched by `GET /rentals` + channel backfill into `source_listings`. */
+  listingBackfillUpserted?: number;
 };
 
 export function emptySyncRunStats(): SyncRunStatsJson {

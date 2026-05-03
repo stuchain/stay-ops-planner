@@ -2,6 +2,7 @@ export {
   HosthubClient,
   type HosthubClientOptions,
   type HosthubClientResult,
+  type HosthubDataListPage,
   type HosthubRequestLog,
   STAY_OPS_SYNC_USER_AGENT,
 } from "./hosthub/client.js";
@@ -15,6 +16,7 @@ export {
   coerceHosthubDateField,
   normalizeHosthubReservationRecord,
   normalizeHosthubReservationPagePayload,
+  parseHosthubGenericDataList,
 } from "./hosthub/normalize.js";
 export {
   hosthubError,
@@ -38,7 +40,10 @@ export { processSyncHosthubJob } from "./jobs/processSyncHosthubJob.js";
 export { getSyncPrisma, disconnectSyncPrisma } from "./db/client.js";
 export { applyHosthubReservation } from "./pipeline/applyHosthubReservation.js";
 export { extractHosthubReservationDto } from "./pipeline/extractReservation.js";
-export { runHosthubReconcile } from "./pipeline/reconcilePoll.js";
+export { runHosthubReconcile, type RunHosthubReconcileOptions } from "./pipeline/reconcilePoll.js";
+export { backfillSourceListingsFromHosthubRentals } from "./pipeline/backfillSourceListingsFromRentals.js";
+export type { BackfillSourceListingsResult } from "./pipeline/backfillSourceListingsFromRentals.js";
+export type { ApplyHosthubReservationRunOptions } from "./pipeline/applyHosthubReservation.js";
 export { runHosthubEnrichmentBackfill } from "./pipeline/backfillEnrichment.js";
 export { mapHosthubListingChannel } from "./pipeline/mapChannel.js";
 export { mapHosthubBookingStatus } from "./pipeline/bookingStatus.js";
