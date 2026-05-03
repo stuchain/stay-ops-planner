@@ -44,6 +44,16 @@ describe("EnvSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.REDIS_URL).toBeUndefined();
+      expect(result.data.SESSION_COOKIE_SECURE).toBe("auto");
     }
+  });
+
+  it("accepts SESSION_COOKIE_SECURE overrides", () => {
+    const r1 = EnvSchema.safeParse({ ...base, SESSION_COOKIE_SECURE: "true" });
+    expect(r1.success).toBe(true);
+    if (r1.success) expect(r1.data.SESSION_COOKIE_SECURE).toBe("true");
+    const r2 = EnvSchema.safeParse({ ...base, SESSION_COOKIE_SECURE: "false" });
+    expect(r2.success).toBe(true);
+    if (r2.success) expect(r2.data.SESSION_COOKIE_SECURE).toBe("false");
   });
 });

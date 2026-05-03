@@ -20,6 +20,8 @@ const postgresUrl = z.string().refine(
 export const EnvSchema = z.object({
   DATABASE_URL: postgresUrl,
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
+  /** Cookie `Secure` flag: auto = production only; true/false override. */
+  SESSION_COOKIE_SECURE: z.enum(["auto", "true", "false"]).default("auto"),
   APP_TIMEZONE: z.string().min(1, "APP_TIMEZONE is required"),
   REDIS_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   HOSTHUB_API_BASE: z.preprocess(
@@ -30,6 +32,14 @@ export const EnvSchema = z.object({
   HOSTHUB_API_TOKEN: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** Path after API base for listing calendar events (see vendor hosthub-api.md). Default in client is `/calendar-events`. */
   HOSTHUB_API_RESERVATIONS_PATH: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** First calendar-events page: Hosthub `is_visible` (e.g. `all`). */
+  HOSTHUB_CALENDAR_EVENTS_IS_VISIBLE: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** When `1` or `true`, reconcile omits incremental updated_gte (full visible history pull). */
+  HOSTHUB_RECONCILE_FULL_SYNC: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** When `0` or `false`, skip calendar-event notes + GR-tax fetches per booking during reconcile. */
+  HOSTHUB_SYNC_FETCH_EVENT_ENRICHMENT: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** When `1` or `true`, reconcile also walks `GET /rentals/{id}/calendar-events` per rental (high API load). */
+  HOSTHUB_RECONCILE_PER_RENTAL_CALENDAR: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** Override webhook HMAC header name if Hosthub docs specify a different name than `x-hosthub-signature`. */
   HOSTHUB_WEBHOOK_SIGNATURE_HEADER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
