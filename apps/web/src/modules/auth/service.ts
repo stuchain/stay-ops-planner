@@ -64,13 +64,19 @@ function accountDisabled(): AuthError {
   });
 }
 
+function loginEmailNorm(email: string) {
+  return email.trim().toLowerCase();
+}
+
 export async function loginWithEmailPassword(body: LoginBody) {
+  const emailNorm = loginEmailNorm(body.email);
   let userRows: UserRowByEmail[];
   try {
+    // Match stored row case-insensitively (Postgres `=` on text is case-sensitive; throttle already uses `emailNorm`).
     userRows = await prisma.$queryRaw<UserRowByEmail[]>`
       SELECT id, email, password_hash, is_active, role::text as role
       FROM users
-      WHERE email = ${body.email}
+      WHERE LOWER(TRIM(email)) = ${emailNorm}
       LIMIT 1
     `;
   } catch (err) {
@@ -79,7 +85,7 @@ export async function loginWithEmailPassword(body: LoginBody) {
     const legacyRows = await prisma.$queryRaw<Array<Omit<UserRowByEmail, "role">>>`
       SELECT id, email, password_hash, is_active
       FROM users
-      WHERE email = ${body.email}
+      WHERE LOWER(TRIM(email)) = ${emailNorm}
       LIMIT 1
     `;
     userRows = legacyRows.map((row) => ({ ...row, role: "operator" }));

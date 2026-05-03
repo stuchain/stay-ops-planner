@@ -9,6 +9,15 @@ import { hashUserId } from "@stay-ops/shared/observability/hash-user-id";
 
 type RequestLike = Pick<Request, "headers">;
 
+function applyRetryAfterFromDetails(res: NextResponse, details: unknown) {
+  if (!details || typeof details !== "object") return;
+  const raw = (details as { retryAfterSeconds?: unknown }).retryAfterSeconds;
+  const sec = Number(raw);
+  if (Number.isFinite(sec) && sec > 0) {
+    res.headers.set("Retry-After", String(Math.ceil(sec)));
+  }
+}
+
 export function attachTraceToResponse(
   request: RequestLike,
   response: NextResponse,
@@ -25,6 +34,7 @@ export function respondAuthError(request: RequestLike, err: AuthError): NextResp
     status: err.status,
   });
   res.headers.set(TRACE_HEADER, traceId);
+  applyRetryAfterFromDetails(res, err.details);
   return res;
 }
 
@@ -41,6 +51,7 @@ export function apiError(
   const traceId = readTraceId(request) || newTraceId();
   const res = NextResponseCtor.json(jsonError(code, message, details, traceId), { status });
   res.headers.set(TRACE_HEADER, traceId);
+  applyRetryAfterFromDetails(res, details);
   if (status >= 500) {
     log("error", "api_error", { code, status, traceId, message });
     Sentry.withScope((scope) => {

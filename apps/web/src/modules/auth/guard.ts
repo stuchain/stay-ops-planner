@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { Prisma } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { AuthError } from "./errors";
-import { SESSION_COOKIE_NAME, verifySessionToken, type SessionRole } from "./session";
+import { SESSION_COOKIE_NAME, verifySessionToken, type SessionRole, type VerifiedSession } from "./session";
 
 export type AuthContext = {
   userId: string;
@@ -70,17 +70,21 @@ export async function verifyAndLoadAuthContext(token: string | null): Promise<Au
 }
 
 /** Synchronous JWT-only context for middleware (no DB). */
-export function getSessionContextFromRequest(request: NextRequest) {
+export function getSessionContextFromRequest(request: NextRequest): {
+  context: AuthContext | null;
+  tokenPresent: boolean;
+  verified?: VerifiedSession;
+} {
   const cookie = request.cookies.get(SESSION_COOKIE_NAME);
   const token = cookie?.value;
 
   if (!token) {
-    return { context: null as AuthContext | null, tokenPresent: false };
+    return { context: null, tokenPresent: false };
   }
 
   const session = verifySessionToken(token);
   if (!session) {
-    return { context: null as AuthContext | null, tokenPresent: true };
+    return { context: null, tokenPresent: true };
   }
 
   return {
@@ -90,6 +94,7 @@ export function getSessionContextFromRequest(request: NextRequest) {
       role: session.role,
     } satisfies AuthContext,
     tokenPresent: true,
+    verified: session,
   };
 }
 

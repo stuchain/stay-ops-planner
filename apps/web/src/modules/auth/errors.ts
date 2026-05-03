@@ -12,7 +12,11 @@ export type AuthErrorCode =
   | "INVALID_CREDENTIALS"
   | "UNAUTHORIZED"
   | "FORBIDDEN"
-  | "ACCOUNT_DISABLED";
+  | "ACCOUNT_DISABLED"
+  | "RATE_LIMITED"
+  | "IDEMPOTENCY_KEY_CONFLICT"
+  | "IDEMPOTENCY_KEY_IN_PROGRESS"
+  | "INVALID_STATUS_TRANSITION";
 
 export class AuthError extends Error {
   public readonly code: AuthErrorCode;
