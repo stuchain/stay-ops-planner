@@ -188,6 +188,8 @@ export type BookingListItemDto = {
 };
 
 export type BookingDetailDto = BookingListItemDto & {
+  /** Optimistic concurrency; increment on each successful PATCH. */
+  version: number;
   createdAt: string;
   updatedAt: string;
   sourceListingId: string | null;
@@ -496,6 +498,7 @@ export function bookingDetailFromModel(booking: BookingWithDetailRelations): Boo
 
   return {
     ...base,
+    version: booking.version,
     createdAt: booking.createdAt.toISOString(),
     updatedAt: booking.updatedAt.toISOString(),
     sourceListingId: booking.sourceListingId,

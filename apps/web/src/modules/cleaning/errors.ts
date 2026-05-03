@@ -1,10 +1,12 @@
 export class CleaningBookingNotFoundError extends Error {
   readonly code = "BOOKING_NOT_FOUND" as const;
   readonly status = 404;
+  readonly details?: { failedIndex?: number; bookingId?: string };
 
-  constructor() {
+  constructor(details?: { failedIndex?: number; bookingId?: string }) {
     super("Booking not found");
     this.name = "CleaningBookingNotFoundError";
+    this.details = details;
   }
 }
 

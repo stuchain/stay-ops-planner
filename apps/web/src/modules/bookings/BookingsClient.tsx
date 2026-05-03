@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import type { DryRunResult } from "@stay-ops/shared";
+import { DryRunPreviewModal, useDryRun } from "@/modules/dry-run";
 import { BookingDetailModal } from "./BookingDetailModal";
 import { ChannelLogo } from "./ChannelLogo";
 
@@ -17,6 +19,8 @@ type SortBy = "updatedAt" | "createdAt" | "checkinDate" | "checkoutDate" | "tota
 type SortOrder = "asc" | "desc";
 type ExportMenu = "standard" | "financial" | null;
 type MultiSelectMenu = "rentals" | "channels" | null;
+
+type BulkCancelBody = { bookingIds: string[] };
 
 type BookingListItem = {
   id: string;
@@ -106,6 +110,16 @@ function toQuery(filters: Filters): string {
 }
 
 export function BookingsClient() {
+  const bulkCancelDry = useDryRun<BulkCancelBody>({
+    url: "/api/bookings/bulk-cancel",
+    buildBody: (input) => ({ bookingIds: input.bookingIds }),
+  });
+  const [selectedCancelIds, setSelectedCancelIds] = useState<string[]>([]);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkSummary, setBulkSummary] = useState<DryRunResult | null>(null);
+  const [bulkCancelIds, setBulkCancelIds] = useState<string[] | null>(null);
+  const [pendingBulkCancel, setPendingBulkCancel] = useState(false);
+
   const defaultFilters = useMemo<Filters>(() => ({ ...DEFAULT_FILTERS, startDate: todayDateLocal() }), []);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [items, setItems] = useState<BookingListItem[]>([]);
@@ -180,6 +194,60 @@ export function BookingsClient() {
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [filtersOpen]);
+
+  const selectableItems = useMemo(
+    () => items.filter((item) => item.status !== "cancelled"),
+    [items],
+  );
+
+  const toggleCancelSelect = useCallback((bookingId: string) => {
+    setSelectedCancelIds((prev) =>
+      prev.includes(bookingId) ? prev.filter((id) => id !== bookingId) : [...prev, bookingId],
+    );
+  }, []);
+
+  const selectAllCancellable = useCallback(() => {
+    const all = selectableItems.map((i) => i.id);
+    if (all.length === selectedCancelIds.length && all.every((id) => selectedCancelIds.includes(id))) {
+      setSelectedCancelIds([]);
+    } else {
+      setSelectedCancelIds(all);
+    }
+  }, [selectableItems, selectedCancelIds]);
+
+  const bulkPreviewCancel = useCallback(async () => {
+    if (selectedCancelIds.length === 0) return;
+    setPendingBulkCancel(true);
+    setError(null);
+    try {
+      const summary = await bulkCancelDry.preview({ bookingIds: selectedCancelIds });
+      setBulkCancelIds([...selectedCancelIds]);
+      setBulkSummary(summary);
+      setBulkModalOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk cancel preview failed");
+    } finally {
+      setPendingBulkCancel(false);
+    }
+  }, [bulkCancelDry, selectedCancelIds]);
+
+  const bulkExecuteCancel = useCallback(async () => {
+    if (!bulkCancelIds?.length) return;
+    setPendingBulkCancel(true);
+    setError(null);
+    try {
+      await bulkCancelDry.execute({ bookingIds: bulkCancelIds });
+      setBulkModalOpen(false);
+      setBulkSummary(null);
+      setBulkCancelIds(null);
+      setSelectedCancelIds([]);
+      await load(filters);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk cancel failed");
+    } finally {
+      setPendingBulkCancel(false);
+    }
+  }, [bulkCancelDry, bulkCancelIds, filters, load]);
 
   const openBooking = useCallback((bookingId: string) => {
     setSelectedId(bookingId);
@@ -647,6 +715,21 @@ export function BookingsClient() {
       <section className="ops-bookings-list-wrap" aria-label="Bookings list">
         <div className="ops-bookings-list-head">
           <strong>{totalText}</strong>
+          {selectedCancelIds.length > 0 ? (
+            <div className="ops-drawer-row-actions" style={{ marginTop: "0.5rem" }}>
+              <button
+                type="button"
+                className="ops-btn ops-btn-danger"
+                disabled={pendingBulkCancel}
+                onClick={() => void bulkPreviewCancel()}
+              >
+                {pendingBulkCancel ? "Previewing…" : `Bulk cancel with preview (${selectedCancelIds.length})`}
+              </button>
+              <button type="button" className="ops-btn" disabled={pendingBulkCancel} onClick={() => setSelectedCancelIds([])}>
+                Clear selection
+              </button>
+            </div>
+          ) : null}
         </div>
         {loading ? <p className="ops-muted">Loading bookings...</p> : null}
         {error ? <p className="ops-error">{error}</p> : null}
@@ -655,6 +738,19 @@ export function BookingsClient() {
           <table className="ops-bookings-table">
             <thead>
               <tr>
+                <th className="ops-bookings-th-static" aria-label="Select for bulk cancel">
+                  {selectableItems.length > 0 ? (
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectableItems.length > 0 &&
+                        selectableItems.every((i) => selectedCancelIds.includes(i.id))
+                      }
+                      onChange={() => selectAllCancellable()}
+                      title="Select all cancellable bookings"
+                    />
+                  ) : null}
+                </th>
                 <th className="ops-bookings-th-static">Booking</th>
                 <th className="ops-bookings-th-static">Rental</th>
                 <th className="ops-bookings-th-static">Guest name</th>
@@ -692,6 +788,19 @@ export function BookingsClient() {
                   onKeyDown={(event) => onRowKeyDown(event, item.id)}
                   aria-label={`Open booking ${item.externalBookingId}`}
                 >
+                  <td
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    {item.status !== "cancelled" ? (
+                      <input
+                        type="checkbox"
+                        checked={selectedCancelIds.includes(item.id)}
+                        onChange={() => toggleCancelSelect(item.id)}
+                        aria-label={`Select ${item.externalBookingId} for bulk cancel`}
+                      />
+                    ) : null}
+                  </td>
                   <td>
                     <span className="ops-bookings-row-logo">
                       <ChannelLogo channel={item.channel} className="ops-channel-logo" />
@@ -712,6 +821,20 @@ export function BookingsClient() {
       </section>
 
       <BookingDetailModal bookingId={selectedId} onClose={closeModal} onAfterSave={() => void load(filters)} />
+      <DryRunPreviewModal
+        open={bulkModalOpen}
+        title="Bulk cancel bookings — preview"
+        summary={bulkSummary}
+        busy={bulkCancelDry.state === "executing" || pendingBulkCancel}
+        executeLabel="Confirm bulk cancel"
+        onCancel={() => {
+          if (bulkCancelDry.state === "executing" || pendingBulkCancel) return;
+          setBulkModalOpen(false);
+          setBulkSummary(null);
+          setBulkCancelIds(null);
+        }}
+        onConfirm={() => void bulkExecuteCancel()}
+      />
     </main>
   );
 }

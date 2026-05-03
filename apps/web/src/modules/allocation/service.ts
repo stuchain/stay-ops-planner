@@ -6,6 +6,7 @@ import {
   Prisma,
   TURNOVER_TASK_TYPE,
 } from "@stay-ops/db";
+import { DryRunRollback, isDryRunRollback, PlanRecorder, type DryRunResult } from "@stay-ops/shared";
 import { prisma } from "@/lib/prisma";
 import { AllocationError } from "./errors";
 import { throwIfStayConflict } from "./stayConflict";
@@ -51,6 +52,8 @@ export type AssignInput = {
   bookingId: string;
   roomId: string;
   actorUserId: string;
+  /** When set, must match `Booking.version` (optimistic concurrency). */
+  expectedVersion?: number;
   /** Merged into audit `metaJson` (e.g. `requestId` from headers). */
   auditMeta?: Record<string, unknown>;
 };
@@ -99,6 +102,9 @@ export type AssignmentCommandResult = {
  * before application-level conflict checks observe the other transaction. Map those to domain errors.
  */
 function mapAssignmentWriteConflict(err: unknown): never {
+  if (isDryRunRollback(err)) {
+    throw err;
+  }
   if (err instanceof AllocationError) {
     throw err;
   }
@@ -144,6 +150,227 @@ function mapAssignmentWriteConflict(err: unknown): never {
   throw err;
 }
 
+export type AssignBookingToRoomTxOptions = {
+  recorder?: PlanRecorder;
+  itemIndex?: number;
+  /** When true, skip audit snapshot (used with dry-run rollback). */
+  skipAudit?: boolean;
+};
+
+/**
+ * Assign within an existing transaction (serializable). Used by {@link assignBookingToRoom} and bulk assign.
+ */
+export async function assignBookingToRoomTx(
+  tx: Prisma.TransactionClient,
+  input: AssignInput,
+  opts?: AssignBookingToRoomTxOptions,
+): Promise<AssignmentCommandResult> {
+  await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${input.bookingId} FOR UPDATE`;
+  const actorUserId = await resolveActorUserId(tx, input.actorUserId);
+
+  const booking = await tx.booking.findUnique({
+    where: { id: input.bookingId },
+    include: { assignment: true },
+  });
+
+  if (!booking) {
+    throw new AllocationError({
+      code: "BOOKING_NOT_ASSIGNABLE",
+      status: 422,
+      message: "Booking not found",
+      details: { bookingId: input.bookingId, ...(opts?.itemIndex !== undefined ? { failedIndex: opts.itemIndex } : {}) },
+    });
+  }
+
+  assertAssignable(booking.status);
+
+  if (input.expectedVersion !== undefined && input.expectedVersion !== booking.version) {
+    throw new AllocationError({
+      code: "STALE_VERSION",
+      status: 409,
+      message: "Stale booking version",
+      details: {
+        bookingId: input.bookingId,
+        expectedVersion: input.expectedVersion,
+        currentVersion: booking.version,
+      },
+    });
+  }
+
+  if (booking.assignment) {
+    throw new AllocationError({
+      code: "BOOKING_ALREADY_ASSIGNED",
+      status: 409,
+      message: "Booking already has an assignment; use reassign",
+      details: {
+        assignmentId: booking.assignment.id,
+        ...(opts?.itemIndex !== undefined ? { failedIndex: opts.itemIndex } : {}),
+      },
+    });
+  }
+
+  await assertRoomActiveForAllocation(tx, input.roomId);
+
+  throwIfStayConflict(
+    await findStayConflict(tx, {
+      roomId: input.roomId,
+      start: booking.checkinDate,
+      end: booking.checkoutDate,
+    }),
+  );
+
+  const created = await tx.assignment.create({
+    data: {
+      bookingId: input.bookingId,
+      roomId: input.roomId,
+      startDate: booking.checkinDate,
+      endDate: booking.checkoutDate,
+      version: 0,
+      createdById: actorUserId,
+      updatedById: actorUserId,
+    },
+  });
+
+  opts?.recorder?.push({
+    entityType: "assignment",
+    entityId: created.id,
+    action: "create",
+    before: null,
+    after: {
+      bookingId: created.bookingId,
+      roomId: created.roomId,
+      startDate: created.startDate.toISOString().slice(0, 10),
+      endDate: created.endDate.toISOString().slice(0, 10),
+      version: created.version,
+    },
+  });
+
+  let auditRef = "";
+  if (!opts?.skipAudit) {
+    auditRef = await writeAuditSnapshot(tx, {
+      actorUserId,
+      action: "assignment.assign",
+      entityType: "assignment",
+      entityId: created.id,
+      before: null,
+      after: {
+        bookingId: created.bookingId,
+        roomId: created.roomId,
+        startDate: created.startDate.toISOString().slice(0, 10),
+        endDate: created.endDate.toISOString().slice(0, 10),
+        version: created.version,
+      },
+      meta: { bookingId: input.bookingId, ...(input.auditMeta ?? {}) },
+    });
+  }
+
+  await ensureTurnoverCleaningTask(tx, {
+    bookingId: input.bookingId,
+    roomId: created.roomId,
+    checkoutDate: booking.checkoutDate,
+  });
+
+  if (opts?.recorder) {
+    const turnover = await tx.cleaningTask.findFirst({
+      where: { bookingId: input.bookingId, taskType: TURNOVER_TASK_TYPE },
+    });
+    if (turnover) {
+      opts.recorder.push({
+        entityType: "cleaning_task",
+        entityId: turnover.id,
+        action: "upsert",
+        before: null,
+        after: {
+          id: turnover.id,
+          taskType: turnover.taskType,
+          status: turnover.status,
+          roomId: turnover.roomId,
+          plannedStart: turnover.plannedStart?.toISOString() ?? null,
+          plannedEnd: turnover.plannedEnd?.toISOString() ?? null,
+        },
+      });
+    }
+  }
+
+  return {
+    assignment: {
+      id: created.id,
+      bookingId: created.bookingId,
+      roomId: created.roomId,
+      startDate: created.startDate,
+      endDate: created.endDate,
+      version: created.version,
+    },
+    auditRef,
+  };
+}
+
+export type BulkAssignBookingsInput = {
+  items: Array<{ bookingId: string; roomId: string }>;
+  actorUserId: string;
+  auditMeta?: Record<string, unknown>;
+  dryRun?: boolean;
+};
+
+export type BulkAssignBookingsResult =
+  | { dryRun: true; summary: DryRunResult }
+  | { dryRun: false; results: AssignmentCommandResult[] };
+
+const BULK_MAX = 200;
+
+/**
+ * All-or-nothing bulk assign. When `dryRun` is true, rolls back after building a {@link DryRunResult}.
+ */
+export async function bulkAssignBookings(input: BulkAssignBookingsInput): Promise<BulkAssignBookingsResult> {
+  const { items, actorUserId, auditMeta, dryRun } = input;
+  if (items.length === 0) {
+    throw new AllocationError({
+      code: "VALIDATION_ERROR",
+      status: 400,
+      message: "At least one assignment item is required",
+      details: {},
+    });
+  }
+  if (items.length > BULK_MAX) {
+    throw new AllocationError({
+      code: "VALIDATION_ERROR",
+      status: 400,
+      message: `At most ${BULK_MAX} items per request`,
+      details: { count: items.length },
+    });
+  }
+
+  const recorder = dryRun ? new PlanRecorder() : undefined;
+
+  try {
+    const results = await prisma.$transaction(
+      async (tx) => {
+        const out: AssignmentCommandResult[] = [];
+        for (let i = 0; i < items.length; i += 1) {
+          const it = items[i]!;
+          const r = await assignBookingToRoomTx(
+            tx,
+            { bookingId: it.bookingId, roomId: it.roomId, actorUserId, auditMeta },
+            { recorder, itemIndex: i, skipAudit: Boolean(dryRun) },
+          );
+          out.push(r);
+        }
+        if (dryRun && recorder) {
+          throw new DryRunRollback(recorder.snapshot());
+        }
+        return out;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    return { dryRun: false, results };
+  } catch (err) {
+    if (isDryRunRollback(err)) {
+      return { dryRun: true, summary: err.plan };
+    }
+    mapAssignmentWriteConflict(err);
+  }
+}
+
 /**
  * Serializable isolation + row locks on booking prevent lost updates on assignment.version
  * while overlapping stays are blocked by assertNoOverlap and DB exclusion.
@@ -151,93 +378,9 @@ function mapAssignmentWriteConflict(err: unknown): never {
 export async function assignBookingToRoom(input: AssignInput): Promise<AssignmentCommandResult> {
   try {
     return await prisma.$transaction(
-      async (tx) => {
-      await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${input.bookingId} FOR UPDATE`;
-      const actorUserId = await resolveActorUserId(tx, input.actorUserId);
-
-      const booking = await tx.booking.findUnique({
-        where: { id: input.bookingId },
-        include: { assignment: true },
-      });
-
-      if (!booking) {
-        throw new AllocationError({
-          code: "BOOKING_NOT_ASSIGNABLE",
-          status: 422,
-          message: "Booking not found",
-          details: { bookingId: input.bookingId },
-        });
-      }
-
-      assertAssignable(booking.status);
-
-      if (booking.assignment) {
-        throw new AllocationError({
-          code: "BOOKING_ALREADY_ASSIGNED",
-          status: 409,
-          message: "Booking already has an assignment; use reassign",
-          details: { assignmentId: booking.assignment.id },
-        });
-      }
-
-      await assertRoomActiveForAllocation(tx, input.roomId);
-
-      throwIfStayConflict(
-        await findStayConflict(tx, {
-          roomId: input.roomId,
-          start: booking.checkinDate,
-          end: booking.checkoutDate,
-        }),
-      );
-
-      const created = await tx.assignment.create({
-        data: {
-          bookingId: input.bookingId,
-          roomId: input.roomId,
-          startDate: booking.checkinDate,
-          endDate: booking.checkoutDate,
-          version: 0,
-          createdById: actorUserId,
-          updatedById: actorUserId,
-        },
-      });
-
-      const auditRef = await writeAuditSnapshot(tx, {
-        actorUserId,
-        action: "assignment.assign",
-        entityType: "assignment",
-        entityId: created.id,
-        before: null,
-        after: {
-          bookingId: created.bookingId,
-          roomId: created.roomId,
-          startDate: created.startDate.toISOString().slice(0, 10),
-          endDate: created.endDate.toISOString().slice(0, 10),
-          version: created.version,
-        },
-        meta: { bookingId: input.bookingId, ...(input.auditMeta ?? {}) },
-      });
-
-      await ensureTurnoverCleaningTask(tx, {
-        bookingId: input.bookingId,
-        roomId: created.roomId,
-        checkoutDate: booking.checkoutDate,
-      });
-
-      return {
-        assignment: {
-          id: created.id,
-          bookingId: created.bookingId,
-          roomId: created.roomId,
-          startDate: created.startDate,
-          endDate: created.endDate,
-          version: created.version,
-        },
-        auditRef,
-      };
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+      async (tx) => assignBookingToRoomTx(tx, input),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   } catch (err) {
     mapAssignmentWriteConflict(err);
   }

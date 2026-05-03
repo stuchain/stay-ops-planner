@@ -6,8 +6,13 @@ import {
   SERVICE_MINUTES,
   validateCleaningSchedule,
 } from "@stay-ops/db";
+import { DryRunRollback, isDryRunRollback, PlanRecorder, type DryRunResult } from "@stay-ops/shared";
 import { prisma } from "@/lib/prisma";
-import { CleaningBookingNotFoundError, CleaningTaskNotFoundError } from "./errors";
+import {
+  CleaningBookingNotFoundError,
+  CleaningTaskNotFoundError,
+  InvalidStateTransitionError,
+} from "./errors";
 
 function cleaningTaskSnapshot(t: {
   id: string;
@@ -106,14 +111,7 @@ export async function updateCleaningTaskSchedule(params: {
   });
 }
 
-export async function createServiceCleaningTaskForApi(params: {
-  bookingId: string;
-  roomId: string;
-  sourceEventId?: string;
-  plannedStart?: Date;
-  actorUserId: string;
-  auditMeta?: Record<string, unknown>;
-}): Promise<{
+export type ServiceCleaningTaskApiResult = {
   created: boolean;
   task: {
     id: string;
@@ -126,46 +124,165 @@ export async function createServiceCleaningTaskForApi(params: {
     assigneeName: string | null;
     durationMinutes: number | null;
   };
-}> {
-  return prisma.$transaction(async (tx) => {
-    const booking = await tx.booking.findUnique({ where: { id: params.bookingId } });
-    if (!booking) {
-      throw new CleaningBookingNotFoundError();
-    }
+};
 
-    const { plannedStart, plannedEnd } = params.plannedStart
-      ? {
-          plannedStart: params.plannedStart,
-          plannedEnd: new Date(params.plannedStart.getTime() + SERVICE_MINUTES * 60_000),
-        }
-      : computeTurnoverPlannedWindowUTC(booking.checkoutDate, SERVICE_MINUTES);
+export type CreateServiceCleaningTaskForApiTxOptions = {
+  recorder?: PlanRecorder;
+  itemIndex?: number;
+  skipAudit?: boolean;
+};
 
-    await validateCleaningSchedule(tx, {
-      roomId: params.roomId,
+export async function createServiceCleaningTaskForApiTx(
+  tx: Prisma.TransactionClient,
+  params: {
+    bookingId: string;
+    roomId: string;
+    sourceEventId?: string;
+    plannedStart?: Date;
+    actorUserId: string;
+    auditMeta?: Record<string, unknown>;
+  },
+  opts?: CreateServiceCleaningTaskForApiTxOptions,
+): Promise<ServiceCleaningTaskApiResult> {
+  const booking = await tx.booking.findUnique({ where: { id: params.bookingId } });
+  if (!booking) {
+    throw new CleaningBookingNotFoundError({
       bookingId: params.bookingId,
-      plannedStart,
-      plannedEnd,
+      ...(opts?.itemIndex !== undefined ? { failedIndex: opts.itemIndex } : {}),
     });
+  }
 
-    const sourceEventId = params.sourceEventId ?? crypto.randomUUID();
-    const r = await createServiceCleaningTask(tx, {
-      bookingId: params.bookingId,
-      roomId: params.roomId,
-      sourceEventId,
-      plannedStart,
-    });
-    const task = await tx.cleaningTask.findUniqueOrThrow({ where: { id: r.id } });
-    if (r.created) {
-      await writeAuditSnapshot(tx, {
-        actorUserId: params.actorUserId,
-        action: "cleaning_task.service_create",
-        entityType: "cleaning_task",
-        entityId: task.id,
-        before: null,
-        after: cleaningTaskSnapshot(task),
-        meta: { bookingId: params.bookingId, ...(params.auditMeta ?? {}) },
-      });
-    }
-    return { created: r.created, task };
+  const { plannedStart, plannedEnd } = params.plannedStart
+    ? {
+        plannedStart: params.plannedStart,
+        plannedEnd: new Date(params.plannedStart.getTime() + SERVICE_MINUTES * 60_000),
+      }
+    : computeTurnoverPlannedWindowUTC(booking.checkoutDate, SERVICE_MINUTES);
+
+  await validateCleaningSchedule(tx, {
+    roomId: params.roomId,
+    bookingId: params.bookingId,
+    plannedStart,
+    plannedEnd,
   });
+
+  const sourceEventId = params.sourceEventId ?? crypto.randomUUID();
+  const r = await createServiceCleaningTask(tx, {
+    bookingId: params.bookingId,
+    roomId: params.roomId,
+    sourceEventId,
+    plannedStart,
+  });
+  const task = await tx.cleaningTask.findUniqueOrThrow({ where: { id: r.id } });
+  if (r.created && !opts?.skipAudit) {
+    await writeAuditSnapshot(tx, {
+      actorUserId: params.actorUserId,
+      action: "cleaning_task.service_create",
+      entityType: "cleaning_task",
+      entityId: task.id,
+      before: null,
+      after: cleaningTaskSnapshot(task),
+      meta: { bookingId: params.bookingId, ...(params.auditMeta ?? {}) },
+    });
+  }
+
+  opts?.recorder?.push({
+    entityType: "cleaning_task",
+    entityId: task.id,
+    action: r.created ? "create" : "noop",
+    before: null,
+    after: cleaningTaskSnapshot(task),
+  });
+
+  return { created: r.created, task };
+}
+
+export async function createServiceCleaningTaskForApi(params: {
+  bookingId: string;
+  roomId: string;
+  sourceEventId?: string;
+  plannedStart?: Date;
+  actorUserId: string;
+  auditMeta?: Record<string, unknown>;
+}): Promise<ServiceCleaningTaskApiResult> {
+  return prisma.$transaction(async (tx) => createServiceCleaningTaskForApiTx(tx, params));
+}
+
+export type BulkCreateServiceCleaningTasksInput = {
+  items: Array<{
+    bookingId: string;
+    roomId: string;
+    sourceEventId?: string;
+    /** ISO string; optional (defaults from booking checkout like single create). */
+    plannedStart?: string;
+  }>;
+  actorUserId: string;
+  auditMeta?: Record<string, unknown>;
+  dryRun?: boolean;
+};
+
+export type BulkCreateServiceCleaningTasksResult =
+  | { dryRun: true; summary: DryRunResult }
+  | { dryRun: false; results: ServiceCleaningTaskApiResult[] };
+
+const BULK_CLEANING_MAX = 200;
+
+/**
+ * All-or-nothing bulk create for service cleaning tasks.
+ */
+export async function bulkCreateServiceCleaningTasks(
+  input: BulkCreateServiceCleaningTasksInput,
+): Promise<BulkCreateServiceCleaningTasksResult> {
+  const { items, actorUserId, auditMeta, dryRun } = input;
+  if (items.length === 0) {
+    throw new InvalidStateTransitionError("At least one cleaning task item is required");
+  }
+  if (items.length > BULK_CLEANING_MAX) {
+    throw new InvalidStateTransitionError(`At most ${BULK_CLEANING_MAX} cleaning tasks per request`);
+  }
+
+  const recorder = dryRun ? new PlanRecorder() : undefined;
+
+  try {
+    const results = await prisma.$transaction(
+      async (tx) => {
+        const out: ServiceCleaningTaskApiResult[] = [];
+        for (let i = 0; i < items.length; i += 1) {
+          const it = items[i]!;
+          let plannedStart: Date | undefined;
+          if (it.plannedStart) {
+            const d = new Date(it.plannedStart);
+            if (Number.isNaN(d.getTime())) {
+              throw new InvalidStateTransitionError(`Invalid plannedStart at index ${i}`);
+            }
+            plannedStart = d;
+          }
+          const r = await createServiceCleaningTaskForApiTx(
+            tx,
+            {
+              bookingId: it.bookingId,
+              roomId: it.roomId,
+              sourceEventId: it.sourceEventId,
+              plannedStart,
+              actorUserId,
+              auditMeta,
+            },
+            { recorder, itemIndex: i, skipAudit: Boolean(dryRun) },
+          );
+          out.push(r);
+        }
+        if (dryRun && recorder) {
+          throw new DryRunRollback(recorder.snapshot());
+        }
+        return out;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    return { dryRun: false, results };
+  } catch (e) {
+    if (isDryRunRollback(e)) {
+      return { dryRun: true, summary: e.plan };
+    }
+    throw e;
+  }
 }

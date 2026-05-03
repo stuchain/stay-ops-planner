@@ -73,7 +73,7 @@ export function HosthubListingsSection() {
     <div className="ops-excel-listings">
       <div className="ops-settings-listings-toolbar">
         <label className="ops-excel-year">
-          Έτος για κρατήσεις{" "}
+          Έτος (επικάλυψη διαμονής){" "}
           <select value={year} onChange={(e) => setYear(Number(e.target.value))} disabled={loading || saving}>
             {Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i).map((y) => (
               <option key={y} value={y}>
@@ -82,6 +82,12 @@ export function HosthubListingsSection() {
             ))}
           </select>
         </label>
+        <p className="ops-muted" style={{ marginTop: "0.35rem", maxWidth: "52rem" }}>
+          Οι κρατήσεις μετριούνται όταν η διαμονή αλληλεπικαλύπτεται με το ημερολογιακό έτος (UTC)· το
+          check-out είναι αποκλειστικό, όπως στο Hosthub sync. Κάθε γραμμή είναι ένα κανάλι (airbnb /
+          booking / direct)· μία κράτηση εμφανίζεται μόνο στο κανάλι που δίνει το Hosthub, όχι στο σύνολο
+          όλων των γραμμών. Το άθροισμα όλων των κελιών δεν είναι «όλες οι κρατήσεις στο Hosthub ποτέ».
+        </p>
       </div>
       {error ? <p className="ops-error">{error}</p> : null}
       {loading ? (
@@ -93,7 +99,7 @@ export function HosthubListingsSection() {
               <th>Channel</th>
               <th>Τίτλος</th>
               <th>External id</th>
-              <th>Κρατήσεις (έτος)</th>
+              <th>Κρατήσεις (έτος, επικάλυψη)</th>
               <th>TAX ROOM</th>
             </tr>
           </thead>

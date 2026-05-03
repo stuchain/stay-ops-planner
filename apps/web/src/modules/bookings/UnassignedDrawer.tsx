@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DryRunResult } from "@stay-ops/shared";
+import { DryRunPreviewModal, useDryRun } from "@/modules/dry-run";
 import {
   applyBookingSuggestionMutation,
   performBookingAssignmentMutation,
@@ -82,7 +84,19 @@ function roomOptionLabel(r: CalendarRoom): string {
   return r.name ?? r.id;
 }
 
+type BulkAssignBody = { items: Array<{ bookingId: string; roomId: string }> };
+
 export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, onAssigned }: Props) {
+  const bulkAssignDry = useDryRun<BulkAssignBody>({
+    url: "/api/assignments/bulk",
+    buildBody: (input) => ({ items: input.items }),
+  });
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkSummary, setBulkSummary] = useState<DryRunResult | null>(null);
+  const [bulkItems, setBulkItems] = useState<BulkAssignBody["items"] | null>(null);
+  const [pendingBulk, setPendingBulk] = useState(false);
+
   const [rows, setRows] = useState<UnassignedRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +154,15 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
   }, [open, loadRows]);
 
   useEffect(() => {
+    if (!open) {
+      setSelectedIds([]);
+      setBulkModalOpen(false);
+      setBulkSummary(null);
+      setBulkItems(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!open || rows.length === 0) return;
     void Promise.all(rows.map((row) => loadSuggestions(row.id)));
   }, [open, rows, loadSuggestions]);
@@ -185,6 +208,54 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
   }, [rows, rooms, suggestContext]);
 
   const fallbackRoomId = rooms[0]?.id ?? "";
+
+  function toggleSelect(bookingId: string) {
+    setSelectedIds((prev) => (prev.includes(bookingId) ? prev.filter((id) => id !== bookingId) : [...prev, bookingId]));
+  }
+
+  async function bulkPreviewAssign() {
+    if (selectedIds.length === 0 || rooms.length === 0) return;
+    const items: BulkAssignBody["items"] = [];
+    for (const id of selectedIds) {
+      const roomId = roomPick[id] ?? defaultRoomByRowId[id] ?? fallbackRoomId;
+      if (!roomId) {
+        setError("Pick a room for every selected booking.");
+        return;
+      }
+      items.push({ bookingId: id, roomId });
+    }
+    setPendingBulk(true);
+    setError(null);
+    try {
+      const summary = await bulkAssignDry.preview({ items });
+      setBulkItems(items);
+      setBulkSummary(summary);
+      setBulkModalOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk preview failed");
+    } finally {
+      setPendingBulk(false);
+    }
+  }
+
+  async function bulkExecuteAssign() {
+    if (!bulkItems) return;
+    setPendingBulk(true);
+    setError(null);
+    try {
+      await bulkAssignDry.execute({ items: bulkItems });
+      setBulkModalOpen(false);
+      setBulkSummary(null);
+      setBulkItems(null);
+      setSelectedIds([]);
+      onAssigned();
+      await loadRows();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk assign failed");
+    } finally {
+      setPendingBulk(false);
+    }
+  }
 
   async function assignOne(row: UnassignedRow) {
     const roomId = roomPick[row.id] ?? defaultRoomByRowId[row.id] ?? fallbackRoomId;
@@ -242,6 +313,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
   if (!open) return null;
 
   return (
+    <>
     <div className="ops-drawer-backdrop" role="presentation" onClick={onClose}>
       <aside
         className="ops-drawer"
@@ -269,10 +341,34 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
         {loading && <p className="ops-muted">Loading…</p>}
         {error && <p className="ops-error">{error}</p>}
         {!loading && !error && filtered.length === 0 && <p className="ops-muted">No unassigned bookings in this range.</p>}
+        {selectedIds.length > 0 ? (
+          <div className="ops-drawer-row-actions">
+            <button
+              type="button"
+              className="ops-btn ops-btn-primary"
+              disabled={pendingBulk || rooms.length === 0}
+              onClick={() => void bulkPreviewAssign()}
+            >
+              {pendingBulk ? "Previewing…" : `Bulk assign with preview (${selectedIds.length})`}
+            </button>
+            <button type="button" className="ops-btn" disabled={pendingBulk} onClick={() => setSelectedIds([])}>
+              Clear selection
+            </button>
+          </div>
+        ) : null}
         <ul className="ops-drawer-list">
           {filtered.map((b) => (
             <li key={b.id} className="ops-drawer-row">
               <div className="ops-drawer-row-main">
+                <label className="ops-drawer-select">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(b.id)}
+                    onChange={() => toggleSelect(b.id)}
+                    onClick={(ev) => ev.stopPropagation()}
+                    aria-label={`Select booking ${b.externalBookingId}`}
+                  />
+                </label>
                 <div className="ops-drawer-dates">
                   {b.checkinDate} → {b.checkoutDate}
                 </div>
@@ -342,5 +438,20 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
         </ul>
       </aside>
     </div>
+    <DryRunPreviewModal
+      open={bulkModalOpen}
+      title="Bulk assign — preview"
+      summary={bulkSummary}
+      busy={bulkAssignDry.state === "executing" || pendingBulk}
+      executeLabel="Confirm bulk assign"
+      onCancel={() => {
+        if (bulkAssignDry.state === "executing" || pendingBulk) return;
+        setBulkModalOpen(false);
+        setBulkSummary(null);
+        setBulkItems(null);
+      }}
+      onConfirm={() => void bulkExecuteAssign()}
+    />
+    </>
   );
 }

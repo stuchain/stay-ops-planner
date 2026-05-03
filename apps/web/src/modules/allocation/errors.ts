@@ -5,7 +5,8 @@ export type AllocationErrorCode =
   | "ASSIGNMENT_NOT_FOUND"
   | "CONFLICT_ASSIGNMENT"
   | "CONFLICT_BLOCK"
-  | "ROOM_INACTIVE";
+  | "ROOM_INACTIVE"
+  | "VALIDATION_ERROR";
 
 export class AllocationError extends Error {
   public readonly code: AllocationErrorCode;
