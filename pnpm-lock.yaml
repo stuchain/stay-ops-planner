@@ -37,6 +37,9 @@ importers:
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
+      bullmq:
+        specifier: ^5.34.5
+        version: 5.73.0
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -98,9 +101,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.2
         version: 19.2.3(@types/react@19.2.14)
-      bullmq:
-        specifier: ^5.34.5
-        version: 5.73.0
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
@@ -110,6 +110,9 @@ importers:
       eslint-config-next:
         specifier: ^15.1.6
         version: 15.5.14(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+      ioredis:
+        specifier: ^5.4.2
+        version: 5.10.1
       jsdom:
         specifier: ^26.0.0
         version: 26.1.0
@@ -181,6 +184,9 @@ importers:
 
   packages/shared:
     dependencies:
+      ioredis:
+        specifier: ^5.4.2
+        version: 5.10.1
       zod:
         specifier: ^3.24.1
         version: 3.25.76
