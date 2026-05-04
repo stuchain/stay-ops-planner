@@ -1,0 +1,104 @@
+/**
+ * Design tokens — semantic names only. Tune brand here (primary hue, radii, shadows).
+ */
+:root {
+  /* Typography */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-size-xs: 0.72rem;
+  --font-size-sm: 0.8rem;
+  --font-size-md: 0.9rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.1rem;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --letter-spacing-ui: 0.01em;
+
+  /* Spacing scale */
+  --space-1: 0.12rem;
+  --space-2: 0.25rem;
+  --space-3: 0.35rem;
+  --space-4: 0.45rem;
+  --space-5: 0.5rem;
+  --space-6: 0.55rem;
+  --space-7: 0.6rem;
+  --space-8: 0.65rem;
+  --space-9: 0.75rem;
+  --space-10: 0.85rem;
+  --space-11: 0.9rem;
+  --space-12: 1rem;
+  --space-13: 1.25rem;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-shell: 14px;
+  --radius-pill: 999px;
+
+  /* Surfaces */
+  --color-surface-page: #eef2f9;
+  --color-surface-base: #ffffff;
+  --color-surface-muted: #f7f9fc;
+  --color-surface-subtle: #fcfcfc;
+  --color-surface-header-start: rgba(255, 255, 255, 0.96);
+  --color-surface-header-end: rgba(247, 249, 252, 0.96);
+  --color-surface-hover: #eef4ff;
+  --color-surface-secondary-btn: #f4f5f7;
+  --color-surface-toast: #1a2744;
+  --color-surface-handle: #cfd4dc;
+
+  /* Text */
+  --color-text-primary: #1a2744;
+  --color-text-secondary: #3d4f66;
+  /* Darkened for WCAG AA contrast on page/surfaces (Epic 9). */
+  --color-text-muted: #4a5568;
+  --color-text-on-primary: #ffffff;
+  --color-text-on-toast: #ffffff;
+  --color-text-error: #b00020;
+
+  /* Borders */
+  --color-border-default: #d0d7e2;
+  --color-border-subtle: #dfe4ec;
+  --color-border-muted: #cfd8e6;
+  --color-border-strong: #b6c8ea;
+  --color-border-input: #c8ced8;
+  --color-border-row: #e2e5eb;
+
+  /* Accent / actions (aligned with shell blues) */
+  --color-accent: #2d4a7c;
+  --color-accent-border: #3d62a8;
+  --color-accent-soft-bg: #eef4ff;
+  --color-accent-soft-border: #9ab3e8;
+  --color-focus-ring: #3366cc;
+
+  /* Primary button (was flat black; now slate aligned with shell) */
+  --color-btn-primary-bg: #1a2744;
+  --color-btn-primary-border: #1a2744;
+
+  /* Danger */
+  --color-danger: #b00020;
+  --color-danger-border: #b00020;
+  --color-danger-surface: #ffffff;
+
+  /* Overlays */
+  --color-backdrop: rgba(15, 23, 42, 0.38);
+  --color-backdrop-strong: rgba(15, 23, 42, 0.45);
+
+  /* Shadows */
+  --shadow-shell: 0 4px 14px rgba(20, 34, 56, 0.1);
+  --shadow-modal: 0 8px 32px rgba(15, 23, 42, 0.18);
+  --shadow-drawer: -4px 0 24px rgba(15, 23, 42, 0.12);
+  --shadow-sheet: 0 -4px 24px rgba(15, 23, 42, 0.14);
+  --shadow-toast: 0 4px 20px rgba(15, 23, 42, 0.22);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --ease-standard: ease;
+
+  /* Z-index */
+  --z-drawer-backdrop: 52;
+  --z-modal-backdrop: 50;
+  --z-sheet-backdrop: 55;
+  --z-toast: 60;
+}
