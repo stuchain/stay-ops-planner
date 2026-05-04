@@ -4,8 +4,10 @@ import { NextResponse } from "next/server";
 import type { BookingStatus, Channel } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
+import { createExcelLedgerManualEntry, upsertExcelLedgerBookingEntry } from "@/modules/excel/excelAuditMutations";
 import type { BookingWithLedgerRelations } from "@/modules/excel/bookingLedgerTypes";
 import { isMissingExcelLedgerTableError } from "@/modules/excel/dbErrors";
 import {
@@ -79,8 +81,9 @@ function rowPayload(
 }
 
 export async function POST(request: NextRequest) {
+  let session;
   try {
-    await requireOperatorOrAdmin(request);
+    session = await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return respondAuthError(request, err);
@@ -102,18 +105,18 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const auditMeta = auditMetaFromRequest(request);
+
   if (parsed.data.kind === "manual") {
     const { year, manualName, manualMonth } = parsed.data;
-    let entry: Awaited<ReturnType<typeof prisma.excelLedgerEntry.create>>;
+    let entry: Awaited<ReturnType<typeof createExcelLedgerManualEntry>>;
     try {
-      entry = await prisma.excelLedgerEntry.create({
-        data: {
-          year,
-          bookingId: null,
-          manualName,
-          manualMonth,
-          overrides: undefined,
-        },
+      entry = await createExcelLedgerManualEntry({
+        year,
+        manualName,
+        manualMonth,
+        actorUserId: session.userId,
+        auditMeta,
       });
     } catch (err) {
       if (!isMissingExcelLedgerTableError(err)) throw err;
@@ -142,22 +145,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(jsonError("NOT_FOUND", "Booking not found"), { status: 404 });
   }
 
-  let entry: Awaited<ReturnType<typeof prisma.excelLedgerEntry.upsert>>;
+  let entry: Awaited<ReturnType<typeof upsertExcelLedgerBookingEntry>>;
   try {
-    entry = await prisma.excelLedgerEntry.upsert({
-      where: {
-        year_bookingId: {
-          year,
-          bookingId,
-        },
-      },
-      create: {
-        year,
-        bookingId,
-        manualName: null,
-        manualMonth: null,
-      },
-      update: {},
+    entry = await upsertExcelLedgerBookingEntry({
+      year,
+      bookingId,
+      actorUserId: session.userId,
+      auditMeta,
     });
   } catch (err) {
     if (!isMissingExcelLedgerTableError(err)) throw err;

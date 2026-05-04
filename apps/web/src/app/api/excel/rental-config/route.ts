@@ -1,11 +1,13 @@
 import type { NextRequest } from "next/server";
 import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
+import { patchExcelRentalConfigLabel } from "@/modules/excel/excelAuditMutations";
 import { getOrCreateExcelRentalConfig } from "@/modules/excel/rentalConfig";
+import { prisma } from "@/lib/prisma";
 
 const PatchBodySchema = z
   .object({
@@ -29,8 +31,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  let session;
   try {
-    await requireOperatorOrAdmin(request);
+    session = await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return respondAuthError(request, err);
@@ -52,19 +55,12 @@ export async function PATCH(request: NextRequest) {
     });
   }
 
-  await getOrCreateExcelRentalConfig(prisma);
   const { index, label } = parsed.data;
-  const data =
-    index === 1
-      ? { label1: label }
-      : index === 2
-        ? { label2: label }
-        : index === 3
-          ? { label3: label }
-          : { label4: label };
-  const updated = await prisma.excelRentalConfig.update({
-    where: { id: 1 },
-    data,
+  const updated = await patchExcelRentalConfigLabel({
+    index: index as 1 | 2 | 3 | 4,
+    label,
+    actorUserId: session.userId,
+    auditMeta: auditMetaFromRequest(request),
   });
 
   return NextResponse.json({

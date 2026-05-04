@@ -5,8 +5,15 @@ import type { BookingStatus, Channel } from "@stay-ops/db";
 import { Prisma } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
+import {
+  clearExcelLedgerEntryOverrides,
+  deleteExcelLedgerManualEntry,
+  ExcelLedgerEntryNotFoundError,
+  patchExcelLedgerEntryOverrides,
+} from "@/modules/excel/excelAuditMutations";
 import type { BookingWithLedgerRelations } from "@/modules/excel/bookingLedgerTypes";
 import { isMissingExcelLedgerTableError } from "@/modules/excel/dbErrors";
 import {
@@ -69,8 +76,9 @@ function rowPayload(
 }
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let session;
   try {
-    await requireOperatorOrAdmin(request);
+    session = await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return respondAuthError(request, err);
@@ -94,6 +102,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     });
   }
 
+  const auditMeta = auditMetaFromRequest(request);
+
   try {
     const existing = await prisma.excelLedgerEntry.findUnique({ where: { id } });
     if (!existing) {
@@ -107,13 +117,23 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         : prevOverrides;
 
     const overrideKeys = Object.keys(nextOverrides as Record<string, unknown>);
-    const updated = await prisma.excelLedgerEntry.update({
-      where: { id },
-      data: {
-        overrides:
-          overrideKeys.length === 0 ? Prisma.JsonNull : (nextOverrides as Prisma.InputJsonValue),
-      },
-    });
+    const overridesValue =
+      overrideKeys.length === 0 ? Prisma.JsonNull : (nextOverrides as Prisma.InputJsonValue);
+
+    let updated;
+    try {
+      updated = await patchExcelLedgerEntryOverrides({
+        entryId: id,
+        nextOverrides: overridesValue,
+        actorUserId: session.userId,
+        auditMeta,
+      });
+    } catch (err) {
+      if (err instanceof ExcelLedgerEntryNotFoundError) {
+        return NextResponse.json(jsonError("NOT_FOUND", "Ledger entry not found"), { status: 404 });
+      }
+      throw err;
+    }
 
     let auto: LedgerRow;
     let bookingMeta: { channel: Channel; status: BookingStatus } | null = null;
@@ -147,8 +167,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 }
 
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let session;
   try {
-    await requireOperatorOrAdmin(request);
+    session = await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return respondAuthError(request, err);
@@ -157,6 +178,8 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   }
 
   const { id } = await ctx.params;
+  const auditMeta = auditMetaFromRequest(request);
+
   try {
     const existing = await prisma.excelLedgerEntry.findUnique({ where: { id } });
     if (!existing) {
@@ -164,14 +187,34 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     }
 
     if (existing.bookingId == null) {
-      await prisma.excelLedgerEntry.delete({ where: { id } });
+      try {
+        await deleteExcelLedgerManualEntry({
+          entryId: id,
+          actorUserId: session.userId,
+          auditMeta,
+        });
+      } catch (err) {
+        if (err instanceof ExcelLedgerEntryNotFoundError) {
+          return NextResponse.json(jsonError("NOT_FOUND", "Ledger entry not found"), { status: 404 });
+        }
+        throw err;
+      }
       return NextResponse.json({ data: { deleted: true } });
     }
 
-    const updated = await prisma.excelLedgerEntry.update({
-      where: { id },
-      data: { overrides: Prisma.JsonNull },
-    });
+    let updated;
+    try {
+      updated = await clearExcelLedgerEntryOverrides({
+        entryId: id,
+        actorUserId: session.userId,
+        auditMeta,
+      });
+    } catch (err) {
+      if (err instanceof ExcelLedgerEntryNotFoundError) {
+        return NextResponse.json(jsonError("NOT_FOUND", "Ledger entry not found"), { status: 404 });
+      }
+      throw err;
+    }
 
     const booking = await prisma.booking.findUnique({
       where: { id: updated.bookingId! },

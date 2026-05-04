@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
+import { ExcelListingNotFoundError, patchExcelListingRentalIndex } from "@/modules/excel/excelAuditMutations";
 
 const PatchBodySchema = z
   .object({
@@ -13,8 +14,9 @@ const PatchBodySchema = z
   .strict();
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let session;
   try {
-    await requireOperatorOrAdmin(request);
+    session = await requireOperatorOrAdmin(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return respondAuthError(request, err);
@@ -39,9 +41,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
 
   try {
-    const updated = await prisma.sourceListing.update({
-      where: { id },
-      data: { rentalIndex: parsed.data.rentalIndex },
+    const updated = await patchExcelListingRentalIndex({
+      listingId: id,
+      rentalIndex: parsed.data.rentalIndex,
+      actorUserId: session.userId,
+      auditMeta: auditMetaFromRequest(request),
     });
     return NextResponse.json({
       data: {
@@ -52,9 +56,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         rentalIndex: updated.rentalIndex,
       },
     });
-  } catch (err: unknown) {
-    const code = typeof err === "object" && err !== null && "code" in err ? (err as { code?: string }).code : undefined;
-    if (code === "P2025") {
+  } catch (err) {
+    if (err instanceof ExcelListingNotFoundError) {
       return NextResponse.json(jsonError("NOT_FOUND", "Listing not found"), { status: 404 });
     }
     throw err;
