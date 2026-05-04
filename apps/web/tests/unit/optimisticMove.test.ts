@@ -135,6 +135,8 @@ describe("parseLaneDropTarget", () => {
 describe("bookingItemToDragPayload", () => {
   it("builds drag payload from calendar item", () => {
     const item = basePayload().items[0];
+    expect(item).toBeDefined();
+    if (!item) return;
     expect(item.kind).toBe("booking");
     if (item.kind !== "booking") return;
     expect(bookingItemToDragPayload(item)).toEqual({
