@@ -223,7 +223,7 @@ body {
 .ops-needs-label {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #3f8d8f;
+  color: #15494c;
   padding: 0.75rem 0.65rem;
   border-right: 1px solid #eee;
   background: #f8fbfb;
@@ -472,7 +472,7 @@ body {
 
 .ops-timeline-head-dow {
   font-size: 0.62rem;
-  color: #777;
+  color: #525252;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -490,7 +490,7 @@ body {
 .ops-timeline-room-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #3f8d8f;
+  color: #15494c;
   padding: 0.5rem 0.45rem;
   border-right: 1px solid #eee;
   background: #f8fbfb;

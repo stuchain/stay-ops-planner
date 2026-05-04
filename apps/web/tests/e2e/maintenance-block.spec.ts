@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { e2eCredentials, gotoCalendarAndWaitReady, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 test.describe("maintenance blocks", () => {
-  test.beforeEach(() => {
-    reseedE2EFixtures();
+  test.beforeEach(async () => {
+    await reseedE2EFixtures();
   });
 
   test("open edit on seeded block and cancel", async ({ page }) => {

@@ -26,12 +26,12 @@ async function assignE2EUnassignedToRoomA(page: Page): Promise<void> {
 }
 
 test.describe("calendar allocation", () => {
-  test.beforeEach(() => {
+  test.beforeEach(async () => {
     test.skip(
       test.info().project.name === "mobile-chromium",
       "Desktop-only coverage here; mobile path has dedicated quick-assign spec.",
     );
-    reseedE2EFixtures();
+    await reseedE2EFixtures();
   });
 
   test("assign unassigned booking to E2E-A via queue when data exists", async ({ page }) => {

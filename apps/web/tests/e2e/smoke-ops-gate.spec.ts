@@ -4,8 +4,8 @@ import { applyCancellationSideEffects, applyHosthubReservation } from "@stay-ops
 import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 test.describe("ops gate smoke @smoke", () => {
-  test.beforeEach(() => {
-    reseedE2EFixtures();
+  test.beforeEach(async () => {
+    await reseedE2EFixtures();
   });
 
   test("@smoke end-to-end operator loop", async ({ page }) => {

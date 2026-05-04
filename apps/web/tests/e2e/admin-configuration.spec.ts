@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 test.describe("admin configuration", () => {
-  test.beforeEach(() => {
-    reseedE2EFixtures();
+  test.beforeEach(async () => {
+    await reseedE2EFixtures();
   });
 
   test("loads admin page and persists a threshold update", async ({ page }) => {

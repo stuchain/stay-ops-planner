@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 test.describe("cleaning board", () => {
-  test.beforeEach(() => {
-    reseedE2EFixtures();
+  test.beforeEach(async () => {
+    await reseedE2EFixtures();
   });
 
   test("todo to done lifecycle when tasks exist", async ({ page }) => {

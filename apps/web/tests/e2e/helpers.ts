@@ -1,13 +1,30 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { expect, type Page } from "@playwright/test";
+import Redis from "ioredis";
 
 /** Default DB URL must match `playwright.config.ts` `webServerEnv.DATABASE_URL` so reseed hits the same Postgres schema as Next.js. */
 const DEFAULT_E2E_DATABASE_URL =
   "postgresql://stayops:stayops@127.0.0.1:5432/stayops?schema=e2e";
 
+async function deleteCalendarMonthCacheKeys(redisUrl: string): Promise<void> {
+  const r = new Redis(redisUrl, { maxRetriesPerRequest: 3 });
+  try {
+    let cursor = "0";
+    do {
+      const [next, keys] = await r.scan(cursor, "MATCH", "cal:month:v1:*", "COUNT", "200");
+      cursor = next;
+      if (keys.length > 0) {
+        await r.del(...keys);
+      }
+    } while (cursor !== "0");
+  } finally {
+    await r.quit();
+  }
+}
+
 /** Re-applies `packages/db` E2E fixtures (run from repo root via `pnpm --filter @stay-ops/web test:e2e`, cwd is `apps/web`). */
-export function reseedE2EFixtures(): void {
+export async function reseedE2EFixtures(): Promise<void> {
   const repoRoot = path.join(process.cwd(), "../..");
   try {
     execSync("corepack pnpm --filter @stay-ops/db seed:e2e", {
@@ -20,6 +37,10 @@ export function reseedE2EFixtures(): void {
     });
   } catch (error) {
     throw new Error(`E2E fixture reseed failed. Verify DATABASE_URL and db seed state. Cause: ${String(error)}`);
+  }
+  const redisUrl = process.env.REDIS_URL?.trim();
+  if (redisUrl) {
+    await deleteCalendarMonthCacheKeys(redisUrl);
   }
 }
 

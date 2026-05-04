@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 test.describe("critical journey @smoke", () => {
-  test.beforeEach(() => {
-    reseedE2EFixtures();
+  test.beforeEach(async () => {
+    await reseedE2EFixtures();
   });
 
   test("@smoke login → calendar sync warnings → booking detail", async ({ page }) => {
