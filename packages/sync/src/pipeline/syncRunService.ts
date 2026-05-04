@@ -1,5 +1,7 @@
 import type { Prisma } from "@stay-ops/db";
 import { PrismaClient } from "@stay-ops/db";
+import { invalidateCalendarForImportErrorInstant, resolveAppTimeZone } from "@stay-ops/shared/calendar-month-cache";
+import { log } from "@stay-ops/shared";
 
 export type SyncRunStatsJson = {
   fetched: number;
@@ -58,4 +60,13 @@ export async function recordImportError(
       payload: payload ?? undefined,
     },
   });
+  const redisUrl = process.env.REDIS_URL?.trim();
+  if (redisUrl) {
+    void invalidateCalendarForImportErrorInstant(redisUrl, resolveAppTimeZone(), new Date()).catch((e) => {
+      log("warn", "calendar_month_cache_invalidate_failed", {
+        op: "recordImportError",
+        err: e instanceof Error ? e.message : String(e),
+      });
+    });
+  }
 }

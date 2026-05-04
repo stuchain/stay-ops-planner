@@ -31,9 +31,27 @@ async function main() {
 
   worker.on("failed", (job, err) => {
     console.error("sync job failed", job?.name, job?.id, err);
+    let dataPreview = "";
+    let payloadBytes = 0;
+    try {
+      const raw = JSON.stringify(job?.data ?? null);
+      payloadBytes = Buffer.byteLength(raw, "utf8");
+      dataPreview = raw.length > 400 ? `${raw.slice(0, 400)}…` : raw;
+    } catch {
+      dataPreview = "(unserializable job.data)";
+    }
     void Sentry.captureException(err, {
       tags: { queue: SYNC_HOSTHUB_QUEUE_NAME, job: job?.name ?? "unknown" },
-      extra: { jobId: job?.id },
+      extra: {
+        jobId: job?.id,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts?.attempts,
+        failedReason: job?.failedReason,
+        timestamp: job?.timestamp,
+        finishedOn: job?.finishedOn,
+        payloadBytes,
+        dataPreview,
+      },
     });
   });
 

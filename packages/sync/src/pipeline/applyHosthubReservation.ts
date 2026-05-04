@@ -1,4 +1,5 @@
 import { writeAuditSnapshot } from "@stay-ops/audit";
+import { invalidateCalendarMonthsForUtcRange, resolveAppTimeZone } from "@stay-ops/shared/calendar-month-cache";
 import { DryRunRollback, PlanRecorder, log, withRetry } from "@stay-ops/shared";
 import type { Prisma } from "@stay-ops/db";
 import {
@@ -388,4 +389,38 @@ export async function applyHosthubReservation(
       },
     },
   );
+
+  if (!dryRun) {
+    const redisUrl = process.env.REDIS_URL?.trim();
+    if (redisUrl) {
+      const channel = mapHosthubListingChannel(dto.listingChannel);
+      try {
+        const row = await prisma.booking.findUnique({
+          where: {
+            channel_externalBookingId: { channel, externalBookingId: dto.reservationId },
+          },
+          include: { assignment: true },
+        });
+        if (row) {
+          let from = row.checkinDate;
+          let to = row.checkoutDate;
+          if (row.assignment) {
+            if (row.assignment.startDate.getTime() < from.getTime()) from = row.assignment.startDate;
+            if (row.assignment.endDate.getTime() > to.getTime()) to = row.assignment.endDate;
+          }
+          void invalidateCalendarMonthsForUtcRange(redisUrl, resolveAppTimeZone(), from, to).catch((e) => {
+            log("warn", "calendar_month_cache_invalidate_failed", {
+              op: "applyHosthubReservation",
+              err: e instanceof Error ? e.message : String(e),
+            });
+          });
+        }
+      } catch (e) {
+        log("warn", "calendar_month_cache_invalidate_lookup_failed", {
+          op: "applyHosthubReservation",
+          err: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  }
 }
