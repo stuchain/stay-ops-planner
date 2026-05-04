@@ -7,6 +7,7 @@ import {
   TURNOVER_TASK_TYPE,
 } from "@stay-ops/db";
 import { DryRunRollback, isDryRunRollback, PlanRecorder, type DryRunResult } from "@stay-ops/shared";
+import { fireInvalidateCalendarForBookingStay } from "@/lib/calendarMonthCacheInvalidate";
 import { prisma } from "@/lib/prisma";
 import { AllocationError } from "./errors";
 import { throwIfStayConflict } from "./stayConflict";
@@ -362,6 +363,9 @@ export async function bulkAssignBookings(input: BulkAssignBookingsInput): Promis
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    for (const r of results) {
+      fireInvalidateCalendarForBookingStay(r.assignment.startDate, r.assignment.endDate);
+    }
     return { dryRun: false, results };
   } catch (err) {
     if (isDryRunRollback(err)) {
@@ -377,10 +381,12 @@ export async function bulkAssignBookings(input: BulkAssignBookingsInput): Promis
  */
 export async function assignBookingToRoom(input: AssignInput): Promise<AssignmentCommandResult> {
   try {
-    return await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => assignBookingToRoomTx(tx, input),
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    fireInvalidateCalendarForBookingStay(result.assignment.startDate, result.assignment.endDate);
+    return result;
   } catch (err) {
     mapAssignmentWriteConflict(err);
   }
@@ -388,7 +394,7 @@ export async function assignBookingToRoom(input: AssignInput): Promise<Assignmen
 
 export async function reassignRoom(input: ReassignInput): Promise<AssignmentCommandResult> {
   try {
-    return await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
       const existing = await tx.assignment.findUnique({
         where: { id: input.assignmentId },
@@ -474,13 +480,15 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+    fireInvalidateCalendarForBookingStay(result.assignment.startDate, result.assignment.endDate);
+    return result;
   } catch (err) {
     mapAssignmentWriteConflict(err);
   }
 }
 
 export async function unassignBooking(input: UnassignInput): Promise<{ auditRef: string }> {
-  return prisma.$transaction(
+  const { auditRef, startDate, endDate } = await prisma.$transaction(
     async (tx) => {
       const existing = await tx.assignment.findUnique({
         where: { id: input.assignmentId },
@@ -530,10 +538,12 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
         meta: { bookingId: existing.bookingId, ...(input.auditMeta ?? {}) },
       });
 
-      return { auditRef };
+      return { auditRef, startDate: existing.startDate, endDate: existing.endDate };
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+  fireInvalidateCalendarForBookingStay(startDate, endDate);
+  return { auditRef };
 }
 
 /** Bookings with no room assignment overlapping `[from, to)` (half-open on dates). */

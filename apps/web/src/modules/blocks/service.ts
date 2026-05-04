@@ -1,4 +1,5 @@
 import { findStayConflict } from "@stay-ops/db";
+import { fireInvalidateCalendarForBookingStay } from "@/lib/calendarMonthCacheInvalidate";
 import { prisma } from "@/lib/prisma";
 import { throwIfStayConflict } from "../allocation/stayConflict";
 import { writeAuditSnapshot } from "@stay-ops/audit";
@@ -72,6 +73,9 @@ export async function createManualBlock(input: CreateManualBlockInput) {
       meta: { roomId: created.roomId, ...(input.auditMeta ?? {}) },
     });
     return created;
+  }).then((created) => {
+    fireInvalidateCalendarForBookingStay(created.startDate, created.endDate);
+    return created;
   });
 }
 
@@ -125,6 +129,10 @@ export async function updateManualBlock(blockId: string, patch: UpdateManualBloc
       },
       meta: { roomId: updated.roomId, ...(patch.auditMeta ?? {}) },
     });
+    return { updated, existing };
+  }).then(({ updated, existing }) => {
+    fireInvalidateCalendarForBookingStay(existing.startDate, existing.endDate);
+    fireInvalidateCalendarForBookingStay(updated.startDate, updated.endDate);
     return updated;
   });
 }
@@ -134,9 +142,9 @@ export async function deleteManualBlock(
   actorUserId?: string,
   auditMeta?: Record<string, unknown>,
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const existing = await tx.manualBlock.findUnique({ where: { id: blockId } });
-    if (!existing) {
+  const existing = await prisma.$transaction(async (tx) => {
+    const row = await tx.manualBlock.findUnique({ where: { id: blockId } });
+    if (!row) {
       throw new BlockNotFoundError(blockId);
     }
     await tx.manualBlock.delete({ where: { id: blockId } });
@@ -146,15 +154,17 @@ export async function deleteManualBlock(
       entityType: "manual_block",
       entityId: blockId,
       before: {
-        roomId: existing.roomId,
-        startDate: existing.startDate.toISOString().slice(0, 10),
-        endDate: existing.endDate.toISOString().slice(0, 10),
-        reason: existing.reason,
+        roomId: row.roomId,
+        startDate: row.startDate.toISOString().slice(0, 10),
+        endDate: row.endDate.toISOString().slice(0, 10),
+        reason: row.reason,
       },
       after: null,
-      meta: { roomId: existing.roomId, ...(auditMeta ?? {}) },
+      meta: { roomId: row.roomId, ...(auditMeta ?? {}) },
     });
+    return row;
   });
+  fireInvalidateCalendarForBookingStay(existing.startDate, existing.endDate);
 }
 
 /** Phase 4 traceability name: delegates to the same transaction helpers as the free functions. */

@@ -1,4 +1,6 @@
 import { BookingStatus, Channel } from "@stay-ops/db";
+import { getCachedCalendarMonthJson, setCachedCalendarMonthJson } from "@stay-ops/shared/calendar-month-cache";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { extractDailyRatesFromHosthubJson } from "./hosthubDailyRates";
 import { zonedMonthRangeUtc } from "./monthBounds";
@@ -83,17 +85,19 @@ export type DailyRatesByRoomDay = Record<
   Record<string, { amountCents: number; currency: string }>
 >;
 
-export async function getCalendarMonthAggregate(args: {
-  yearMonth: string;
-  timeZone: string;
-}): Promise<{
+export type CalendarMonthAggregatePayload = {
   month: string;
   timezone: string;
   rooms: CalendarRoomDto[];
   items: (CalendarBookingItem | CalendarBlockItem)[];
   markers: CalendarMarker[];
   dailyRatesByRoomDay: DailyRatesByRoomDay;
-}> {
+};
+
+async function computeCalendarMonthAggregate(args: {
+  yearMonth: string;
+  timeZone: string;
+}): Promise<CalendarMonthAggregatePayload> {
   const { monthStartUtc, monthEndExclusiveUtc } = zonedMonthRangeUtc(args.yearMonth, args.timeZone);
 
   const roomsRaw = await prisma.room.findMany({
@@ -249,4 +253,33 @@ export async function getCalendarMonthAggregate(args: {
     markers,
     dailyRatesByRoomDay,
   };
+}
+
+/**
+ * Calendar month DTO with optional Redis cache-aside (Epic 12).
+ * When `REDIS_URL` is unset, always computes fresh.
+ */
+export async function getCalendarMonthAggregate(args: {
+  yearMonth: string;
+  timeZone: string;
+}): Promise<CalendarMonthAggregatePayload> {
+  const redisUrl = process.env.REDIS_URL?.trim();
+  if (redisUrl) {
+    const cached = await getCachedCalendarMonthJson(redisUrl, args.timeZone, args.yearMonth);
+    if (cached) {
+      try {
+        return JSON.parse(cached) as CalendarMonthAggregatePayload;
+      } catch {
+        log("warn", "calendar_month_cache_corrupt", { yearMonth: args.yearMonth });
+      }
+    }
+  }
+
+  const data = await computeCalendarMonthAggregate(args);
+
+  if (redisUrl) {
+    await setCachedCalendarMonthJson(redisUrl, args.timeZone, args.yearMonth, JSON.stringify(data));
+  }
+
+  return data;
 }
