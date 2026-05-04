@@ -60,6 +60,8 @@ async function main() {
   const m0 = now.getMonth();
   const ym = `${y}-${String(m0 + 1).padStart(2, "0")}`;
 
+  await prisma.syncRun.deleteMany({ where: { source: "e2e_seed_calendar_warning" } });
+
   await wipeE2eBookings();
   await wipeE2eBlocksAndRooms();
 
@@ -86,7 +88,29 @@ async function main() {
       checkinDate: earlyStart,
       checkoutDate: earlyEnd,
       nights: nightsEarly,
+      guestName: "E2E Alpha",
       rawPayload: { guest: "E2E Alpha" },
+    },
+  });
+
+  /** Calendar `import_errors` markers for the seeded month (Epic 10 smoke: SyncWarningsInfo). */
+  const markerDay = utcYmd(y, m0, 10);
+  const e2eSyncRun = await prisma.syncRun.create({
+    data: {
+      source: "e2e_seed_calendar_warning",
+      status: "completed",
+      startedAt: markerDay,
+      completedAt: markerDay,
+    },
+  });
+  await prisma.importError.create({
+    data: {
+      syncRunId: e2eSyncRun.id,
+      code: "E2E_IMPORT_WARNING",
+      message: "E2E seeded sync warning",
+      payload: { bookingId: bAlpha.id },
+      resolved: false,
+      createdAt: markerDay,
     },
   });
 
@@ -98,6 +122,7 @@ async function main() {
       checkinDate: midStart,
       checkoutDate: midEnd,
       nights: nightsMid,
+      guestName: "E2E Bravo",
       rawPayload: { guest: "E2E Bravo" },
     },
   });
@@ -110,6 +135,7 @@ async function main() {
       checkinDate: midStart,
       checkoutDate: midEnd,
       nights: nightsMid,
+      guestName: "E2E Unassigned",
       rawPayload: { guest: "E2E Unassigned" },
     },
   });
@@ -122,6 +148,7 @@ async function main() {
       checkinDate: midStart,
       checkoutDate: midEnd,
       nights: nightsMid,
+      guestName: "E2E Delta",
       rawPayload: { guest: "E2E Delta" },
     },
   });
