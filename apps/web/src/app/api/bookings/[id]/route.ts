@@ -1,13 +1,17 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { writeAuditSnapshot } from "@stay-ops/audit";
 import { BookingStatus, Prisma } from "@stay-ops/db";
 import { applyCancellationSideEffects } from "@stay-ops/sync";
+import { fireInvalidateCalendarForBookingStay } from "@/lib/calendarMonthCacheInvalidate";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { attachTraceToResponse, apiError } from "@/lib/apiError";
+import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { InvalidBookingStatusTransitionError, assertBookingStatusTransition } from "@/modules/booking/statusTransition";
+import { bookingToAuditSnapshot } from "@/modules/bookings/bookingAuditSnapshot";
 import { bookingDetailFromModel, mergeEditablePayload } from "@/modules/bookings/details";
 
 const PatchBodySchema = z
@@ -125,13 +129,29 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       return apiError(request, "VALIDATION_ERROR", "No changes provided", 400);
     }
 
+    const auditMeta = auditMetaFromRequest(request);
+
     try {
       const updated = await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${id} FOR UPDATE`;
 
         const locked = await tx.booking.findUnique({
           where: { id },
-          select: { version: true, status: true },
+          select: {
+            version: true,
+            status: true,
+            guestName: true,
+            guestEmail: true,
+            guestPhone: true,
+            guestAdults: true,
+            guestChildren: true,
+            guestInfants: true,
+            guestTotal: true,
+            totalAmountCents: true,
+            currency: true,
+            notes: true,
+            action: true,
+          },
         });
         if (!locked) {
           throw new Error("BOOKING_NOT_FOUND");
@@ -142,6 +162,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
         const becameCancelled =
           parsed.data.status === BookingStatus.cancelled && locked.status !== BookingStatus.cancelled;
+
+        const beforeSnapshot = bookingToAuditSnapshot(locked);
 
         let row;
         if (parsed.data.expectedVersion !== undefined) {
@@ -170,12 +192,24 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           });
         }
 
+        await writeAuditSnapshot(tx, {
+          actorUserId: session.userId,
+          action: "booking.update",
+          entityType: "booking",
+          entityId: id,
+          before: beforeSnapshot,
+          after: bookingToAuditSnapshot(row),
+          meta: { bookingId: id, ...auditMeta },
+        });
+
         if (becameCancelled) {
           await applyCancellationSideEffects(tx, id, session.userId, { skipAudit: false });
         }
 
         return row;
       });
+
+      fireInvalidateCalendarForBookingStay(updated.checkinDate, updated.checkoutDate);
 
       return attachTraceToResponse(
         request,
