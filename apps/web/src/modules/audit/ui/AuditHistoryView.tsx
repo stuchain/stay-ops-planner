@@ -109,6 +109,49 @@ export function AuditHistoryView() {
     return q.toString();
   }, [entityType, bookingId, roomId, actorUserId, from, to]);
 
+  const exportQueryString = useMemo(() => {
+    const q = new URLSearchParams();
+    q.set("from", from);
+    q.set("to", to);
+    if (entityType.trim()) q.set("entityType", entityType.trim());
+    if (bookingId.trim()) q.set("bookingId", bookingId.trim());
+    if (roomId.trim()) q.set("roomId", roomId.trim());
+    if (actorUserId.trim()) q.set("actorUserId", actorUserId.trim());
+    q.set("format", "ndjson");
+    return q.toString();
+  }, [entityType, bookingId, roomId, actorUserId, from, to]);
+
+  const [exporting, setExporting] = useState(false);
+
+  async function exportNdjson() {
+    setExporting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/audit/export?${exportQueryString}`, { credentials: "include" });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition");
+      const match = cd?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? "audit-export.ndjson";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function load(reset: boolean, cursor?: string | null) {
     setLoading(true);
     setError(null);
@@ -164,6 +207,9 @@ export function AuditHistoryView() {
           Actor user id
           <input className="ops-input" value={actorUserId} onChange={(e) => setActorUserId(e.target.value)} />
         </label>
+        <button type="button" className="ops-btn ops-btn-primary" disabled={exporting} onClick={() => void exportNdjson()}>
+          {exporting ? "Exporting…" : "Export NDJSON"}
+        </button>
       </div>
       {loading && <p className="ops-muted">Loading audit events…</p>}
       {error && <p className="ops-error">{error}</p>}
