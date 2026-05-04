@@ -35,6 +35,11 @@
       "types": "./dist/log/log.d.ts",
       "import": "./dist/log/log.js",
       "default": "./dist/log/log.js"
+    },
+    "./calendar-month-cache": {
+      "types": "./dist/calendar/calendarMonthRedisCache.d.ts",
+      "import": "./dist/calendar/calendarMonthRedisCache.js",
+      "default": "./dist/calendar/calendarMonthRedisCache.js"
     }
   },
   "scripts": {
@@ -44,6 +49,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "ioredis": "^5.4.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
