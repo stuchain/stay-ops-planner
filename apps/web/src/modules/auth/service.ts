@@ -13,6 +13,14 @@ export const LoginBodySchema = z.object({
 
 export type LoginBody = z.infer<typeof LoginBodySchema>;
 
+export const PatchMeBodySchema = z.object({
+  uiLocale: z.enum(["en", "el"]),
+});
+
+export type PatchMeBody = z.infer<typeof PatchMeBodySchema>;
+
+export type UiLocaleCode = "en" | "el";
+
 type UserRowByEmail = {
   id: string;
   email: string;
@@ -26,6 +34,7 @@ type UserRowById = {
   email: string;
   is_active: boolean;
   role: string;
+  ui_locale?: string | null;
 };
 
 function toSessionRole(value: string): SessionRole {
@@ -38,6 +47,13 @@ function isMissingRoleColumnError(err: unknown): boolean {
   if (err.code !== "P2010") return false;
   const meta = err.meta as { code?: string; message?: string } | undefined;
   return meta?.code === "42703" && typeof meta.message === "string" && meta.message.includes("\"role\"");
+}
+
+function isMissingUiLocaleColumnError(err: unknown): boolean {
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (err.code !== "P2010") return false;
+  const meta = err.meta as { code?: string; message?: string } | undefined;
+  return meta?.code === "42703" && typeof meta.message === "string" && meta.message.includes("\"ui_locale\"");
 }
 
 function invalidCredentials(): AuthError {
@@ -115,30 +131,66 @@ export async function getMeFromSessionToken(token: string) {
   let userRows: UserRowById[];
   try {
     userRows = await prisma.$queryRaw<UserRowById[]>`
-      SELECT id, email, is_active, role::text as role
+      SELECT id, email, is_active, role::text as role, ui_locale::text as ui_locale
       FROM users
       WHERE id = ${session.userId}
       LIMIT 1
     `;
   } catch (err) {
-    if (!isMissingRoleColumnError(err)) throw err;
-    const legacyRows = await prisma.$queryRaw<Array<Omit<UserRowById, "role">>>`
-      SELECT id, email, is_active
-      FROM users
-      WHERE id = ${session.userId}
-      LIMIT 1
-    `;
-    userRows = legacyRows.map((row) => ({ ...row, role: "operator" }));
+    if (isMissingUiLocaleColumnError(err)) {
+      try {
+        const rows = await prisma.$queryRaw<Omit<UserRowById, "ui_locale">[]>`
+          SELECT id, email, is_active, role::text as role
+          FROM users
+          WHERE id = ${session.userId}
+          LIMIT 1
+        `;
+        userRows = rows.map((row) => ({ ...row, ui_locale: "en" }));
+      } catch (err2) {
+        if (!isMissingRoleColumnError(err2)) throw err2;
+        const legacyRows = await prisma.$queryRaw<Array<Omit<UserRowById, "role" | "ui_locale">>>`
+          SELECT id, email, is_active
+          FROM users
+          WHERE id = ${session.userId}
+          LIMIT 1
+        `;
+        userRows = legacyRows.map((row) => ({ ...row, role: "operator", ui_locale: "en" }));
+      }
+    } else if (isMissingRoleColumnError(err)) {
+      const legacyRows = await prisma.$queryRaw<Array<Omit<UserRowById, "role">>>`
+        SELECT id, email, is_active
+        FROM users
+        WHERE id = ${session.userId}
+        LIMIT 1
+      `;
+      userRows = legacyRows.map((row) => ({ ...row, role: "operator", ui_locale: "en" }));
+    } else {
+      throw err;
+    }
   }
 
   const user = userRows[0];
   if (!user) throw unauthorized();
   if (!user.is_active) throw accountDisabled();
 
+  const uiLocale: UiLocaleCode = user.ui_locale === "el" ? "el" : "en";
+
   return {
-    user: { id: user.id, email: user.email, role: toSessionRole(user.role) },
+    user: {
+      id: user.id,
+      email: user.email,
+      role: toSessionRole(user.role),
+      uiLocale,
+    },
     sessionExpiresAt: session.expiresAt.toISOString(),
   };
+}
+
+export async function patchMyUiLocale(userId: string, uiLocale: UiLocaleCode): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { uiLocale },
+  });
 }
 
 export function assertLogoutTokenPresent(token: string | null) {

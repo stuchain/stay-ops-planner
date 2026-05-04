@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 
 export function LoginForm() {
   const router = useRouter();
@@ -12,6 +12,10 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const formId = useId();
+  const emailId = `${formId}-email`;
+  const passwordId = `${formId}-password`;
+  const errorId = `${formId}-error`;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -40,29 +44,39 @@ export function LoginForm() {
     <form className="ops-login-form" onSubmit={onSubmit}>
       <h1>Stay Ops Planner</h1>
       <p className="ops-muted">Sign in to continue.</p>
-      <label className="ops-label">
-        Email
+      <div className="ops-label">
+        <label htmlFor={emailId}>Email</label>
         <input
+          id={emailId}
           className="ops-input"
           type="email"
           autoComplete="username"
           value={email}
           onChange={(ev) => setEmail(ev.target.value)}
           required
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
-      </label>
-      <label className="ops-label">
-        Password
+      </div>
+      <div className="ops-label">
+        <label htmlFor={passwordId}>Password</label>
         <input
+          id={passwordId}
           className="ops-input"
           type="password"
           autoComplete="current-password"
           value={password}
           onChange={(ev) => setPassword(ev.target.value)}
           required
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
-      </label>
-      {error && <p className="ops-error">{error}</p>}
+      </div>
+      {error ? (
+        <p id={errorId} className="ops-error" role="alert">
+          {error}
+        </p>
+      ) : null}
       <button type="submit" className="ops-btn ops-btn-primary" disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
       </button>
