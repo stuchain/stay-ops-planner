@@ -1,12 +1,143 @@
-name: E2E
+name: Web CI
 
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
+  schema-drift:
+    name: schema-drift
+    runs-on: ubuntu-latest
+
+    services:
+      # `prisma migrate diff --from-migrations` requires a shadow database to
+      # replay migrations against before comparing the resulting schema to
+      # `schema.prisma`. We use a dedicated short-lived Postgres for this so
+      # the drift gate runs independently of the integration DB.
+      shadow:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: stayops
+          POSTGRES_PASSWORD: stayops
+          POSTGRES_DB: shadow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U stayops -d shadow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 8
+          --health-start-period 10s
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Generate Prisma client
+        run: pnpm --filter @stay-ops/db generate
+      - name: Detect drift between schema.prisma and migrations/
+        # Replays prisma/migrations/ on a clean shadow database, compares the
+        # resulting schema to `schema.prisma`, and exits 2 if they diverge
+        # (e.g. schema edited without a new migration, or migration was edited
+        # after being applied elsewhere). We translate exit 2 into a clear
+        # actionable error so the failure surface explains itself.
+        run: |
+          set +e
+          pnpm --filter @stay-ops/db exec prisma migrate diff \
+            --exit-code \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "postgresql://stayops:stayops@localhost:5433/shadow"
+          status=$?
+          set -e
+          if [ "$status" = "0" ]; then
+            echo "Schema and migrations are in sync."
+            exit 0
+          fi
+          if [ "$status" = "2" ]; then
+            echo "::error title=Schema drift detected::schema.prisma has changes not represented in prisma/migrations/. Run 'pnpm --filter @stay-ops/db migrate:dev --name <change>' locally and commit the generated migration."
+            exit 1
+          fi
+          echo "::error::prisma migrate diff failed with exit code $status (not a drift signal)."
+          exit "$status"
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: stayops
+          POSTGRES_PASSWORD: stayops
+          POSTGRES_DB: stayops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stayops -d stayops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 8
+          --health-start-period 10s
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 8
+
+    env:
+      DATABASE_URL: postgresql://stayops:stayops@localhost:5432/stayops_test
+      TEST_DATABASE_URL: postgresql://stayops:stayops@localhost:5432/stayops_test
+      REDIS_URL: redis://localhost:6379
+      SESSION_SECRET: ci-integration-session-secret-at-least-32-chars-long
+      APP_TIMEZONE: Etc/UTC
+      BOOTSTRAP_ADMIN_EMAIL: integration-admin@stayops.local
+      BOOTSTRAP_ADMIN_PASSWORD: Integration_Test_Password_12+
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Build workspace packages
+        run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/audit build && pnpm --filter @stay-ops/sync build
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y postgresql-client
+
+      - name: Ensure stayops_test database exists
+        run: bash scripts/ci-ensure-test-db.sh
+
+      - name: Migrate integration database
+        run: pnpm --filter @stay-ops/db exec prisma migrate deploy
+
+      - name: Verify migration history is fully applied (no drift)
+        # `prisma migrate status` exits non-zero if migrations are pending,
+        # rolled back, or unknown to the local history. After `migrate deploy`
+        # this should always be a clean confirmation; any failure indicates
+        # a divergence between committed migrations and what was applied.
+        run: pnpm --filter @stay-ops/db exec prisma migrate status
+
+      - name: Seed bootstrap admin
+        run: pnpm --filter @stay-ops/db seed
+
+      - name: Run Vitest integration
+        run: pnpm --filter @stay-ops/web exec vitest run --project integration --no-file-parallelism
+
   playwright:
+    name: playwright
     runs-on: ubuntu-latest
 
     services:
@@ -49,14 +180,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-node-pnpm
 
       - name: Build workspace packages
         run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/audit build && pnpm --filter @stay-ops/sync build
@@ -70,10 +194,16 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter @stay-ops/web exec playwright install chromium --with-deps
 
+      - name: Storybook build (Epic 8 primitives)
+        run: pnpm --filter @stay-ops/web run build-storybook
+        env:
+          CI: true
+          STORYBOOK_DISABLE_TELEMETRY: "1"
+
       - name: Run Playwright
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pnpm --filter @stay-ops/web test:e2e -- --grep "@smoke"
+            pnpm --filter @stay-ops/web test:e2e -- --grep "@smoke|@a11y"
           else
             pnpm --filter @stay-ops/web test:e2e
           fi
