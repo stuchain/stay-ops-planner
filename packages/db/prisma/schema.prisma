@@ -215,6 +215,7 @@ model ManualBlock {
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
+  @@index([roomId, startDate, endDate])
   @@map("manual_blocks")
 }
 
