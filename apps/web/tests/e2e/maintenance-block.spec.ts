@@ -49,7 +49,7 @@ test.describe("maintenance blocks", () => {
     await loginAsStaff(page);
     await gotoCalendarAndWaitReady(page);
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "Run seed:e2e for overlap block on E2E-A.");
-    const ym = await page.getByLabel("Select month").inputValue();
+    const ym = await page.locator('input[type="month"]').first().inputValue();
     test.skip(!ym || !/^\d{4}-\d{2}$/.test(ym), "Could not read calendar month from UI.");
 
     const err = await page.evaluate(async (monthYm: string) => {

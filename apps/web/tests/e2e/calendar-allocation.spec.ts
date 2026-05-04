@@ -47,7 +47,7 @@ test.describe("calendar allocation", () => {
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await gotoCalendarAndWaitReady(page);
-    const monthYm = await page.getByLabel("Select month").inputValue();
+    const monthYm = await page.locator('input[type="month"]').first().inputValue();
     expect(monthYm).toMatch(/^\d{4}-\d{2}$/);
 
     test.skip((await page.getByTestId("ops-room-lane-E2E-A").count()) < 1, "E2E-A lane missing (seed:e2e).");

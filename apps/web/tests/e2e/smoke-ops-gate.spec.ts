@@ -110,7 +110,7 @@ test.describe("ops gate smoke @smoke", () => {
     });
 
     // Conflict rejection smoke via reassign API path.
-    const monthYm = await page.getByLabel("Select month").inputValue();
+    const monthYm = await page.locator('input[type="month"]').first().inputValue();
     const conflict = await page.evaluate(async (ym: string) => {
       const cal = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, { credentials: "include" });
       if (!cal.ok) return { ok: false, status: cal.status };
