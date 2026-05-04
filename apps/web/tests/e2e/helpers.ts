@@ -2,6 +2,10 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { expect, type Page } from "@playwright/test";
 
+/** Default DB URL must match `playwright.config.ts` `webServerEnv.DATABASE_URL` so reseed hits the same Postgres schema as Next.js. */
+const DEFAULT_E2E_DATABASE_URL =
+  "postgresql://stayops:stayops@127.0.0.1:5432/stayops?schema=e2e";
+
 /** Re-applies `packages/db` E2E fixtures (run from repo root via `pnpm --filter @stay-ops/web test:e2e`, cwd is `apps/web`). */
 export function reseedE2EFixtures(): void {
   const repoRoot = path.join(process.cwd(), "../..");
@@ -11,8 +15,7 @@ export function reseedE2EFixtures(): void {
       stdio: "pipe",
       env: {
         ...process.env,
-        DATABASE_URL:
-          process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops",
+        DATABASE_URL: process.env.DATABASE_URL ?? DEFAULT_E2E_DATABASE_URL,
       },
     });
   } catch (error) {
@@ -43,5 +46,5 @@ export async function loginAsStaff(page: Page): Promise<void> {
 /** Opens calendar route and waits for stable controls to render across desktop/mobile layouts. */
 export async function gotoCalendarAndWaitReady(page: Page): Promise<void> {
   await page.goto("/app/calendar");
-  await expect(page.getByLabel("Select month")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('input[type="month"]').first()).toBeVisible({ timeout: 15_000 });
 }
