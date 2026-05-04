@@ -23,7 +23,16 @@ export function middleware(request: NextRequest) {
   const isApp = pathname.startsWith("/app/");
 
   // Public allowlist (Phase 1)
-  const isHealth = isApi && pathname === "/api/health" && method === "GET";
+  // Health endpoints must remain reachable for platform/uptime probes that
+  // have no session cookie (e.g. Vercel deployment_status workflow). The
+  // legacy alias /api/health and the canonical /api/health/{live,ready} are
+  // all GET-only and safe to expose unauthenticated.
+  const isHealth =
+    isApi &&
+    method === "GET" &&
+    (pathname === "/api/health" ||
+      pathname === "/api/health/live" ||
+      pathname === "/api/health/ready");
   const isLogin = isApi && pathname === "/api/auth/login" && method === "POST";
   const isHosthubWebhook =
     isApi && pathname === "/api/sync/hosthub/webhook" && method === "POST";
