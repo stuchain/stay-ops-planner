@@ -54,6 +54,8 @@ describe("auth.authorization matrix", () => {
     expect(resolveApiPolicy("POST", "/api/sync/hosthub/webhook")).toEqual([]);
     expect(resolveApiPolicy("GET", "/api/sync/runs")).toEqual(["operator", "admin"]);
     expect(resolveApiPolicy("GET", "/api/admin/config/templates")).toEqual(["admin"]);
+    expect(resolveApiPolicy("GET", "/api/admin/queue/sync-hosthub")).toEqual(["admin"]);
+    expect(resolveApiPolicy("GET", "/api/audit/export")).toEqual(["operator", "admin"]);
     expect(resolveApiPolicy("GET", "/api/assets/channel-logo/airbnb")).toEqual(["viewer", "operator", "admin"]);
   });
 

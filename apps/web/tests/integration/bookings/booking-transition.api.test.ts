@@ -141,4 +141,38 @@ describe("api PATCH /api/bookings/[id] transitions and version", () => {
     expect(j2.data.booking.version).toBe(2);
     expect(j2.data.booking.notes).toBe("y");
   });
+
+  it("writes booking.update audit with before and after snapshots", async () => {
+    const jar = await loginJar();
+    const actor = await prisma.user.findUniqueOrThrow({ where: { email } });
+    const b = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: "tr-audit-snap",
+        status: BookingStatus.pending,
+        guestName: "Alpha",
+        checkinDate: new Date("2026-07-01T00:00:00.000Z"),
+        checkoutDate: new Date("2026-07-03T00:00:00.000Z"),
+        nights: 2,
+      },
+    });
+
+    const res = await PATCH_BOOKING(
+      new NextRequest(`http://localhost/api/bookings/${b.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+        body: JSON.stringify({ editable: { guestName: "Bravo" } }),
+      }),
+      { params: Promise.resolve({ id: b.id }) },
+    );
+    expect(res.status).toBe(200);
+
+    const logs = await prisma.auditEvent.findMany({
+      where: { entityType: "booking", entityId: b.id, action: "booking.update" },
+    });
+    expect(logs).toHaveLength(1);
+    expect((logs[0]!.beforeJson as { guestName?: string | null }).guestName).toBe("Alpha");
+    expect((logs[0]!.afterJson as { guestName?: string | null }).guestName).toBe("Bravo");
+    expect(logs[0]!.userId).toBe(actor.id);
+  });
 });
