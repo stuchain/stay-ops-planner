@@ -39,6 +39,27 @@
   - assignment/reassign,
   - sync run query.
 
+## Automated post-deploy health checks (Epic 11)
+- [`.github/workflows/health-check.yml`](../../.github/workflows/health-check.yml) listens for `deployment_status` events emitted by the Vercel GitHub integration. On `state == 'success'` it curls `${target_url}/api/health/ready` (3 attempts, exponential backoff), validates `status == "ok"` and `checks.db == "ok"`, and mirrors the result back as the `post-deploy-health` commit status visible on the PR/commit.
+- On failure it also posts a structured comment on the associated PR carrying the `traceId` from `x-request-id` for Sentry/log correlation.
+- Covers preview (every push) and production (`main`) automatically; nothing extra to wire when promoting deploys.
+- Prerequisite: the Vercel GitHub integration must be configured to emit GitHub Deployments (default behaviour).
+- Required middleware allowlist for unauthenticated probes: `/api/health`, `/api/health/live`, `/api/health/ready` are exempt from session checks (see [`apps/web/src/middleware.ts`](../../apps/web/src/middleware.ts)).
+
+## CI/CD quality gates (Epic 11)
+- PR-required workflows:
+  - [`ci.yml`](../../.github/workflows/ci.yml) → `lint`, `typecheck`, `unit` (fast, no DB).
+  - [`e2e.yml`](../../.github/workflows/e2e.yml) → `schema-drift`, `integration`, `playwright`.
+- Schema-drift gate runs `prisma migrate diff --from-migrations --to-schema-datamodel --exit-code` on a clean shadow Postgres; any unmigrated `schema.prisma` change fails the PR. The integration job additionally runs `prisma migrate status` after `migrate deploy` to assert the live history is fully applied.
+- Branch protection is codified in [`.github/rulesets/main.json`](../../.github/rulesets/main.json). Apply once with admin permissions:
+  ```bash
+  gh api -X POST \
+    -H "Accept: application/vnd.github+json" \
+    "repos/${GITHUB_REPOSITORY}/rulesets" \
+    --input .github/rulesets/main.json
+  ```
+  See [`.github/rulesets/README.md`](../../.github/rulesets/README.md) for update/verification commands.
+
 ## Rollback path
 1. Roll back Vercel deployment to previous known-good release.
 2. If a migration is incompatible, apply documented migration recovery procedure in `docs/runbooks/migrations.md`.

@@ -23,6 +23,36 @@ pnpm --filter @stay-ops/web start           # or your process manager
 
 `migrate:deploy` fails if there are pending migrations that do not apply cleanly — treat that as a release blocker.
 
+## CI gate: schema drift detection (Epic 11)
+
+Two checks run on every PR:
+
+1. **`schema-drift` job** in [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) replays `prisma/migrations/` onto a clean shadow Postgres and compares the resulting schema to `schema.prisma`:
+
+   ```bash
+   pnpm --filter @stay-ops/db exec prisma migrate diff \
+     --exit-code \
+     --from-migrations prisma/migrations \
+     --to-schema-datamodel prisma/schema.prisma \
+     --shadow-database-url "<shadow_db_url>"
+   ```
+
+   Exit code 2 means drift; CI translates that into an actionable error telling the author to run `pnpm --filter @stay-ops/db migrate:dev --name <change>` and commit the new migration.
+
+2. **`prisma migrate status`** in the `integration` job (after `migrate deploy`) asserts the live history is fully applied with no gaps. Any failure indicates a divergent migration history that should be investigated before merge.
+
+To reproduce the drift gate locally before pushing:
+
+```bash
+pnpm --filter @stay-ops/db exec prisma migrate diff \
+  --exit-code \
+  --from-migrations prisma/migrations \
+  --to-schema-datamodel prisma/schema.prisma \
+  --shadow-database-url "$DATABASE_URL"
+```
+
+Use a throwaway DB for the shadow URL — the command will reset/replay it.
+
 ## Local workflow
 
 1. Copy `.env.example` to `.env.local` and set `DATABASE_URL` (e.g. Postgres from [local-dev.md](local-dev.md)).

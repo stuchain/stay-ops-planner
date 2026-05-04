@@ -18,6 +18,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 | `pnpm dev` | Builds workspace packages, then starts the Next.js app (`apps/web`) |
 | `pnpm build` | Builds all workspace packages (`pnpm -r run build`) |
 | `pnpm lint` | Runs ESLint in all packages (`pnpm -r run lint`) |
+| `pnpm typecheck` | Generates the Prisma client, then runs `tsc --noEmit` across every workspace package |
 | `pnpm test` | Runs tests in all packages (`pnpm -r run test`) |
 
 ## Workspace layout
@@ -92,8 +93,10 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 ### Tests
 - **Unit / package tests**: `packages/shared`, `packages/sync` (Vitest).
 - **Web integration tests**: `apps/web/tests/integration/` (Vitest; `apps/web/vitest.config.ts` uses projects for integration + jsdom unit tests). They hit real Postgres and Redis — start `docker compose` before `pnpm --filter @stay-ops/web test`.
-- **Web component tests (Phase 6 UI)**: `apps/web/tests/unit/` (Vitest + Testing Library + jsdom) — calendar cards/lanes/grid, block modal, unassigned drawer, cleaning board. Run with `pnpm --filter @stay-ops/web test` (same command as integration).
-- **Browser E2E (Playwright)**: `apps/web/tests/e2e/` — desktop Chromium and mobile viewport (390×844). **Easiest local run:** `pnpm e2e:local` (Docker Postgres/Redis → migrate → seed → `seed:e2e` → Playwright on **port 3005** so it does not clash with `pnpm dev` on 3000; same disposable test admin as CI). Otherwise install browsers once (`pnpm --filter @stay-ops/web test:e2e:install`), seed the DB, set `E2E_ADMIN_*` to match `BOOTSTRAP_ADMIN_*`, then `pnpm --filter @stay-ops/web test:e2e`. Skipping seed or env vars causes login **401**. CI: [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml). See [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
+- **Web component tests (Phase 6 UI)**: `apps/web/tests/unit/` (Vitest + Testing Library + jsdom) — calendar cards/lanes/grid, block modal, unassigned drawer, cleaning board. Run with `pnpm --filter @stay-ops/web run test:unit` (no DB required) or as part of `pnpm --filter @stay-ops/web test`.
+- **Browser E2E (Playwright)**: `apps/web/tests/e2e/` — desktop Chromium and mobile viewport (390×844). **Easiest local run:** `pnpm e2e:local` (Docker Postgres/Redis → migrate → seed → `seed:e2e` → Playwright on **port 3005** so it does not clash with `pnpm dev` on 3000; same disposable test admin as CI). Otherwise install browsers once (`pnpm --filter @stay-ops/web test:e2e:install`), seed the DB, set `E2E_ADMIN_*` to match `BOOTSTRAP_ADMIN_*`, then `pnpm --filter @stay-ops/web test:e2e`. Skipping seed or env vars causes login **401**. CI: [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) runs **Vitest integration** (`stayops_test`) and **Playwright** (`stayops`) in parallel on every PR. To stress-check smokes locally: `pnpm --filter @stay-ops/web test:e2e -- --grep @smoke --repeat-each=5`. See [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
+- **Visual regression (opt-in)**: `pnpm --filter @stay-ops/web run test:e2e:visual` runs tagged `@visual` screenshot tests (desktop 1280×720). First-time or after UI changes, add `-- --update-snapshots` and commit the PNGs next to the spec (Playwright’s `*-snapshots/` folders under `apps/web/tests/e2e/visual/`). Default `test:e2e` does not run this project (`PLAYWRIGHT_VISUAL` is unset).
+- **Storybook (UI primitives)**: `pnpm --filter @stay-ops/web run storybook` (dev) or `pnpm --filter @stay-ops/web run build-storybook` (static output in `apps/web/storybook-static`, gitignored).
 - Coverage includes auth, allocation (including races and inactive rooms), blocks, cleaning flows, DB constraints, and sync webhook behavior.
 
 ### Production deployment reference
@@ -110,7 +113,12 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 - Copy env: `.env.example` → `.env` / `apps/web/.env.local` as needed (never commit secrets)
 - Apply DB + bootstrap admin: `pnpm --filter @stay-ops/db migrate:deploy` then `pnpm --filter @stay-ops/db seed` (with `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` set). For Playwright, also run `pnpm --filter @stay-ops/db seed:e2e` and align `E2E_ADMIN_*` with the bootstrap user — or run **`pnpm e2e:local`** once Chromium is installed to do Docker + migrate + both seeds + E2E with CI-aligned defaults.
 - Run the app: `pnpm --filter @stay-ops/web dev`
-- Run the full check from repo root: `pnpm lint`, `pnpm build`, `pnpm test`
+- Run the full check from repo root: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test`
+
+### CI/CD quality gates (Epic 11)
+- PR-required workflows: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`lint`, `typecheck`, `unit`) and [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) (`schema-drift`, `integration`, `playwright`).
+- Branch protection is codified in [`.github/rulesets/main.json`](.github/rulesets/main.json) — see [`.github/rulesets/README.md`](.github/rulesets/README.md) for one-time import instructions.
+- Post-deploy health probe: [`.github/workflows/health-check.yml`](.github/workflows/health-check.yml) listens on `deployment_status: success` and pings `/api/health/ready` on the deployment URL, surfacing the result as the `post-deploy-health` commit status.
 
 ### Roadmap / deeper spec
 - Phased execution and acceptance criteria: [docs/phases/README.md](docs/phases/README.md) and individual phase files (calendar UX, suggestions, production readiness, etc. are specified there even when not yet built in code).
