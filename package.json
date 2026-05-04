@@ -15,6 +15,7 @@
     "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs",
     "hosthub:count-bookings": "node ./scripts/hosthub-count-bookings.mjs",
     "hosthub:db-overlap-year": "node ./packages/db/scripts/db-overlap-year-snapshot.mjs",
+    "perf:calendar-baseline": "node ./packages/db/scripts/explain-calendar-baseline.mjs",
     "hosthub:reconcile-full": "corepack pnpm --filter @stay-ops/web run hosthub:reconcile-full",
     "e2e:local": "node ./scripts/e2e-local.mjs",
     "backup:pg": "node ./scripts/backup-postgres.mjs",
