@@ -7,11 +7,16 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node ../../packages/sync/node_modules/typescript/lib/tsc.js -p ../../packages/sync/tsconfig.json && vitest run --no-file-parallelism",
     "test:integration": "vitest run --project integration",
+    "test:unit": "vitest run --project unit",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test --grep \"@smoke\"",
     "test:e2e:install": "playwright install chromium",
+    "test:e2e:visual": "cross-env PLAYWRIGHT_VISUAL=1 playwright test tests/e2e/visual --project=visual-desktop",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o storybook-static",
     "hosthub:reconcile-full": "node ./scripts/run-hosthub-full-reconcile.mjs"
   },
   "dependencies": {
@@ -32,8 +37,13 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@eslint/eslintrc": "^3.2.0",
     "@playwright/test": "^1.59.1",
+    "@storybook/addon-essentials": "8.4.7",
+    "@storybook/blocks": "8.4.7",
+    "@storybook/nextjs": "8.4.7",
+    "@storybook/react": "8.4.7",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
@@ -42,9 +52,11 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "bullmq": "^5.34.5",
+    "cross-env": "^7.0.3",
     "eslint": "^9.16.0",
     "eslint-config-next": "^15.1.6",
     "jsdom": "^26.0.0",
+    "storybook": "8.4.7",
     "typescript": "^5.7.2",
     "vitest": "^3.0.5"
   }
