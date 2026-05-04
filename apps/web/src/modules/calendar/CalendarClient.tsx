@@ -34,6 +34,8 @@ import {
 } from "./optimisticMove";
 import { useIsNarrowViewport } from "./useIsNarrowViewport";
 import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
+import { useI18n } from "@/i18n/I18nProvider";
+import { ToastBanner } from "@/modules/ui";
 import { suggestDefaultRoomForBooking } from "./assignmentSuggest";
 
 function shiftMonth(ym: string, delta: number): string {
@@ -68,6 +70,7 @@ type OverviewUnassignedBooking = {
 };
 
 export function CalendarClient() {
+  const { t } = useI18n();
   const [month, setMonth] = useState(() => {
     if (typeof window === "undefined") return defaultMonthYm();
     const stored = window.localStorage.getItem(CALENDAR_MONTH_STORAGE_KEY);
@@ -377,10 +380,10 @@ export function CalendarClient() {
         },
         roomId,
       );
-      setFlash("Booking assigned successfully.");
+      setFlash(t("calendar.assignedOk"));
       await load(month, displayMonths);
     } catch (e) {
-      setFlash(e instanceof Error ? e.message : "Failed to assign booking.");
+      setFlash(e instanceof Error ? e.message : t("calendar.assignFail"));
     } finally {
       setAssigningBookingId(null);
     }
@@ -390,46 +393,46 @@ export function CalendarClient() {
     <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={onDragEnd}>
       <main className="ops-calendar-main">
         <header className="ops-calendar-header">
-          <h1>Calendar</h1>
+          <h1>{t("calendar.title")}</h1>
         </header>
         <section className="ops-calendar-controls" aria-label="Calendar controls">
           <button type="button" className="ops-btn" onClick={() => setMonth(defaultMonthYm())}>
-            Today
+            {t("calendar.today")}
           </button>
           <input
             type="month"
             className="ops-input"
-            aria-label="Select month"
+            aria-label={t("calendar.selectMonthAria")}
             value={month}
             onChange={(ev) => setMonth(ev.target.value)}
           />
           <label className="ops-label ops-inline-label">
-            <span>Display</span>
+            <span>{t("calendar.display")}</span>
             <select
               className="ops-input"
               value={displayMonths}
               onChange={(ev) => setDisplayMonths(Number(ev.target.value) as 1 | 2 | 3)}
-              aria-label="Display month count"
+              aria-label={t("calendar.displayMonthCount")}
             >
-              <option value={1}>1 month</option>
-              <option value={2}>2 months</option>
-              <option value={3}>3 months</option>
+              <option value={1}>{t("calendar.month1")}</option>
+              <option value={2}>{t("calendar.month2")}</option>
+              <option value={3}>{t("calendar.month3")}</option>
             </select>
           </label>
-          <button type="button" className="ops-btn" onClick={() => setFlash("Filters are coming soon.")}>
-            Filters
+          <button type="button" className="ops-btn" onClick={() => setFlash(t("calendar.filtersSoon"))}>
+            {t("calendar.filters")}
           </button>
           <button type="button" className="ops-btn" disabled={!baseData} onClick={() => setQueueOpen(true)}>
-            Unassigned list
+            {t("calendar.unassignedList")}
           </button>
         </section>
         {!loading && !error && overview && (
           <section className="ops-needs-table" aria-label="Needs assignment table">
             <div className="ops-needs-row">
-              <div className="ops-needs-label">Needs assignment</div>
+              <div className="ops-needs-label">{t("calendar.needsAssignment")}</div>
               <NeedsAssignmentDropZone laneId={`${month}:lane-unassigned`}>
                 {overview.unassigned.length === 0 ? (
-                  <span className="ops-muted">All bookings are assigned for this month.</span>
+                  <span className="ops-muted">{t("calendar.allAssigned")}</span>
                 ) : (
                   overview.unassigned.map((booking) => (
                     <NeedsAssignmentDragCard
@@ -456,11 +459,7 @@ export function CalendarClient() {
             </div>
           </section>
         )}
-        {flash && (
-          <div className="ops-toast" role="alert">
-            {flash}
-          </div>
-        )}
+        {flash ? <ToastBanner>{flash}</ToastBanner> : null}
         <section
           className={
             isMobile || displayMonths === 1

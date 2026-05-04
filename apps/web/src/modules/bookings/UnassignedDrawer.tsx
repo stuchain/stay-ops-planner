@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useOverlayAccessibility } from "@/modules/ui/useOverlayAccessibility";
 import type { DryRunResult } from "@stay-ops/shared";
 import { DryRunPreviewModal, useDryRun } from "@/modules/dry-run";
 import {
@@ -87,6 +89,7 @@ function roomOptionLabel(r: CalendarRoom): string {
 type BulkAssignBody = { items: Array<{ bookingId: string; roomId: string }> };
 
 export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, onAssigned }: Props) {
+  const panelRef = useRef<HTMLElement>(null);
   const bulkAssignDry = useDryRun<BulkAssignBody>({
     url: "/api/assignments/bulk",
     buildBody: (input) => ({ items: input.items }),
@@ -166,6 +169,15 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
     if (!open || rows.length === 0) return;
     void Promise.all(rows.map((row) => loadSuggestions(row.id)));
   }, [open, rows, loadSuggestions]);
+
+  useOverlayAccessibility({
+    open,
+    trapActive: open && !bulkModalOpen,
+    busy: pendingBulk || bulkAssignDry.state === "executing" || pendingId != null,
+    panelRef,
+    onRequestClose: onClose,
+    useInert: true,
+  });
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
@@ -311,11 +323,12 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
   }
 
   if (!open) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
-    <>
+  const drawer = (
     <div className="ops-drawer-backdrop" role="presentation" onClick={onClose}>
       <aside
+        ref={panelRef}
         className="ops-drawer"
         role="dialog"
         aria-modal="true"
@@ -438,7 +451,12 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
         </ul>
       </aside>
     </div>
-    <DryRunPreviewModal
+  );
+
+  return (
+    <>
+      {createPortal(drawer, document.body)}
+      <DryRunPreviewModal
       open={bulkModalOpen}
       title="Bulk assign — preview"
       summary={bulkSummary}

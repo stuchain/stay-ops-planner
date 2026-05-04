@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { DryRunResult } from "@stay-ops/shared";
+import { useI18n } from "@/i18n/I18nProvider";
 import { DryRunPreviewModal, useDryRun } from "@/modules/dry-run";
 import { BookingDetailModal } from "./BookingDetailModal";
 import { ChannelLogo } from "./ChannelLogo";
@@ -110,6 +111,7 @@ function toQuery(filters: Filters): string {
 }
 
 export function BookingsClient() {
+  const { t } = useI18n();
   const bulkCancelDry = useDryRun<BulkCancelBody>({
     url: "/api/bookings/bulk-cancel",
     buildBody: (input) => ({ bookingIds: input.bookingIds }),
@@ -474,7 +476,7 @@ export function BookingsClient() {
   return (
     <main className="ops-bookings-main">
       <header className="ops-bookings-header">
-        <h1>Bookings</h1>
+        <h1>{t("bookings.title")}</h1>
         <p className="ops-muted">{sortLabelText}</p>
       </header>
 

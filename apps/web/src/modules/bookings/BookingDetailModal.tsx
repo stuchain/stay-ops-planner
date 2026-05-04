@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useOverlayAccessibility } from "@/modules/ui/useOverlayAccessibility";
 import type { BookingStatus } from "@stay-ops/db";
 import { ChannelLogo } from "./ChannelLogo";
 import type { BookingDetailDto } from "./details";
@@ -55,6 +57,7 @@ export type BookingDetailModalProps = {
 };
 
 export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingDetailModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const [detail, setDetail] = useState<BookingDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -216,23 +219,46 @@ export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingD
 
   const guestTotalText = useMemo(() => detail?.guests.total ?? detail?.guestCount ?? "-", [detail]);
 
-  if (!bookingId) return null;
+  useOverlayAccessibility({
+    open: Boolean(bookingId),
+    busy: saving,
+    panelRef,
+    onRequestClose: onClose,
+    useInert: true,
+  });
 
-  return (
-    <>
+  if (!bookingId) return null;
+  if (typeof document === "undefined") return null;
+
+  const modal = (
+    <div
+      className="ops-modal-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="ops-modal-backdrop"
+        ref={panelRef}
+        className="ops-modal ops-booking-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Booking details"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
+        aria-labelledby="ops-booking-modal-title"
+        onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="ops-modal ops-booking-modal">
-          {detailLoading || !detail ? (
+        <h2 id="ops-booking-modal-title" className="ops-sr-only">
+          Booking details
+        </h2>
+        {detailLoading || !detail ? (
+          <>
             <p className="ops-muted">Loading booking details...</p>
-          ) : (
+            <div className="ops-modal-actions">
+              <button className="ops-btn" type="button" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </>
+        ) : (
             <>
               <div className="ops-booking-popup-summary">
                 <div className="ops-booking-popup-status">
@@ -508,8 +534,13 @@ export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingD
               </div>
             </>
           )}
-        </div>
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      {createPortal(modal, document.body)}
       {toast ? <div className="ops-toast">{toast}</div> : null}
     </>
   );

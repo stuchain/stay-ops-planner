@@ -1,7 +1,10 @@
 "use client";
 
+import { useRef } from "react";
+import { createPortal } from "react-dom";
 import type { CalendarBookingItem, CalendarRoom } from "./calendarTypes";
 import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
+import { useOverlayAccessibility } from "@/modules/ui/useOverlayAccessibility";
 
 type Props = {
   open: boolean;
@@ -12,11 +15,22 @@ type Props = {
 };
 
 export function MobileAssignSheet({ open, booking, rooms, onClose, onPickRoom }: Props) {
-  if (!open || !booking) return null;
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  return (
+  useOverlayAccessibility({
+    open: open && booking != null,
+    panelRef,
+    onRequestClose: onClose,
+    useInert: true,
+  });
+
+  if (!open || !booking) return null;
+  if (typeof document === "undefined") return null;
+
+  const tree = (
     <div className="ops-sheet-backdrop" role="presentation" onClick={onClose}>
       <div
+        ref={panelRef}
         className="ops-sheet"
         role="dialog"
         aria-modal="true"
@@ -36,21 +50,12 @@ export function MobileAssignSheet({ open, booking, rooms, onClose, onPickRoom }:
         </p>
         <div className="ops-sheet-actions">
           {booking.assignmentId && (
-            <button
-              type="button"
-              className="ops-sheet-btn"
-              onClick={() => onPickRoom(null)}
-            >
+            <button type="button" className="ops-sheet-btn" onClick={() => onPickRoom(null)}>
               Move to unassigned
             </button>
           )}
           {rooms.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              className="ops-sheet-btn"
-              onClick={() => onPickRoom(r.id)}
-            >
+            <button key={r.id} type="button" className="ops-sheet-btn" onClick={() => onPickRoom(r.id)}>
               {r.code ?? r.name ?? r.id}
             </button>
           ))}
@@ -61,4 +66,6 @@ export function MobileAssignSheet({ open, booking, rooms, onClose, onPickRoom }:
       </div>
     </div>
   );
+
+  return createPortal(tree, document.body);
 }

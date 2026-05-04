@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DryRunResult } from "@stay-ops/shared";
+import { useI18n } from "@/i18n/I18nProvider";
 import { DryRunPreviewModal, useDryRun } from "@/modules/dry-run";
 import { HosthubListingsSection } from "@/modules/settings/HosthubListingsSection";
+import { ToastBanner } from "@/modules/ui";
 
 type ApiError = { error?: { code?: string; message?: string } };
 type HosthubTokenStatus = { configured: boolean; updatedAt: string | null; name: string | null };
@@ -55,6 +57,7 @@ function fmtDateTime(iso: string | null) {
 }
 
 export function SettingsView() {
+  const { t, setLocale } = useI18n();
   const reconcileDryRun = useDryRun<Record<string, never>>({
     url: "/api/sync/hosthub/reconcile",
     dryRunQueryParam: true,
@@ -81,6 +84,7 @@ export function SettingsView() {
   const [diagLoading, setDiagLoading] = useState(false);
   const [diagError, setDiagError] = useState<string | null>(null);
   const [probeBusy, setProbeBusy] = useState(false);
+  const [uiLocaleDraft, setUiLocaleDraft] = useState<"en" | "el">("en");
 
   const latestHosthubPoll = useMemo(() => runs.find((r) => r.source === "hosthub_poll") ?? null, [runs]);
   const isAdmin = userRole === "admin";
@@ -125,8 +129,13 @@ export function SettingsView() {
       ]);
 
       if (meRes.ok) {
-        const meJson = (await meRes.json()) as { data?: { user?: { role?: string } } };
+        const meJson = (await meRes.json()) as { data?: { user?: { role?: string; uiLocale?: string } } };
         setUserRole(meJson.data?.user?.role ?? null);
+        const uil = meJson.data?.user?.uiLocale;
+        if (uil === "en" || uil === "el") {
+          setUiLocaleDraft(uil);
+          setLocale(uil);
+        }
       } else {
         setUserRole(null);
       }
@@ -157,11 +166,35 @@ export function SettingsView() {
     } finally {
       setLoading(false);
     }
-  }, [editingTokenMeta, loadDiag]);
+  }, [editingTokenMeta, loadDiag, setLocale]);
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  async function saveUiLocale() {
+    setSaving(true);
+    setError(null);
+    setFlash(null);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ uiLocale: uiLocaleDraft }),
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as ApiError | null;
+        throw new Error(err?.error?.message ?? `Save HTTP ${res.status}`);
+      }
+      setLocale(uiLocaleDraft);
+      setFlash(t("settings.languageSaved"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("settings.languageError"));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     function onTick() {
@@ -334,19 +367,39 @@ export function SettingsView() {
   return (
     <main className="ops-calendar-main">
       <header className="ops-calendar-header">
-        <h1>Settings</h1>
+        <h1>{t("settings.title")}</h1>
       </header>
 
       {loading && <p className="ops-muted">Loading settings…</p>}
       {error && <p className="ops-error">{error}</p>}
-      {flash && (
-        <div className="ops-toast" role="alert">
-          {flash}
-        </div>
-      )}
+      {flash ? <ToastBanner>{flash}</ToastBanner> : null}
 
       {!loading && (
         <>
+          <section className="ops-markers">
+            <h2>{t("settings.language")}</h2>
+            <p className="ops-muted">{t("settings.languageHelp")}</p>
+            <div className="ops-drawer-row-actions" style={{ alignItems: "center" }}>
+              <select
+                className="ops-input"
+                style={{ maxWidth: "12rem" }}
+                value={uiLocaleDraft}
+                onChange={(e) => setUiLocaleDraft(e.target.value === "el" ? "el" : "en")}
+              >
+                <option value="en">English</option>
+                <option value="el">Ελληνικά</option>
+              </select>
+              <button
+                type="button"
+                className="ops-btn ops-btn-primary"
+                disabled={saving}
+                onClick={() => void saveUiLocale()}
+              >
+                {t("settings.saveLanguage")}
+              </button>
+            </div>
+          </section>
+
           <section className="ops-markers">
             <h2>Hosthub token</h2>
             <p className="ops-muted">

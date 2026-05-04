@@ -32,6 +32,8 @@ export function BookingCard({ item, isMobile, onQuickAssign }: Props) {
   const unassigned = item.flags.includes("unassigned");
   const needsRe = item.flags.includes("needs_reassignment");
   const stateClass = unassigned ? "ops-card-unassigned" : needsRe ? "ops-card-warning" : "ops-card-normal";
+  const stateBits = [unassigned && "unassigned", needsRe && "needs reassignment"].filter(Boolean).join(", ");
+  const dragLabel = `Booking ${item.guestName}, ${item.startDate} to ${item.endDate}${stateBits ? `, ${stateBits}` : ""}`;
   const channelClass =
     item.channel === "airbnb"
       ? "ops-booking-channel-airbnb"
@@ -45,6 +47,7 @@ export function BookingCard({ item, isMobile, onQuickAssign }: Props) {
       style={{ ...style, touchAction: isMobile ? "manipulation" : "none" }}
       className={`ops-booking-card ${stateClass} ${channelClass}`}
       data-testid={`ops-booking-card-${item.id}`}
+      aria-label={isMobile ? undefined : dragLabel}
       {...(isMobile ? {} : listeners)}
       {...attributes}
     >
