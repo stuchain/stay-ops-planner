@@ -1,8 +1,10 @@
 # GitHub Rulesets (repo-as-code branch protection)
 
-`main.json` codifies the required PR checks for the `main` branch. It is
-GitHub's modern replacement for branch protection rules and is the source of
-truth for "Epic 11: CI/CD Quality Gates".
+`main.json` codifies required **status checks** for the `main` branch. It does
+**not** require pull requests: direct pushes to `main` are allowed once the
+six checks pass (GitHub still runs workflows on the pushed commit). This is
+GitHub's modern replacement for branch protection rules and matches Epic 11
+quality gates without forcing a PR workflow.
 
 Required checks defined here:
 
@@ -52,5 +54,5 @@ gh api -X PUT \
 gh api "repos/OWNER/REPO/rulesets" --jq '.[] | {id, name, enforcement}'
 ```
 
-Open a PR that intentionally fails one of the required checks (e.g. add an
-ESLint error) and confirm the merge button is blocked.
+Push a commit that intentionally fails one of the required checks (e.g. an
+ESLint error) and confirm GitHub blocks updating `main` until checks pass.

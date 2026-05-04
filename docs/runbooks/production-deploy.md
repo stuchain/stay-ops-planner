@@ -47,7 +47,7 @@
 - Required middleware allowlist for unauthenticated probes: `/api/health`, `/api/health/live`, `/api/health/ready` are exempt from session checks (see [`apps/web/src/middleware.ts`](../../apps/web/src/middleware.ts)).
 
 ## CI/CD quality gates (Epic 11)
-- PR-required workflows:
+- Required-check workflows (run on every push to `main` and on pull requests):
   - [`ci.yml`](../../.github/workflows/ci.yml) → `lint`, `typecheck`, `unit` (fast, no DB).
   - [`e2e.yml`](../../.github/workflows/e2e.yml) → `schema-drift`, `integration`, `playwright`.
 - Schema-drift gate runs `prisma migrate diff --from-migrations --to-schema-datamodel --exit-code` on a clean shadow Postgres; any unmigrated `schema.prisma` change fails the PR. The integration job additionally runs `prisma migrate status` after `migrate deploy` to assert the live history is fully applied.
