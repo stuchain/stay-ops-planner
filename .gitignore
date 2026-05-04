@@ -12,6 +12,7 @@ dist
 coverage
 playwright-report
 test-results
+apps/web/storybook-static
 .turbo
 .DS_Store
 docs/phases/
