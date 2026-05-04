@@ -26,6 +26,7 @@
     "smoke:epic7-auth": "tsx --tsconfig ../../apps/web/tsconfig.json ../../apps/web/scripts/epic7-auth-smoke.ts",
     "build": "prisma generate && tsc",
     "lint": "eslint .",
+    "typecheck": "prisma generate && tsc --noEmit",
     "test": "node -e \"process.exit(0)\""
   },
   "dependencies": {

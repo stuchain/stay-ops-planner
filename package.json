@@ -9,6 +9,7 @@
     "dev": "corepack pnpm --filter @stay-ops/shared build && corepack pnpm --filter @stay-ops/db build && corepack pnpm --filter @stay-ops/audit build && corepack pnpm --filter @stay-ops/sync build && corepack pnpm --filter @stay-ops/web dev",
     "build": "corepack pnpm -r run build",
     "lint": "corepack pnpm -r run lint",
+    "typecheck": "corepack pnpm --filter @stay-ops/db generate && corepack pnpm -r run typecheck",
     "test": "corepack pnpm -r run test",
     "test:integration": "node ./scripts/test-integration.mjs",
     "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs",
