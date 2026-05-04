@@ -1,27 +1,17 @@
 # GitHub Rulesets (repo-as-code branch protection)
 
-`main.json` codifies required **status checks** for the `main` branch. It does
-**not** require pull requests: direct pushes to `main` are allowed once the
-six checks pass (GitHub still runs workflows on the pushed commit). This is
-GitHub's modern replacement for branch protection rules and matches Epic 11
-quality gates without forcing a PR workflow.
+`main.json` applies light **ref safety** on `main` only (no force-delete of the
+branch, no non-fast-forward updates). It does **not** require pull requests and
+does **not** block pushes on GitHub Actions status — so you can `git push` and
+CI runs **after** the push like a normal repo.
 
-Required checks defined here:
-
-- `lint` — `pnpm lint` (ESLint)
-- `typecheck` — `pnpm typecheck` (TypeScript no-emit, all packages)
-- `unit` — `apps/web` Vitest unit project (jsdom, no DB)
-- `schema-drift` — `prisma migrate diff` between `schema.prisma` and `prisma/migrations/`
-- `integration` — Vitest integration project (real Postgres + Redis) including `prisma migrate status`
-- `playwright` — `@smoke|@a11y` E2E on PR; full suite on `main`
-
-The workflows that produce these check names live in `.github/workflows/`:
-
-- `ci.yml` → `lint`, `typecheck`, `unit`
-- `e2e.yml` → `schema-drift`, `integration`, `playwright`
-
-`post-deploy-health` (from `health-check.yml`) is **not** in the required set
-because it fires on `deployment_status` events, after merge.
+Quality gates (`lint`, `typecheck`, `unit`, `schema-drift`, `integration`,
+`playwright`) still run from [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)
+and [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) on every push
+and pull request; treat red checks as release discipline, not a hard server-side
+block. To block merges again, re-add a `required_status_checks` rule (or use a
+separate ruleset / classic branch protection) once you are comfortable with the
+bootstrap trade-off.
 
 ## Apply once (admin)
 
@@ -54,5 +44,5 @@ gh api -X PUT \
 gh api "repos/OWNER/REPO/rulesets" --jq '.[] | {id, name, enforcement}'
 ```
 
-Push a commit that intentionally fails one of the required checks (e.g. an
-ESLint error) and confirm GitHub blocks updating `main` until checks pass.
+Confirm a failing commit still **pushes** to `main` while Actions shows red on
+the commit; fix forward or revert as your process dictates.

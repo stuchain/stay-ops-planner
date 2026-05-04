@@ -47,11 +47,11 @@
 - Required middleware allowlist for unauthenticated probes: `/api/health`, `/api/health/live`, `/api/health/ready` are exempt from session checks (see [`apps/web/src/middleware.ts`](../../apps/web/src/middleware.ts)).
 
 ## CI/CD quality gates (Epic 11)
-- Required-check workflows (run on every push to `main` and on pull requests):
+- Workflows run on **every push to `main` and on pull requests** (nothing in the repo ruleset blocks the push; CI is advisory unless you add required checks in GitHub again):
   - [`ci.yml`](../../.github/workflows/ci.yml) → `lint`, `typecheck`, `unit` (fast, no DB).
   - [`e2e.yml`](../../.github/workflows/e2e.yml) → `schema-drift`, `integration`, `playwright`.
-- Schema-drift gate runs `prisma migrate diff --from-migrations --to-schema-datamodel --exit-code` on a clean shadow Postgres; any unmigrated `schema.prisma` change fails the PR. The integration job additionally runs `prisma migrate status` after `migrate deploy` to assert the live history is fully applied.
-- Branch protection is codified in [`.github/rulesets/main.json`](../../.github/rulesets/main.json). Apply once with admin permissions:
+- Schema-drift job runs `prisma migrate diff --from-migrations --to-schema-datamodel --exit-code` on a clean shadow Postgres; any unmigrated `schema.prisma` change **fails that workflow run**. The integration job additionally runs `prisma migrate status` after `migrate deploy` to assert the live history is fully applied.
+- Light ruleset (no PR requirement, no required-status gate) lives in [`.github/rulesets/main.json`](../../.github/rulesets/main.json). Apply or update with admin permissions:
   ```bash
   gh api -X POST \
     -H "Accept: application/vnd.github+json" \

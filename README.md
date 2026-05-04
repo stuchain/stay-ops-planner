@@ -117,7 +117,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 
 ### CI/CD quality gates (Epic 11)
 - Required-check workflows (push and PR): [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`lint`, `typecheck`, `unit`) and [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) (`schema-drift`, `integration`, `playwright`).
-- Branch protection is codified in [`.github/rulesets/main.json`](.github/rulesets/main.json) — see [`.github/rulesets/README.md`](.github/rulesets/README.md) for one-time import instructions.
+- Optional light ruleset (no PR, no push-blocking checks) in [`.github/rulesets/main.json`](.github/rulesets/main.json) — see [`.github/rulesets/README.md`](.github/rulesets/README.md) for import/update commands.
 - Post-deploy health probe: [`.github/workflows/health-check.yml`](.github/workflows/health-check.yml) listens on `deployment_status: success` and pings `/api/health/ready` on the deployment URL, surfacing the result as the `post-deploy-health` commit status.
 
 ### Roadmap / deeper spec
