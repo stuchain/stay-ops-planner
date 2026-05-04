@@ -17,6 +17,9 @@ const webServerEnv: Record<string, string> = {
   APP_TIMEZONE: process.env.APP_TIMEZONE ?? "Etc/UTC",
 };
 
+/** Screenshot baselines live under tests/e2e/visual; enable only when ready to compare or refresh them. */
+const runVisualProject = process.env.PLAYWRIGHT_VISUAL === "1";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   globalTeardown: "./tests/e2e/globalTeardown.ts",
@@ -45,9 +48,10 @@ export default defineConfig({
         env: webServerEnv,
       },
   projects: [
-    { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "desktop-chromium", grepInvert: /@visual/, use: { ...devices["Desktop Chrome"] } },
     {
       name: "mobile-chromium",
+      grepInvert: /@visual/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 390, height: 844 },
@@ -55,5 +59,17 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    ...(runVisualProject
+      ? [
+          {
+            name: "visual-desktop",
+            grep: /@visual/,
+            use: {
+              ...devices["Desktop Chrome"],
+              viewport: { width: 1280, height: 720 },
+            },
+          },
+        ]
+      : []),
   ],
 });
