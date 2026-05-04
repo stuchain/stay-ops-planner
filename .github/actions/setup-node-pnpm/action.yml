@@ -1,0 +1,29 @@
+name: Setup Node and pnpm
+description: Install pnpm, set up Node 20 with pnpm cache, and run a frozen install at the repo root.
+
+inputs:
+  node-version:
+    description: Node.js version to install.
+    required: false
+    default: "20"
+  install:
+    description: Whether to run `pnpm install --frozen-lockfile` after setup. Set to "false" to skip (e.g. for jobs that only need the toolchain).
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - name: Install dependencies (frozen lockfile)
+      if: ${{ inputs.install == 'true' }}
+      shell: bash
+      run: pnpm install --frozen-lockfile
