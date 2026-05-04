@@ -1,4 +1,4 @@
-import { BookingStatus, Channel, PrismaClient } from "@prisma/client";
+import { Channel, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const E2E_CLEANUP_LOCK_KEY = 9_209_002;
