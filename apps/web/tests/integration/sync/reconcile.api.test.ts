@@ -40,9 +40,9 @@ describe("api /api/sync/hosthub/reconcile", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    PUT_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route.ts")).PUT;
-    POST_RECONCILE = (await import("../../../src/app/api/sync/hosthub/reconcile/route.ts")).POST;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    PUT_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route")).PUT;
+    POST_RECONCILE = (await import("../../../src/app/api/sync/hosthub/reconcile/route")).POST;
   });
 
   afterAll(async () => {

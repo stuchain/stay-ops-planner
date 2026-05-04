@@ -20,12 +20,12 @@ describe("auth.middleware", () => {
   beforeAll(async () => {
     await prisma.$connect();
 
-    const middlewareModule = await import("../../src/middleware.ts");
+    const middlewareModule = await import("../../src/middleware");
     middlewareFn = middlewareModule.middleware;
 
-    const loginModule = await import("../../src/app/api/auth/login/route.ts");
+    const loginModule = await import("../../src/app/api/auth/login/route");
     const logoutModule = await import(
-      "../../src/app/api/auth/logout/route.ts"
+      "../../src/app/api/auth/logout/route"
     );
     POST_LOGIN = loginModule.POST;
     POST_LOGOUT = logoutModule.POST;

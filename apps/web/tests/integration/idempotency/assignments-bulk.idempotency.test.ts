@@ -35,8 +35,8 @@ describe("idempotency POST /api/assignments/bulk", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    POST_BULK = (await import("../../../src/app/api/assignments/bulk/route.ts")).POST;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    POST_BULK = (await import("../../../src/app/api/assignments/bulk/route")).POST;
   });
 
   afterAll(async () => {

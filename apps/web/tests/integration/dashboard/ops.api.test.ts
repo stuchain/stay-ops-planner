@@ -37,8 +37,8 @@ describe("api /api/dashboard/ops", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_OPS = (await import("../../../src/app/api/dashboard/ops/route.ts")).GET;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_OPS = (await import("../../../src/app/api/dashboard/ops/route")).GET;
   });
 
   afterAll(async () => {
@@ -113,7 +113,7 @@ describe("api /api/dashboard/ops", () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as {
       data: {
-        sync: { successRatio24h: number };
+        sync: { successRatio24h: number; successfulRuns24h: number };
         importErrors: {
           unresolvedTotal: number;
           oldestUnresolved: { ageMs: number; code: string } | null;

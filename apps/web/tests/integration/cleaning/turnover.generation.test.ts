@@ -42,7 +42,7 @@ describe("cleaning — turnover generation", () => {
   });
 
   it("creates a 120-minute turnover task on assign and upserts idempotently", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `cln-${s}@example.com`, passwordHash: "x" },

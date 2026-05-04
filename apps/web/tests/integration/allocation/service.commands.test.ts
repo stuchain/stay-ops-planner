@@ -44,7 +44,7 @@ describe("allocation service — commands", () => {
 
   it("assign creates assignment version 0 and audit", async () => {
     const { assignBookingToRoom } = await import(
-      "../../../src/modules/allocation/service.ts"
+      "../../../src/modules/allocation/service"
     );
     const s = suffix();
     const actor = await prisma.user.create({
@@ -88,7 +88,7 @@ describe("allocation service — commands", () => {
 
   it("reassign increments version when expectedVersion matches", async () => {
     const { assignBookingToRoom, reassignRoom } = await import(
-      "../../../src/modules/allocation/service.ts"
+      "../../../src/modules/allocation/service"
     );
     const s = suffix();
     const actor = await prisma.user.create({
@@ -129,9 +129,9 @@ describe("allocation service — commands", () => {
 
   it("reassign rejects stale expectedVersion", async () => {
     const { assignBookingToRoom, reassignRoom } = await import(
-      "../../../src/modules/allocation/service.ts"
+      "../../../src/modules/allocation/service"
     );
-    const { AllocationError } = await import("../../../src/modules/allocation/errors.ts");
+    const { AllocationError } = await import("../../../src/modules/allocation/errors");
 
     const s = suffix();
     const actor = await prisma.user.create({

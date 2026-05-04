@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import { PrismaClient } from "@stay-ops/db";
+import { Prisma, PrismaClient } from "@stay-ops/db";
 import { CookieJar } from "../cookieJar";
 
 const email = "audit-events@example.com";
@@ -35,8 +35,8 @@ describe("api /api/audit/events", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_EVENTS = (await import("../../../src/app/api/audit/events/route.ts")).GET;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_EVENTS = (await import("../../../src/app/api/audit/events/route")).GET;
   });
 
   afterAll(async () => {
@@ -86,7 +86,7 @@ describe("api /api/audit/events", () => {
         entityType: "manual_block",
         entityId: "blk-1",
         action: "manual_block.create",
-        beforeJson: null,
+        beforeJson: Prisma.JsonNull,
         afterJson: { roomId: "room-9" },
         metaJson: {},
       },

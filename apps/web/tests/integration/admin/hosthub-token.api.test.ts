@@ -40,10 +40,10 @@ describe("api /api/admin/integrations/hosthub/token", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route.ts")).GET;
-    PUT_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route.ts")).PUT;
-    DELETE_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route.ts")).DELETE;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route")).GET;
+    PUT_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route")).PUT;
+    DELETE_HOSTHUB_TOKEN = (await import("../../../src/app/api/admin/integrations/hosthub/token/route")).DELETE;
   });
 
   afterAll(async () => {

@@ -14,6 +14,14 @@ function suffix() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 10);
 }
 
+function deferredVoid(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
 async function truncateDomain() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
@@ -46,7 +54,7 @@ describe("allocation — race and cancellation", () => {
   });
 
   it("parallel overlapping assigns: one succeeds, one CONFLICT_ASSIGNMENT", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `race-${s}@example.com`, passwordHash: "x" },
@@ -73,7 +81,7 @@ describe("allocation — race and cancellation", () => {
       },
     });
 
-    const gate = Promise.withResolvers<void>();
+    const gate = deferredVoid();
     const p1 = (async () => {
       await gate.promise;
       return assignBookingToRoom({
@@ -103,7 +111,7 @@ describe("allocation — race and cancellation", () => {
   });
 
   it("parallel assign same booking to two rooms: one BOOKING_ALREADY_ASSIGNED", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `race2-${s}@example.com`, passwordHash: "x" },
@@ -121,7 +129,7 @@ describe("allocation — race and cancellation", () => {
       },
     });
 
-    const gate = Promise.withResolvers<void>();
+    const gate = deferredVoid();
     const p1 = (async () => {
       await gate.promise;
       return assignBookingToRoom({

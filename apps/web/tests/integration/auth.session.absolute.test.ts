@@ -17,7 +17,7 @@ describe("session absolute expiry (Epic 7)", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    GET_ME = (await import("../../src/app/api/auth/me/route.ts")).GET;
+    GET_ME = (await import("../../src/app/api/auth/me/route")).GET;
   });
 
   afterAll(async () => {

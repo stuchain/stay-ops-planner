@@ -24,8 +24,8 @@ describe("auth.login", () => {
       create: { email, passwordHash, isActive: true },
     });
 
-    const loginModule = await import("../../src/app/api/auth/login/route.ts");
-    const meModule = await import("../../src/app/api/auth/me/route.ts");
+    const loginModule = await import("../../src/app/api/auth/login/route");
+    const meModule = await import("../../src/app/api/auth/me/route");
     POST_LOGIN = loginModule.POST;
     GET_ME = meModule.GET;
   });
@@ -58,8 +58,11 @@ describe("auth.login", () => {
     );
 
     expect(meRes.status).toBe(200);
-    const json = (await meRes.json()) as { data: { user: { email: string } } };
+    const json = (await meRes.json()) as { data: { user: { email: string; uiLocale?: string } } };
     expect(json.data.user.email).toBe(email);
+    expect(json.data.user.uiLocale === "en" || json.data.user.uiLocale === "el" || json.data.user.uiLocale == null).toBe(
+      true,
+    );
   });
 
   it("accepts login when submitted email casing differs from the stored row", async () => {

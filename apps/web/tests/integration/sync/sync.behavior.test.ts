@@ -1,7 +1,7 @@
 /**
  * Postgres + Redis (DB 2). Apply migrations: `pnpm --filter @stay-ops/db migrate:deploy`.
  */
-import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import type { Job } from "bullmq";
 import { UnrecoverableError } from "bullmq";
 import { Worker, Queue } from "bullmq";
@@ -291,25 +291,13 @@ describe("sync inbound job — malformed payload records import_errors", () => {
 
 describe("sync webhook + queue — idempotent dedupe", () => {
   /** `handleHosthubWebhookPost` skips signature when NODE_ENV is development and WEBHOOK_SECRET is unset (see hosthubWebhook.ts). Vitest defaults NODE_ENV=test, which otherwise returns 503 without a configured secret. */
-  const savedNodeEnv = process.env.NODE_ENV;
-  const savedWebhookSecret = process.env.WEBHOOK_SECRET;
-
   beforeAll(async () => {
-    process.env.NODE_ENV = "development";
-    delete process.env.WEBHOOK_SECRET;
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("WEBHOOK_SECRET", "");
     await prisma.$connect();
   });
   afterAll(async () => {
-    if (savedNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
-    } else {
-      process.env.NODE_ENV = savedNodeEnv;
-    }
-    if (savedWebhookSecret === undefined) {
-      delete process.env.WEBHOOK_SECRET;
-    } else {
-      process.env.WEBHOOK_SECRET = savedWebhookSecret;
-    }
+    vi.unstubAllEnvs();
     await prisma.$disconnect();
   });
 

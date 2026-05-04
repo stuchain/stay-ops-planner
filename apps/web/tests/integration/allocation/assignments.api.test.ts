@@ -47,11 +47,11 @@ describe("api assignments + unassigned queue", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    POST_ASSIGN = (await import("../../../src/app/api/assignments/route.ts")).POST;
-    PATCH_REASSIGN = (await import("../../../src/app/api/assignments/[id]/reassign/route.ts")).PATCH;
-    POST_UNASSIGN = (await import("../../../src/app/api/assignments/[id]/unassign/route.ts")).POST;
-    GET_UNASSIGNED = (await import("../../../src/app/api/bookings/unassigned/route.ts")).GET;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    POST_ASSIGN = (await import("../../../src/app/api/assignments/route")).POST;
+    PATCH_REASSIGN = (await import("../../../src/app/api/assignments/[id]/reassign/route")).PATCH;
+    POST_UNASSIGN = (await import("../../../src/app/api/assignments/[id]/unassign/route")).POST;
+    GET_UNASSIGNED = (await import("../../../src/app/api/bookings/unassigned/route")).GET;
   });
 
   afterAll(async () => {

@@ -8,6 +8,7 @@ import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@stay-ops/db";
 import { CookieJar } from "./cookieJar";
+import { assertApiErrorBody } from "./helpers/errorEnvelope";
 
 const email = "error-contract-admin@example.com";
 const password = "password1234";
@@ -31,12 +32,12 @@ describe("error contract (traceId + x-request-id)", () => {
       create: { email, passwordHash, isActive: true },
     });
 
-    const mw = await import("../../src/middleware.ts");
+    const mw = await import("../../src/middleware");
     middlewareFn = mw.middleware;
 
-    GET_CALENDAR_MONTH = (await import("../../src/app/api/calendar/month/route.ts")).GET;
-    GET_BOOKINGS_LIST = (await import("../../src/app/api/bookings/list/route.ts")).GET;
-    POST_LOGIN = (await import("../../src/app/api/auth/login/route.ts")).POST;
+    GET_CALENDAR_MONTH = (await import("../../src/app/api/calendar/month/route")).GET;
+    GET_BOOKINGS_LIST = (await import("../../src/app/api/bookings/list/route")).GET;
+    POST_LOGIN = (await import("../../src/app/api/auth/login/route")).POST;
   });
 
   it("middleware 401 includes traceId in body matching x-request-id header", async () => {
@@ -49,9 +50,8 @@ describe("error contract (traceId + x-request-id)", () => {
     const rid = res.headers.get("x-request-id");
     expect(rid).toBeTruthy();
     expect(rid!.length).toBeGreaterThanOrEqual(32);
-    const json = (await res.json()) as { error: { code: string; message: string; traceId: string } };
-    expect(json.error.code).toBe("UNAUTHORIZED");
-    expect(json.error.traceId).toBe(rid);
+    const json = await res.json();
+    assertApiErrorBody(json, { code: "UNAUTHORIZED", traceId: rid! });
   });
 
   it("GET /api/bookings/list echoes x-request-id on success when provided on request", async () => {
@@ -108,8 +108,47 @@ describe("error contract (traceId + x-request-id)", () => {
     const res = await GET_CALENDAR_MONTH(req);
     expect(res.status).toBe(400);
     expect(res.headers.get("x-request-id")).toBe(tid);
-    const json = (await res.json()) as { error: { code: string; traceId: string } };
-    expect(json.error.code).toBe("VALIDATION_ERROR");
-    expect(json.error.traceId).toBe(tid);
+    const json = await res.json();
+    assertApiErrorBody(json, {
+      code: "VALIDATION_ERROR",
+      traceId: tid,
+      expectDetailsDefined: true,
+    });
+  });
+
+  it("POST /api/auth/login invalid body returns VALIDATION_ERROR with details + traceId", async () => {
+    const tid = "cccccccc-bbbb-4ccc-dddd-eeeeeeeeeeee";
+    const res = await POST_LOGIN(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": tid,
+        },
+        body: JSON.stringify({}),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(res.headers.get("x-request-id")).toBe(tid);
+    const json = await res.json();
+    assertApiErrorBody(json, { code: "VALIDATION_ERROR", traceId: tid, expectDetailsDefined: true });
+  });
+
+  it("POST /api/auth/login invalid credentials returns INVALID_CREDENTIALS + traceId", async () => {
+    const tid = "dddddddd-bbbb-4ccc-dddd-eeeeeeeeeeee";
+    const res = await POST_LOGIN(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": tid,
+        },
+        body: JSON.stringify({ email, password: "not-the-password" }),
+      }),
+    );
+    expect(res.status).toBe(401);
+    expect(res.headers.get("x-request-id")).toBe(tid);
+    const json = await res.json();
+    assertApiErrorBody(json, { code: "INVALID_CREDENTIALS", traceId: tid });
   });
 });

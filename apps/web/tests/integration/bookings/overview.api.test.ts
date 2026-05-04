@@ -38,8 +38,8 @@ describe("api GET /api/bookings/overview", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_OVERVIEW = (await import("../../../src/app/api/bookings/overview/route.ts")).GET;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_OVERVIEW = (await import("../../../src/app/api/bookings/overview/route")).GET;
   });
 
   afterAll(async () => {

@@ -38,8 +38,8 @@ describe("api POST /api/bookings/bulk-cancel", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    POST_BULK_CANCEL = (await import("../../../src/app/api/bookings/bulk-cancel/route.ts")).POST;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    POST_BULK_CANCEL = (await import("../../../src/app/api/bookings/bulk-cancel/route")).POST;
   });
 
   afterAll(async () => {

@@ -26,8 +26,8 @@ describe("auth.session", () => {
       create: { email, passwordHash, isActive: true },
     });
 
-    const loginModule = await import("../../src/app/api/auth/login/route.ts");
-    const meModule = await import("../../src/app/api/auth/me/route.ts");
+    const loginModule = await import("../../src/app/api/auth/login/route");
+    const meModule = await import("../../src/app/api/auth/me/route");
     const logoutModule = await import(
       "../../src/app/api/auth/logout/route"
     );

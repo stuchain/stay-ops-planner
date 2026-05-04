@@ -37,8 +37,8 @@ describe("api GET /api/admin/sync/hosthub/diag overlapYear", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_DIAG = (await import("../../../src/app/api/admin/sync/hosthub/diag/route.ts")).GET;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_DIAG = (await import("../../../src/app/api/admin/sync/hosthub/diag/route")).GET;
   });
 
   afterAll(async () => {

@@ -44,7 +44,7 @@ describe("allocation — hard-block conflicts", () => {
   });
 
   it("assign rejects overlap with existing assignment (CONFLICT_ASSIGNMENT)", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `op-${s}@example.com`, passwordHash: "x" },
@@ -101,7 +101,7 @@ describe("allocation — hard-block conflicts", () => {
   });
 
   it("assign rejects overlap with manual block (CONFLICT_BLOCK)", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `op-${s}@example.com`, passwordHash: "x" },
@@ -147,7 +147,7 @@ describe("allocation — hard-block conflicts", () => {
   });
 
   it("assign allows adjacent stay after existing assignment (half-open)", async () => {
-    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service.ts");
+    const { assignBookingToRoom } = await import("../../../src/modules/allocation/service");
     const s = suffix();
     const actor = await prisma.user.create({
       data: { email: `op-${s}@example.com`, passwordHash: "x" },

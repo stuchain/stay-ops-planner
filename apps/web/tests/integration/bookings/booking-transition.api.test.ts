@@ -35,8 +35,8 @@ describe("api PATCH /api/bookings/[id] transitions and version", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    PATCH_BOOKING = (await import("../../../src/app/api/bookings/[id]/route.ts")).PATCH;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    PATCH_BOOKING = (await import("../../../src/app/api/bookings/[id]/route")).PATCH;
   });
 
   afterAll(async () => {

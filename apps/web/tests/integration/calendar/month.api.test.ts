@@ -41,8 +41,8 @@ describe("api GET /api/calendar/month", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_MONTH = (await import("../../../src/app/api/calendar/month/route.ts")).GET;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_MONTH = (await import("../../../src/app/api/calendar/month/route")).GET;
   });
 
   afterAll(async () => {
@@ -197,24 +197,27 @@ describe("api GET /api/calendar/month", () => {
     expect(json.data.rooms.map((r) => r.code)).toEqual(["A", "B"]);
 
     expect(json.data.items).toHaveLength(3);
-    expect(json.data.items[0].kind).toBe("booking");
-    if (json.data.items[0].kind === "booking") {
-      expect(json.data.items[0].id).toBe(bookingEarly.id);
-      expect(json.data.items[0].roomId).toBe(roomB.id);
-      expect(json.data.items[0].flags).not.toContain("unassigned");
-      expect(json.data.items[0].guestName).toBe("Ada");
+    const row0 = json.data.items[0]!;
+    const row1 = json.data.items[1]!;
+    const row2 = json.data.items[2]!;
+    expect(row0.kind).toBe("booking");
+    if (row0.kind === "booking") {
+      expect(row0.id).toBe(bookingEarly.id);
+      expect(row0.roomId).toBe(roomB.id);
+      expect(row0.flags).not.toContain("unassigned");
+      expect(row0.guestName).toBe("Ada");
     }
-    expect(json.data.items[1].kind).toBe("block");
-    if (json.data.items[1].kind === "block") {
-      expect(json.data.items[1].id).toBe(block.id);
+    expect(row1.kind).toBe("block");
+    if (row1.kind === "block") {
+      expect(row1.id).toBe(block.id);
     }
-    expect(json.data.items[2].kind).toBe("booking");
-    if (json.data.items[2].kind === "booking") {
-      expect(json.data.items[2].flags).toContain("unassigned");
+    expect(row2.kind).toBe("booking");
+    if (row2.kind === "booking") {
+      expect(row2.flags).toContain("unassigned");
     }
 
     expect(json.data.markers).toHaveLength(1);
-    expect(json.data.markers[0].bookingId).toBe(bookingLate.id);
+    expect(json.data.markers[0]?.bookingId).toBe(bookingLate.id);
   });
 
   it("includes booking overlapping month boundary (checkin before month)", async () => {

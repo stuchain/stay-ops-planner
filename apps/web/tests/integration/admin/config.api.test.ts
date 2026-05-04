@@ -41,13 +41,13 @@ describe("api /api/admin/config", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_TEMPLATES = (await import("../../../src/app/api/admin/config/templates/route.ts")).GET;
-    POST_TEMPLATES = (await import("../../../src/app/api/admin/config/templates/route.ts")).POST;
-    PATCH_TEMPLATE = (await import("../../../src/app/api/admin/config/templates/[id]/route.ts")).PATCH;
-    GET_THRESHOLDS = (await import("../../../src/app/api/admin/config/thresholds/route.ts")).GET;
-    POST_THRESHOLDS = (await import("../../../src/app/api/admin/config/thresholds/route.ts")).POST;
-    PATCH_THRESHOLD = (await import("../../../src/app/api/admin/config/thresholds/[id]/route.ts")).PATCH;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_TEMPLATES = (await import("../../../src/app/api/admin/config/templates/route")).GET;
+    POST_TEMPLATES = (await import("../../../src/app/api/admin/config/templates/route")).POST;
+    PATCH_TEMPLATE = (await import("../../../src/app/api/admin/config/templates/[id]/route")).PATCH;
+    GET_THRESHOLDS = (await import("../../../src/app/api/admin/config/thresholds/route")).GET;
+    POST_THRESHOLDS = (await import("../../../src/app/api/admin/config/thresholds/route")).POST;
+    PATCH_THRESHOLD = (await import("../../../src/app/api/admin/config/thresholds/[id]/route")).PATCH;
   });
 
   afterAll(async () => {

@@ -39,8 +39,8 @@ describe("api booking suggestions", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    GET_SUGGESTIONS = (await import("../../../src/app/api/bookings/[id]/suggestions/route.ts")).GET;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    GET_SUGGESTIONS = (await import("../../../src/app/api/bookings/[id]/suggestions/route")).GET;
   });
 
   afterAll(async () => {

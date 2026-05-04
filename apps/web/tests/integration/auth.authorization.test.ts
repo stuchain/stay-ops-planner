@@ -13,9 +13,9 @@ describe("auth.authorization matrix", () => {
   let GET_ADMIN_TEMPLATES: (req: NextRequest) => Promise<Response>;
 
   beforeAll(async () => {
-    POST_LOGIN = (await import("../../src/app/api/auth/login/route.ts")).POST;
-    GET_SYNC_RUNS = (await import("../../src/app/api/sync/runs/route.ts")).GET;
-    GET_ADMIN_TEMPLATES = (await import("../../src/app/api/admin/config/templates/route.ts")).GET;
+    POST_LOGIN = (await import("../../src/app/api/auth/login/route")).POST;
+    GET_SYNC_RUNS = (await import("../../src/app/api/sync/runs/route")).GET;
+    GET_ADMIN_TEMPLATES = (await import("../../src/app/api/admin/config/templates/route")).GET;
   });
 
   beforeEach(async () => {

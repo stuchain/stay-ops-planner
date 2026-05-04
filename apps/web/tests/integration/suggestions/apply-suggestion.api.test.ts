@@ -38,8 +38,8 @@ describe("api apply suggestion endpoint", () => {
 
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route.ts")).POST;
-    POST_APPLY = (await import("../../../src/app/api/bookings/[id]/suggestions/[roomId]/apply/route.ts")).POST;
+    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
+    POST_APPLY = (await import("../../../src/app/api/bookings/[id]/suggestions/[roomId]/apply/route")).POST;
   });
 
   afterAll(async () => {
