@@ -1,0 +1,157 @@
+name: Post-deploy health check
+
+# Listens for GitHub Deployment status events emitted by the Vercel GitHub
+# integration. Whenever a deployment transitions to `success`, we curl the
+# deployment URL's readiness probe and assert the response shape. The result
+# is mirrored back as a commit status named `post-deploy-health` so it is
+# visible on the PR / commit checks list.
+#
+# Triggers automatically for both preview deployments (every push) and
+# production deployments (merges to `main`). Requires the Vercel GitHub
+# integration to be configured to emit GitHub Deployments (default behavior).
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: write
+
+jobs:
+  health-check:
+    name: post-deploy-health
+    runs-on: ubuntu-latest
+    if: github.event.deployment_status.state == 'success' && github.event.deployment_status.target_url != ''
+
+    env:
+      DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+      DEPLOYMENT_SHA: ${{ github.event.deployment.sha }}
+      DEPLOYMENT_ENV: ${{ github.event.deployment.environment }}
+
+    steps:
+      - name: Probe ${{ env.DEPLOYMENT_URL }}/api/health/ready (3 attempts with backoff)
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${DEPLOYMENT_URL%/}/api/health/ready"
+          echo "Probing $target (env=${DEPLOYMENT_ENV:-unknown}, sha=${DEPLOYMENT_SHA:-unknown})"
+
+          attempt=0
+          max_attempts=3
+          delay=5
+          status=""
+          body=""
+          trace_id=""
+
+          while [ "$attempt" -lt "$max_attempts" ]; do
+            attempt=$((attempt + 1))
+            echo "Attempt $attempt of $max_attempts..."
+
+            # `-w` prints status code on stdout AFTER the body; we split on a sentinel.
+            response=$(curl --silent --show-error --max-time 15 \
+              -o /tmp/health-body.txt \
+              -D /tmp/health-headers.txt \
+              -w '%{http_code}' \
+              "$target") || response="000"
+
+            status="$response"
+            body="$(cat /tmp/health-body.txt 2>/dev/null || echo '')"
+            trace_id="$(grep -i '^x-request-id:' /tmp/health-headers.txt 2>/dev/null | tr -d '\r' | sed 's/^[Xx]-[Rr]equest-[Ii]d: *//' | head -n1)"
+
+            echo "  status=$status"
+            echo "  trace=$trace_id"
+
+            if [ "$status" = "200" ]; then
+              break
+            fi
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              echo "  retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+            fi
+          done
+
+          {
+            echo "status=$status"
+            echo "trace_id=$trace_id"
+            echo "url=$target"
+            echo "body<<HEALTH_BODY_EOF"
+            echo "$body"
+            echo "HEALTH_BODY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$status" != "200" ]; then
+            echo "::error title=Health check failed::Got HTTP $status from $target after $max_attempts attempts. trace_id=${trace_id:-none}"
+            exit 1
+          fi
+
+          # Validate JSON envelope: status === "ok" AND checks.db === "ok".
+          # Use node (always preinstalled on ubuntu-latest runners) instead of
+          # adding a jq dependency.
+          node -e '
+            const fs = require("fs");
+            const raw = fs.readFileSync("/tmp/health-body.txt", "utf8");
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch (e) {
+              console.error("::error::readiness body is not valid JSON: " + raw);
+              process.exit(1);
+            }
+            if (parsed.status !== "ok" || !parsed.checks || parsed.checks.db !== "ok") {
+              console.error("::error::readiness body did not assert ok+db=ok: " + JSON.stringify(parsed));
+              process.exit(1);
+            }
+            console.log("Readiness OK: " + JSON.stringify(parsed));
+          '
+
+      - name: Mirror result as commit status `post-deploy-health`
+        if: always() && env.DEPLOYMENT_SHA != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTCOME: ${{ steps.probe.outcome }}
+          TRACE_ID: ${{ steps.probe.outputs.trace_id }}
+          URL: ${{ steps.probe.outputs.url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="failure"
+          if [ "$OUTCOME" = "success" ]; then state="success"; fi
+          description="Probe $URL"
+          if [ -n "${TRACE_ID:-}" ]; then description="$description (trace=$TRACE_ID)"; fi
+          # Cap description at 140 chars per GitHub status API limit.
+          description="${description:0:139}"
+
+          gh api -X POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${DEPLOYMENT_SHA}" \
+            -f state="$state" \
+            -f context="post-deploy-health" \
+            -f description="$description" \
+            -f target_url="${URL}" \
+            > /dev/null
+
+      - name: Comment on associated PR on failure
+        if: failure() && github.event.deployment.payload != null
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          URL: ${{ steps.probe.outputs.url }}
+          STATUS: ${{ steps.probe.outputs.status }}
+          TRACE_ID: ${{ steps.probe.outputs.trace_id }}
+          BODY: ${{ steps.probe.outputs.body }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Find the open PR(s) whose head sha matches this deployment.
+          prs=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits/${DEPLOYMENT_SHA}/pulls" \
+            --jq '.[].number' || true)
+          if [ -z "$prs" ]; then
+            echo "No open PR associated with sha ${DEPLOYMENT_SHA}; skipping comment."
+            exit 0
+          fi
+          comment=$(printf '### Post-deploy health check failed\n\n- url: `%s`\n- http_status: `%s`\n- trace_id: `%s`\n- environment: `%s`\n\n<details><summary>response body</summary>\n\n```json\n%s\n```\n\n</details>\n' \
+            "$URL" "${STATUS:-unknown}" "${TRACE_ID:-none}" "${DEPLOYMENT_ENV:-unknown}" "${BODY:-}")
+          for pr in $prs; do
+            echo "Posting health-check failure comment on PR #$pr"
+            gh pr comment "$pr" --body "$comment" || echo "Failed to comment on PR #$pr (non-fatal)"
+          done
