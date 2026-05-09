@@ -1,7 +1,4 @@
 services:
-  app:
-    image: my-image
-    restart: unless-stopped
   postgres:
     image: postgres:16-alpine
     environment:
@@ -46,6 +43,24 @@ services:
       NODE_ENV: production
     ports:
       - "3000:3000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["pnpm", "--filter", "@stay-ops/worker", "start"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://stayops:stayops@postgres:5432/stayops
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: replace-with-local-only-secret-at-least-32-characters-long
+      APP_TIMEZONE: Etc/UTC
+      NODE_ENV: production
+    restart: unless-stopped
 
 volumes:
   postgres_data:
