@@ -1,6 +1,7 @@
 {
   "name": "stay-ops-planner",
   "private": true,
+  "license": "MIT",
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=20"
@@ -23,5 +24,8 @@
     "backup:verify-restore": "node ./scripts/restore-verify-postgres.mjs",
     "retention:prune": "corepack pnpm --filter @stay-ops/db run retention:prune",
     "smoke:epic7-auth": "corepack pnpm --filter @stay-ops/db run smoke:epic7-auth"
+  },
+  "devDependencies": {
+    "typescript": "5.7.2"
   }
 }
