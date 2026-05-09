@@ -23,7 +23,8 @@
     "backup:prune": "node ./scripts/backup-prune.mjs",
     "backup:verify-restore": "node ./scripts/restore-verify-postgres.mjs",
     "retention:prune": "corepack pnpm --filter @stay-ops/db run retention:prune",
-    "smoke:epic7-auth": "corepack pnpm --filter @stay-ops/db run smoke:epic7-auth"
+    "smoke:epic7-auth": "corepack pnpm --filter @stay-ops/db run smoke:epic7-auth",
+    "db:migrate-docker-to-neon": "node ./scripts/migrate-docker-to-neon.mjs"
   },
   "devDependencies": {
     "typescript": "5.7.2"

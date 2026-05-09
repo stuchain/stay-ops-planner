@@ -68,3 +68,13 @@ Do **not** use `migrate:dev` in production or CI; use `migrate:deploy` only.
 |---------|----------------|
 | `migrate deploy` errors on startup | Drift between DB and migration history; restore from backup or fix migrations in a **new** migration (never rewrite applied history in prod without ops sign-off). |
 | Build fails after pull | Run `pnpm --filter @stay-ops/db generate` so the generated client matches the schema. |
+
+## One-off: copy local Docker Postgres to Neon
+
+When your data lives in `docker compose` Postgres (see [../../docker-compose.yml](../../docker-compose.yml)) and you want the same data in Neon:
+
+1. Set **Neon** as `DATABASE_URL` in repo-root `.env` (or export it for one shell only).
+2. Start Docker: `docker compose up -d postgres`.
+3. Run **`pnpm db:migrate-docker-to-neon`** ([../../scripts/migrate-docker-to-neon.mjs](../../scripts/migrate-docker-to-neon.mjs)) — dumps `postgres` service, restores into `DATABASE_URL`, then runs `migrate:deploy`.
+
+Do **not** commit `DATABASE_URL` or dumps; `tmp/` is gitignored.
