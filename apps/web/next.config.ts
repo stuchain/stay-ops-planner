@@ -15,6 +15,12 @@ loadEnvFile({ path: path.join(monorepoRoot, ".env.local") });
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@stay-ops/shared", "@stay-ops/audit"],
+  /**
+   * Prisma Query Engine binaries must not be webpack-bundled into route chunks on Vercel
+   * (see prisma.loginAttempt / libquery_engine-rhel-openssl-3.0.x not found).
+   * Keep Node resolving `@prisma/client` + workspace DB package from node_modules at runtime.
+   */
+  serverExternalPackages: ["@prisma/client", "prisma", "@stay-ops/db"],
 };
 
 const sentryUploadEnabled = Boolean(
