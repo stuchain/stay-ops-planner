@@ -122,10 +122,19 @@ if (merged.SKIP_MIGRATE === "1") {
   console.log("SKIP_MIGRATE=1 — not running migrate:deploy.");
 } else {
   console.log("Running prisma migrate deploy against Neon…");
-  run("corepack", ["pnpm", "--filter", "@stay-ops/db", "migrate:deploy"], {
-    env: { ...process.env, ...merged, DATABASE_URL: targetUrl },
-    shell: false,
+  const dbDir = path.join(root, "packages", "db");
+  const env = { ...process.env, ...merged, DATABASE_URL: targetUrl };
+  /** Prefer `npx prisma` so global `pnpm` is not required (Windows-friendly). */
+  const r = spawnSync("npx", ["prisma", "migrate", "deploy"], {
+    cwd: dbDir,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+    env,
   });
+  if (r.status !== 0) {
+    console.error("npx prisma migrate deploy failed. Install deps (pnpm install / npm install) then retry.");
+    process.exit(r.status ?? 1);
+  }
 }
 
 if (merged.KEEP_DUMP !== "1") {
@@ -136,4 +145,4 @@ if (merged.KEEP_DUMP !== "1") {
   }
 }
 
-console.log("Done. Verify with pnpm --filter @stay-ops/db (or app login).");
+console.log("Done. Verify app login or: cd packages/db && npx prisma migrate status");

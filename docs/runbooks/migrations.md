@@ -75,6 +75,6 @@ When your data lives in `docker compose` Postgres (see [../../docker-compose.yml
 
 1. Set **Neon** as `DATABASE_URL` in repo-root `.env` (or export it for one shell only).
 2. Start Docker: `docker compose up -d postgres`.
-3. Run **`pnpm db:migrate-docker-to-neon`** ([../../scripts/migrate-docker-to-neon.mjs](../../scripts/migrate-docker-to-neon.mjs)) — dumps `postgres` service, restores into `DATABASE_URL`, then runs `migrate:deploy`.
+3. Run the migration helper ([../../scripts/migrate-docker-to-neon.mjs](../../scripts/migrate-docker-to-neon.mjs)): **`node ./scripts/migrate-docker-to-neon.mjs`** from repo root (works without `pnpm` on `PATH`; after `pnpm install` / `npm install` so Prisma exists). Optional: **`pnpm db:migrate-docker-to-neon`** if you use pnpm globally — dumps `postgres` service, restores into `DATABASE_URL`, then runs `migrate:deploy`.
 
 Do **not** commit `DATABASE_URL` or dumps; `tmp/` is gitignored.
