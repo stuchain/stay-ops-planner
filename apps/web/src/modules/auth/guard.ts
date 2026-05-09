@@ -2,13 +2,10 @@ import type { NextRequest } from "next/server";
 import { Prisma } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { AuthError } from "./errors";
-import { SESSION_COOKIE_NAME, verifySessionToken, type SessionRole, type VerifiedSession } from "./session";
+import { SESSION_COOKIE_NAME, verifySessionToken, type SessionRole } from "./session";
+import type { AuthContext } from "./authContext";
 
-export type AuthContext = {
-  userId: string;
-  sessionExpiresAt: Date;
-  role: SessionRole;
-};
+export type { AuthContext };
 
 const ALL_ROLES: readonly SessionRole[] = ["viewer", "operator", "admin"];
 
@@ -66,35 +63,6 @@ export async function verifyAndLoadAuthContext(token: string | null): Promise<Au
     userId: session.userId,
     sessionExpiresAt: session.expiresAt,
     role,
-  };
-}
-
-/** Synchronous JWT-only context for middleware (no DB). */
-export function getSessionContextFromRequest(request: NextRequest): {
-  context: AuthContext | null;
-  tokenPresent: boolean;
-  verified?: VerifiedSession;
-} {
-  const cookie = request.cookies.get(SESSION_COOKIE_NAME);
-  const token = cookie?.value;
-
-  if (!token) {
-    return { context: null, tokenPresent: false };
-  }
-
-  const session = verifySessionToken(token);
-  if (!session) {
-    return { context: null, tokenPresent: true };
-  }
-
-  return {
-    context: {
-      userId: session.userId,
-      sessionExpiresAt: session.expiresAt,
-      role: session.role,
-    } satisfies AuthContext,
-    tokenPresent: true,
-    verified: session,
   };
 }
 

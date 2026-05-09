@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jsonError } from "@/modules/auth/errors";
 import { clearSessionCookie, refreshSessionTokenIfNeeded, setSessionCookie } from "@/modules/auth/session";
-import { getSessionContextFromRequest } from "@/modules/auth/guard";
+import { getSessionContextFromRequest } from "@/modules/auth/middlewareSession";
 import { newTraceId, TRACE_HEADER } from "@/lib/traceId";
 
 function nextWithTrace(request: NextRequest, traceId: string): NextResponse {
