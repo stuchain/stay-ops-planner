@@ -1,5 +1,7 @@
 # Ship-Readiness Epics
 
+**Related:** For single-household production hosting, Docker self-host, and clone-and-run checklists, see [EPICS_2.md](./EPICS_2.md).
+
 ## Epic 1: Error Contract And Global Failure UX
 **Description:** Create a unified runtime/API failure experience so errors are actionable and traceable via `traceId`.
 

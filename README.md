@@ -2,7 +2,7 @@
 
 **Work in progress.** Internal tool for short-term rental ops: sync bookings from a channel manager, assign each stay to a **physical unit**, avoid double-booking, and coordinate cleaning and maintenance. Not for guests.
 
-Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md). 
+Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — see [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md). 
 
 **Code review:** use [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md) as the checklist for module boundaries, API errors, and data access.
 
@@ -99,8 +99,14 @@ Stack direction: Next.js, PostgreSQL / Prisma, Redis for jobs — see [docs/arch
 - **Storybook (UI primitives)**: `pnpm --filter @stay-ops/web run storybook` (dev) or `pnpm --filter @stay-ops/web run build-storybook` (static output in `apps/web/storybook-static`, gitignored).
 - Coverage includes auth, allocation (including races and inactive rooms), blocks, cleaning flows, DB constraints, and sync webhook behavior.
 
+### Ship for your household
+- Household production roadmap and ship gates (A1 no-worker primary path): [docs/EPICS_2.md](docs/EPICS_2.md).
+- Production runbook (Vercel + Neon, optional cron, no dedicated worker baseline): [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
+- Docker Compose and worker-based local/dev stack remain available in-repo: [docker-compose.yml](docker-compose.yml), [docs/runbooks/self-host-docker.md](docs/runbooks/self-host-docker.md).
+- License: [LICENSE](LICENSE) (MIT).
+
 ### Production deployment reference
-- Target stack: Vercel + Neon + Upstash.
+- Target stack (household baseline): Vercel + Neon, sync through protected web endpoints.
 - Deployment runbook: [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
 - Incident runbooks:
   - [docs/runbooks/runbook-sync-failure.md](docs/runbooks/runbook-sync-failure.md)
