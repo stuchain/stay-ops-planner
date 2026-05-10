@@ -113,7 +113,11 @@ Checklist:
 - [ ] Confirm runtime and migration contexts point to the same Neon DB.
 
 Commands:
-- `pnpm --filter @stay-ops/db migrate:deploy` (against production environment)
+- `pnpm --filter @stay-ops/db migrate:deploy` (against production environment), **or**
+- GitHub Actions **Migrate production DB** (`workflow_dispatch`): [`.github/workflows/migrate-production.yml`](../.github/workflows/migrate-production.yml) using Environment **`production`** and secret **`DATABASE_URL`** (Neon; see [production-deploy.md](./runbooks/production-deploy.md)).
+
+Optional verification (does not migrate; proves runtime DB reachability from app edge):
+- **Verify production readiness** (`workflow_dispatch`): [`.github/workflows/verify-production-readiness.yml`](../.github/workflows/verify-production-readiness.yml) with full **`https://…/api/health/ready`** URL; repo secret **`VERCEL_AUTOMATION_BYPASS_SECRET`** if Vercel Deployment Protection applies.
 
 Expected result:
 - Production runtime and migration execution are both pointed at the exact same Neon DB.
@@ -124,7 +128,8 @@ Failure triage:
 
 Evidence:
 - Screenshot/export of Vercel env showing `DATABASE_URL` configured (secret redacted).
-- Migration command output with successful DB connectivity.
+- Migration command output with successful DB connectivity — from a trusted CLI session **and/or** a completed **Migrate production DB** Actions run summary (no secrets pasted in logs beyond GitHub masking).
+- Optional: **Verify production readiness** Actions run summary showing HTTP 200 and `checks.db: "ok"` for the deployed URL.
 
 Gate:
 - Migration context and runtime context both resolve to the same Neon production DB.

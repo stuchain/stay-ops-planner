@@ -1,0 +1,34 @@
+# Apply pending Prisma migrations to the production Neon database.
+# Trigger manually only — requires GitHub Environment `production` with secret DATABASE_URL.
+# See docs/runbooks/production-deploy.md § Production migrations via GitHub Actions.
+
+name: Migrate production DB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: prisma migrate deploy
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Prisma migrate deploy
+        run: pnpm --filter @stay-ops/db exec prisma migrate deploy
+
+      - name: Prisma migrate status
+        run: pnpm --filter @stay-ops/db exec prisma migrate status

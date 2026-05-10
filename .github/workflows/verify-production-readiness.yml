@@ -1,0 +1,97 @@
+# Manually probe GET /api/health/ready on any deployment URL (production or preview).
+# Optional secret VERCEL_AUTOMATION_BYPASS_SECRET for Vercel Deployment Protection.
+
+name: Verify production readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      readiness_url:
+        description: "Full URL to readiness endpoint (e.g. https://your-app.vercel.app/api/health/ready)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: GET /api/health/ready
+    runs-on: ubuntu-latest
+    env:
+      READINESS_URL: ${{ github.event.inputs.readiness_url }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
+    steps:
+      - name: Probe readiness URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${READINESS_URL// /}"
+          if [[ "$target" != http://* && "$target" != https://* ]]; then
+            echo "::error::readiness_url must start with http:// or https://"
+            exit 1
+          fi
+          echo "Probing $target"
+
+          curl_opts=(--silent --show-error --max-time 15)
+          if [[ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]]; then
+            curl_opts+=(--header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
+          fi
+
+          attempt=0
+          max_attempts=3
+          delay=5
+          status=""
+          trace_id=""
+
+          while [ "$attempt" -lt "$max_attempts" ]; do
+            attempt=$((attempt + 1))
+            echo "Attempt $attempt of $max_attempts..."
+
+            response=$(curl "${curl_opts[@]}" \
+              -o /tmp/readiness-body.txt \
+              -D /tmp/readiness-headers.txt \
+              -w '%{http_code}' \
+              "$target") || response="000"
+
+            status="$response"
+            trace_id="$(grep -i '^x-request-id:' /tmp/readiness-headers.txt 2>/dev/null | tr -d '\r' | sed 's/^[Xx]-[Rr]equest-[Ii]d: *//' | head -n1)"
+
+            echo "  status=$status"
+            echo "  trace=$trace_id"
+
+            if [ "$status" = "200" ]; then
+              break
+            fi
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              echo "  retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+            fi
+          done
+
+          if [ "$status" != "200" ]; then
+            hint=""
+            if [ "$status" = "401" ] && [ -z "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]; then
+              hint=" Configure repo secret VERCEL_AUTOMATION_BYPASS_SECRET if Vercel Deployment Protection is on."
+            fi
+            echo "::error::Got HTTP $status from $target after $max_attempts attempts. trace_id=${trace_id:-none}.${hint}"
+            exit 1
+          fi
+
+          node -e '
+            const fs = require("fs");
+            const raw = fs.readFileSync("/tmp/readiness-body.txt", "utf8");
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch (e) {
+              console.error("::error::readiness body is not valid JSON: " + raw);
+              process.exit(1);
+            }
+            if (parsed.status !== "ok" || !parsed.checks || parsed.checks.db !== "ok") {
+              console.error("::error::readiness body did not assert ok+db=ok: " + JSON.stringify(parsed));
+              process.exit(1);
+            }
+            console.log("Readiness OK: " + JSON.stringify(parsed));
+          '
