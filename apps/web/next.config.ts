@@ -15,6 +15,22 @@ loadEnvFile({ path: path.join(monorepoRoot, ".env.local") });
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@stay-ops/shared", "@stay-ops/audit"],
+  /** @see https://nextjs.org/docs/app/guides/memory-usage */
+  experimental: {
+    webpackMemoryOptimizations: true,
+    serverSourceMaps: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  /**
+   * CI runs `pnpm -r run typecheck`. Skipping the duplicate `tsc` pass inside `next build` saves RAM;
+   * do not merge type-broken PRs (CI must stay green).
+   */
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  productionBrowserSourceMaps: false,
   /**
    * pnpm installs Prisma engines under `<repo>/node_modules/.pnpm/.../.prisma/client/`.
    * Default tracing roots at `apps/web`, so Lambda never receives `libquery_engine-rhel-openssl-3.0.x*.node`.
@@ -22,7 +38,22 @@ const nextConfig: NextConfig = {
    */
   outputFileTracingRoot: monorepoRoot,
   outputFileTracingIncludes: {
-    "/*": ["../../node_modules/.pnpm/**/.prisma/client/**"],
+    // Narrow Prisma trace globs — wide `.pnpm` prisma patterns inflate NFT RAM on monorepo trace root.
+    "/*": [
+      "../../node_modules/.pnpm/@prisma+client@*/**/.prisma/**/*",
+      "../../node_modules/.pnpm/@prisma+client@*/**/node_modules/@prisma/client/**/*",
+      "../../node_modules/.pnpm/@prisma+engines@*/**/*",
+    ],
+  },
+  /** Monorepo `outputFileTracingRoot` widens NFT; exclude paths never imported by the server bundle. */
+  outputFileTracingExcludes: {
+    "/*": [
+      "../../packages/worker/**/*",
+      "../../docs/**/*",
+      "../../.github/**/*",
+      "./tests/**/*",
+      "../../scripts/**/*",
+    ],
   },
   /**
    * Prisma Query Engine binaries must not be webpack-bundled into route chunks on Vercel.

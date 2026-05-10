@@ -188,11 +188,24 @@ Collect these artifacts for release notes:
 
 ### Vercel “Build Failed (out of memory)”
 
-Standard Vercel builders have a **fixed RAM budget** (~8GB including all processes). Large Next.js apps with **output file tracing** (and monorepo Prisma binaries) can spike during **“Collecting build traces”**. Giving Node a **heap limit near the full machine size** (`--max-old-space-size=8192`) often **triggers OS-level OOM**: the heap competes with Webpack/trace workers.
+**Cleaning up old deployments does not reduce build RAM** — each Production build starts on fresh hardware. OOM means the **`next build` Node process** (compile, NFT trace, workers) exhausted heap or container memory during that single run.
+
+Standard Vercel builders have a **fixed RAM budget** (~8 GB including all processes). Large Next.js apps with **output file tracing** (and monorepo Prisma binaries) often spike during **“Collecting build traces”**. Giving Node a **heap limit near the full machine size** (`--max-old-space-size=8192`) often **triggers OS-level OOM**: the heap competes with Webpack/trace workers.
 
 The web package pins a safer default in [`../../apps/web/package.json`](../../apps/web/package.json) (`NODE_OPTIONS=--max-old-space-size=6144` for `next build`). Locally, if traces still exhaust memory, run once with `cross-env NODE_OPTIONS=--max-old-space-size=8192 pnpm --filter @stay-ops/web run build` **on a larger machine**.
 
-If production builds remain unstable after lowering heap, enable Vercel **Enhanced Builds** (larger build machines) from the dashboard error banner, or refactor tracing (narrower [`outputFileTracingIncludes`](../../apps/web/next.config.ts) — trades off risk of missing Prisma engine files).
+The app also applies Next.js-focused mitigations in [`../../apps/web/next.config.ts`](../../apps/web/next.config.ts) (aligned with [Next.js memory guidance](https://nextjs.org/docs/app/guides/memory-usage)):
+
+- **`experimental.webpackMemoryOptimizations`** — lowers peak Webpack RSS (slightly slower compile).
+- **`eslint.ignoreDuringBuilds`** — CI already runs **`pnpm lint`** ([`../../.github/workflows/ci.yml`](../../.github/workflows/ci.yml)); avoid duplicating ESLint inside **`next build`**.
+- **`typescript.ignoreBuildErrors`** — CI runs **`pnpm -r run typecheck`** — same trade-off: fewer duplicate checks during **`next build`**. Merge only when typecheck stays green.
+- **`productionBrowserSourceMaps: false`** and **`experimental.serverSourceMaps: false`** — less map work during the build.
+- **`outputFileTracingExcludes`** for paths not used by the server bundle (worker package, docs, `.github`, `apps/web/tests`, `scripts`).
+- **Narrow `outputFileTracingIncludes` for Prisma** — avoids a recursive `.pnpm` prisma glob that explodes NFT over the whole store.
+
+If builds remain unstable after the above, enable Vercel **Enhanced Builds** (larger machines) from the dashboard, or tighten tracing further knowing it can drop required Prisma engine files — validate **`GET /api/health/ready`** after any tracing change.
+
+For hotspots, **`next build --experimental-debug-memory-usage`** (see Next docs above) prints heap-centric diagnostics locally or in a throwaway CI job.
 
 ## Rollback and restore rehearsal
 
