@@ -8,7 +8,7 @@ afterEach(() => {
 describe("api health", () => {
   it("/api/health returns readiness 200 when db is reachable", async () => {
     vi.doMock("../../../src/modules/health/checks", () => ({
-      checkDatabaseConnectivity: vi.fn().mockResolvedValue(true),
+      checkDatabaseConnectivity: vi.fn().mockResolvedValue({ ok: true }),
     }));
     const GET_HEALTH = (await import("../../../src/app/api/health/route")).GET;
     const res = await GET_HEALTH();
@@ -21,7 +21,7 @@ describe("api health", () => {
 
   it("/api/health/ready matches readiness", async () => {
     vi.doMock("../../../src/modules/health/checks", () => ({
-      checkDatabaseConnectivity: vi.fn().mockResolvedValue(true),
+      checkDatabaseConnectivity: vi.fn().mockResolvedValue({ ok: true }),
     }));
     const GET_READY = (await import("../../../src/app/api/health/ready/route")).GET;
     const res = await GET_READY();
@@ -42,14 +42,24 @@ describe("api health", () => {
 
   it("/api/health/ready returns 503 when db is unreachable", async () => {
     vi.doMock("../../../src/modules/health/checks", () => ({
-      checkDatabaseConnectivity: vi.fn().mockResolvedValue(false),
+      checkDatabaseConnectivity: vi.fn().mockResolvedValue({
+        ok: false,
+        prismaCode: "P1001",
+        issue: "cannot_connect",
+      }),
     }));
     const GET_READY = (await import("../../../src/app/api/health/ready/route")).GET;
     const res = await GET_READY();
     expect(res.status).toBe(503);
-    const json = (await res.json()) as { status: string; kind: string; checks: { db: string } };
+    const json = (await res.json()) as {
+      status: string;
+      kind: string;
+      checks: { db: string; prismaCode?: string; issue?: string };
+    };
     expect(json.status).toBe("degraded");
     expect(json.kind).toBe("readiness");
     expect(json.checks.db).toBe("error");
+    expect(json.checks.prismaCode).toBe("P1001");
+    expect(json.checks.issue).toBe("cannot_connect");
   });
 });

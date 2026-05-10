@@ -42,7 +42,8 @@ from production baseline.
 - Monorepo build/install commands are pinned in Git for this app:
   [`../../apps/web/vercel.json`](../../apps/web/vercel.json). In Vercel, set **Root Directory**
   to `apps/web` and leave **Install** / **Build** empty in the dashboard so those commands apply.
-  (**Dashboard** install/build overrides `vercel.json` if filled in.)
+  (**Dashboard** install/build overrides `vercel.json` if filled in.) Production build runs
+  `pnpm build:web`, which builds `@stay-ops/web` and its workspace dependencies only (skips `packages/worker`) and uses pnpm **append-only** output so logs advance while `next build` compiles.
 - Deployment trigger: auto-deploy on push/merge to `main`
 - Production DB: single Neon Postgres target
 - Migration policy: run in deploy pipeline and block release on failure
@@ -54,6 +55,29 @@ from production baseline.
 
 Validate the production environment matrix in [../../.env.example](../../.env.example)
 before each ship candidate.
+
+### When `/api/health/ready` returns 503 `degraded`
+
+The body includes `checks.db: "error"` plus, when Prisma exposes them, **`checks.prismaCode`** and **`checks.issue`** (`cannot_connect`, `authentication_failed`, `connection_timeout`, etc.). Interpretation hints:
+
+| `issue` / typical code | Likely meaning | What to verify |
+|---|---|---|
+| `cannot_connect` (often **P1001**) | TCP/TLS/name could not establish | Neon project running (not fully suspended); `DATABASE_URL` host matches Neon’s **pooler** URL if you deploy serverless (Vercel); no typo in hostname/port |
+| `connection_timeout` (**P1002**) | Firewall or network stall | Neon/Vercel allowlists; regional latency; try Neon’s pooled string |
+| `authentication_failed` (**P1000**) | User/password/database rejected | Rotate Neon role password; URL-encode special characters in the password portion of `DATABASE_URL` |
+| `database_does_not_exist` (**P1003**) | DB name in URL wrong | Neon default DB name (`neondb` vs custom) |
+
+Full Prisma messages are emitted to **function logs** (e.g. Vercel → Logs) alongside JSON `readiness_db_check` — never commit connection strings.
+
+### Cross-check locally
+
+Use the **same** `DATABASE_URL` value as Production in your shell (copy from Vercel env UI; never commit it), then:
+
+```bash
+pnpm --filter @stay-ops/db exec prisma migrate status
+```
+
+If this cannot connect, fix the URL (pooler hostname, SSL, password encoding) before expecting `/api/health/ready` to pass on Vercel.
 
 Required:
 - `DATABASE_URL`

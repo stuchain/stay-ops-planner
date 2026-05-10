@@ -4,8 +4,8 @@ import { checkDatabaseConnectivity } from "./checks";
 /** Readiness: process can serve traffic; database is reachable. */
 export async function getReadinessResponse() {
   const startedAt = Date.now();
-  const dbOk = await checkDatabaseConnectivity();
-  if (dbOk) {
+  const db = await checkDatabaseConnectivity();
+  if (db.ok) {
     return NextResponse.json(
       {
         status: "ok",
@@ -16,11 +16,21 @@ export async function getReadinessResponse() {
       { status: 200 },
     );
   }
+
+  const checks =
+    db.prismaCode || db.issue
+      ? {
+          db: "error" as const,
+          ...(db.prismaCode ? { prismaCode: db.prismaCode } : {}),
+          ...(db.issue ? { issue: db.issue } : {}),
+        }
+      : { db: "error" as const };
+
   return NextResponse.json(
     {
       status: "degraded",
       kind: "readiness",
-      checks: { db: "error" },
+      checks,
       uptimeSeconds: process.uptime(),
       durationMs: Date.now() - startedAt,
     },
