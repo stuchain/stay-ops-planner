@@ -185,6 +185,14 @@ Collect these artifacts for release notes:
   [../../apps/web/src/middleware.ts](../../apps/web/src/middleware.ts).
 - If deployment protection is enabled on Vercel, probes from GitHub Actions see **HTTP 401** before the request reaches the app unless you add **[Protection Bypass for Automation](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation)** in the Vercel project and paste the same value into a GitHub repository secret **`VERCEL_AUTOMATION_BYPASS_SECRET`** so the workflow can send the `x-vercel-protection-bypass` header when curling the deployment URL.
 
+### Vercel “Build Failed (out of memory)”
+
+Standard Vercel builders have a **fixed RAM budget** (~8GB including all processes). Large Next.js apps with **output file tracing** (and monorepo Prisma binaries) can spike during **“Collecting build traces”**. Giving Node a **heap limit near the full machine size** (`--max-old-space-size=8192`) often **triggers OS-level OOM**: the heap competes with Webpack/trace workers.
+
+The web package pins a safer default in [`../../apps/web/package.json`](../../apps/web/package.json) (`NODE_OPTIONS=--max-old-space-size=6144` for `next build`). Locally, if traces still exhaust memory, run once with `cross-env NODE_OPTIONS=--max-old-space-size=8192 pnpm --filter @stay-ops/web run build` **on a larger machine**.
+
+If production builds remain unstable after lowering heap, enable Vercel **Enhanced Builds** (larger build machines) from the dashboard error banner, or refactor tracing (narrower [`outputFileTracingIncludes`](../../apps/web/next.config.ts) — trades off risk of missing Prisma engine files).
+
 ## Rollback and restore rehearsal
 
 1. Roll back Vercel to previous known-good deployment.
