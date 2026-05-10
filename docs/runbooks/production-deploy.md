@@ -44,6 +44,7 @@ from production baseline.
   to `apps/web` and leave **Install** / **Build** empty in the dashboard so those commands apply.
   (**Dashboard** install/build overrides `vercel.json` if filled in.) Production build runs
   `pnpm build:web`, which builds `@stay-ops/web` and its workspace dependencies only (skips `packages/worker`) and uses pnpm **append-only** output so logs advance while `next build` compiles.
+  [`apps/web/vercel.json`](../../apps/web/vercel.json) sets **`SKIP_STAYOPS_ENV_VALIDATE=1` for the build step only** so `next build` does not run strict `parseEnv` (which would **`exit(1)`** when Neon/session secrets exist only at **runtime**, not Build, in Vercel). Production serverless runtime still receives full env from the dashboard. Alternatively, enable Production secrets **for builds** instead of skipping (duplicate scope in Vercel UI).
 - Deployment trigger: auto-deploy on push/merge to `main`
 - Production DB: single Neon Postgres target
 - Migration policy: run in deploy pipeline and block release on failure

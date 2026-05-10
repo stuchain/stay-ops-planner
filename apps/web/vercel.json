@@ -2,5 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "cd ../.. && corepack enable pnpm && pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && corepack enable pnpm && pnpm build:web"
+  "buildCommand": "cd ../.. && corepack enable pnpm && pnpm build:web",
+  "build": {
+    "env": {
+      "SKIP_STAYOPS_ENV_VALIDATE": "1"
+    }
+  }
 }
