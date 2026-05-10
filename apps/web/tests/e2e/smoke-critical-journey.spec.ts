@@ -34,6 +34,18 @@ test.describe("critical journey @smoke", () => {
       await page.goto("/app/bookings");
       await expect(page.getByRole("heading", { name: "Bookings" })).toBeVisible();
       await expect(page.getByText("Loading bookings...")).toBeHidden({ timeout: 20_000 });
+      /** Default filters use check-in ≥ today; seeded alpha stays early in month. */
+      await page.getByRole("button", { name: "Filters" }).click();
+      await expect(page.getByText("Date range (check-in)", { exact: false })).toBeVisible();
+      const monthStartIso = await page.evaluate(() => {
+        const n = new Date();
+        const y = n.getFullYear();
+        const m = `${n.getMonth() + 1}`.padStart(2, "0");
+        return `${y}-${m}-01`;
+      });
+      await page.locator(".ops-bookings-date-range").locator('input[type="date"]').first().fill(monthStartIso);
+      await page.getByRole("button", { name: "Search" }).click();
+      await expect(page.getByText("Loading bookings...")).toBeHidden({ timeout: 20_000 });
       const alphaRow = page.getByRole("button", { name: /Open booking e2e-seed-alpha/i });
       await alphaRow.scrollIntoViewIfNeeded();
       await alphaRow.focus();

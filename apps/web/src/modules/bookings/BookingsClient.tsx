@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DryRunResult } from "@stay-ops/shared";
 import { useI18n } from "@/i18n/I18nProvider";
 import { DryRunPreviewModal, useDryRun } from "@/modules/dry-run";
@@ -258,15 +258,6 @@ export function BookingsClient() {
   const closeModal = useCallback(() => {
     setSelectedId(null);
   }, []);
-
-  const onRowKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLTableRowElement>, bookingId: string) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      openBooking(bookingId);
-    },
-    [openBooking],
-  );
 
   const toggleChannel = useCallback((channel: Channel) => {
     setFilters((state) => {
@@ -784,11 +775,7 @@ export function BookingsClient() {
                 <tr
                   key={item.id}
                   className="ops-bookings-row"
-                  role="button"
-                  tabIndex={0}
                   onClick={() => openBooking(item.id)}
-                  onKeyDown={(event) => onRowKeyDown(event, item.id)}
-                  aria-label={`Open booking ${item.externalBookingId}`}
                 >
                   <td
                     onClick={(event) => event.stopPropagation()}
@@ -803,10 +790,20 @@ export function BookingsClient() {
                       />
                     ) : null}
                   </td>
-                  <td>
-                    <span className="ops-bookings-row-logo">
-                      <ChannelLogo channel={item.channel} className="ops-channel-logo" />
-                    </span>
+                  <td
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="ops-bookings-row-btn ops-bookings-row-open"
+                      onClick={() => openBooking(item.id)}
+                      aria-label={`Open booking ${item.externalBookingId}`}
+                    >
+                      <span className="ops-bookings-row-logo">
+                        <ChannelLogo channel={item.channel} className="ops-channel-logo" />
+                      </span>
+                    </button>
                   </td>
                   <td>{item.assignedRentalName ?? "Unassigned ⚠"}</td>
                   <td>{item.guestName}</td>

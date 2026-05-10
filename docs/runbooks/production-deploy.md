@@ -135,6 +135,7 @@ Collect these artifacts for release notes:
   validates `/api/health/ready` after deployment events.
 - Health routes remain allowlisted in
   [../../apps/web/src/middleware.ts](../../apps/web/src/middleware.ts).
+- If deployment protection is enabled on Vercel, probes from GitHub Actions see **HTTP 401** before the request reaches the app unless you add **[Protection Bypass for Automation](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation)** in the Vercel project and paste the same value into a GitHub repository secret **`VERCEL_AUTOMATION_BYPASS_SECRET`** so the workflow can send the `x-vercel-protection-bypass` header when curling the deployment URL.
 
 ## Rollback and restore rehearsal
 

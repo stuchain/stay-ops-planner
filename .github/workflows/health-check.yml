@@ -27,6 +27,7 @@ jobs:
       DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
       DEPLOYMENT_SHA: ${{ github.event.deployment.sha }}
       DEPLOYMENT_ENV: ${{ github.event.deployment.environment }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
       - name: Probe ${{ env.DEPLOYMENT_URL }}/api/health/ready (3 attempts with backoff)
@@ -36,6 +37,13 @@ jobs:
           set -euo pipefail
           target="${DEPLOYMENT_URL%/}/api/health/ready"
           echo "Probing $target (env=${DEPLOYMENT_ENV:-unknown}, sha=${DEPLOYMENT_SHA:-unknown})"
+
+          curl_opts=(--silent --show-error --max-time 15)
+          # With Vercel Deployment Protection enabled, probes get HTTP 401 before Next.js unless this header matches
+          # Vercel → Deployment Protection → Protection Bypass for Automation (GitHub Actions secret `VERCEL_AUTOMATION_BYPASS_SECRET`).
+          if [[ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]]; then
+            curl_opts+=(--header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
+          fi
 
           attempt=0
           max_attempts=3
@@ -49,7 +57,7 @@ jobs:
             echo "Attempt $attempt of $max_attempts..."
 
             # `-w` prints status code on stdout AFTER the body; we split on a sentinel.
-            response=$(curl --silent --show-error --max-time 15 \
+            response=$(curl "${curl_opts[@]}" \
               -o /tmp/health-body.txt \
               -D /tmp/health-headers.txt \
               -w '%{http_code}' \
@@ -83,7 +91,11 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           if [ "$status" != "200" ]; then
-            echo "::error title=Health check failed::Got HTTP $status from $target after $max_attempts attempts. trace_id=${trace_id:-none}"
+            hint=""
+            if [ "$status" = "401" ] && [ -z "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]; then
+              hint=" If this is a Vercel-protected deployment, add repo secret VERCEL_AUTOMATION_BYPASS_SECRET (Protection Bypass for Automation)."
+            fi
+            echo "::error title=Health check failed::Got HTTP $status from $target after $max_attempts attempts. trace_id=${trace_id:-none}${hint}"
             exit 1
           fi
 
