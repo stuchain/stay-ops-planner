@@ -42,9 +42,11 @@ from production baseline.
 - Monorepo build/install commands are pinned in Git for this app:
   [`../../apps/web/vercel.json`](../../apps/web/vercel.json). In Vercel, set **Root Directory**
   to `apps/web` and leave **Install** / **Build** empty in the dashboard so those commands apply.
-  (**Dashboard** install/build overrides `vercel.json` if filled in.) Production build runs
-  `pnpm build:web`, which builds `@stay-ops/web` and its workspace dependencies only (skips `packages/worker`) and uses pnpm **append-only** output so logs advance while `next build` compiles.
-  [`apps/web/vercel.json`](../../apps/web/vercel.json) sets **`SKIP_STAYOPS_ENV_VALIDATE=1` for the build step only** so `next build` does not run strict `parseEnv` (which would **`exit(1)`** when Neon/session secrets exist only at **runtime**, not Build, in Vercel). Production serverless runtime still receives full env from the dashboard. Alternatively, enable Production secrets **for builds** instead of skipping (duplicate scope in Vercel UI).
+  (**Dashboard** install/build overrides `vercel.json` if filled in.)
+  **`buildCommand` runs migrations before the Next build:** `pnpm --filter @stay-ops/db exec prisma migrate deploy`, then **`prisma migrate status`**, then **`pnpm build:web`**. If either migrate step exits non‑zero, Vercel **does not ship** that deployment (EPICS Ship‑Epic **S3**).
+  **`DATABASE_URL` must be available during the build** for every Vercel environment that runs this command (typically **Production** and **Preview**) — enable the same secret for **Build** (and Preview if applicable), not **Runtime-only**, otherwise migrate fails at build time. Use a **different** `DATABASE_URL` per environment when Preview should not touch production Neon (see [Preview deployments](#preview-deployments-and-the-production-database)).
+  The web build builds `@stay-ops/web` and its workspace dependencies only (skips `packages/worker`) and uses pnpm **append-only** output so logs advance while `next build` compiles.
+  [`apps/web/vercel.json`](../../apps/web/vercel.json) sets **`SKIP_STAYOPS_ENV_VALIDATE=1` for the build step only** so `next build` does not run strict `parseEnv` (which would **`exit(1)`** when session and other secrets exist only at **runtime**, not Build, in Vercel). Production serverless runtime still receives full env from the dashboard; **`DATABASE_URL` is an exception**: it must be present at **Build** too so `migrate deploy` can run (duplicate scope in Vercel UI).
 - Deployment trigger: auto-deploy on push/merge to `main`
 - Production DB: single Neon Postgres target
 - Migration policy: run in deploy pipeline and block release on failure
@@ -99,6 +101,8 @@ Validation reference: [../../packages/shared/src/env.ts](../../packages/shared/s
 
 ## Production migrations via GitHub Actions
 
+**Primary path (S3):** migrations run inside the Vercel **`buildCommand`** (see [Locked deployment decisions](#locked-deployment-decisions)). The workflow below is **optional** — use it for break-glass runs, pre-deploy verification from a trusted machine, or when you need to migrate **before** merging app code that depends on the new schema.
+
 For EPICS [S2 / S3](../EPICS_2.md) traceability you can apply pending migrations without pasting Neon credentials into CI logs explicitly beyond GitHub-supplied masking:
 
 1. In GitHub: **Settings → Environments → create `production`** (recommended: required reviewers).
@@ -113,12 +117,12 @@ You can still run `pnpm --filter @stay-ops/db migrate:deploy` from a trusted mac
 
 ## Preview deployments and the production database
 
-Some teams point **both** Vercel **Production** and **Preview** at the **same Neon `DATABASE_URL`** (minimal household setup). Treat that Neon database as **the** production plane for all those deployments:
+**Every Preview and Production build** runs **`prisma migrate deploy`** against the **`DATABASE_URL` configured for that Vercel environment** (Production vs Preview keys in the dashboard). Wrong scoping risks migrating production from a branch preview or migrating a disposable DB unintentionally:
 
-- Do **not** run destructive fixtures, **`seed:dev`**, **`migrate:dev`**, or experimental SQL against that URL from preview-only workflows.
-- Schema changes remain **`migrate deploy`** only ([migrations.md](migrations.md)); coordinate so only one migration path wins (recommended: GitHub **Migrate production DB** workflow or an approved maintainer CLI run).
-
-If you adopt a dedicated **preview/staging Neon** later, assign a separate `DATABASE_URL` on Vercel **Preview** so branch deploys stop sharing production data risk.
+- Prefer a **separate Neon branch / DB** for Vercel **Preview** (`DATABASE_URL` on the Preview scope only) vs **Production** — same split-brain rules as EPICS **S2** (runtime and migration targets must match **per environment**).
+- Some teams still point **both** Production and Preview at the **same** Neon URL (minimal household setup). Treat that DB as **the** production plane: every preview **build** applies pending migrations to it as well — do **not** merge migration PRs casually without coordination.
+- Do **not** run destructive fixtures, **`seed:dev`**, **`migrate:dev`**, or experimental SQL against production-class URLs from ad-hoc jobs.
+- Schema changes remain **`migrate deploy`** only ([migrations.md](migrations.md)). Vercel build is the default single path; GitHub **Migrate production DB** remains a coordinated alternative when needed.
 
 ## Operator-only steps (cannot be done from this repository)
 
@@ -128,27 +132,25 @@ These require your accounts, secrets, and browser—there is nothing to “push�
 |------|--------|
 | Neon | Create DB; copy **`DATABASE_URL`**; keep it secret. |
 | Vercel | Create/link project → Git repo → Root Directory **`apps/web`** → deploy. **`vercel.json`** supplies install/build commands. |
-| Vercel env | Add **`DATABASE_URL`**, **`SESSION_SECRET`** (≥32 chars), **`APP_TIMEZONE`**, plus Hosthub/Sentry when needed (see [.env.example](../../.env.example)). |
+| Vercel env | Add **`DATABASE_URL`** for **Build + Runtime** (migrate runs at build), **`SESSION_SECRET`** (≥32 chars), **`APP_TIMEZONE`**, plus Hosthub/Sentry when needed (see [.env.example](../../.env.example)). |
 | Vercel Git | Confirm **Production Branch** = **`main`**. |
 | Schema + users | On a trusted machine, with **`DATABASE_URL`** set to **Neon**: `pnpm --filter @stay-ops/db migrate:deploy` then `pnpm --filter @stay-ops/db seed` (set **`BOOTSTRAP_ADMIN_*`** for seed). Never commit secrets. |
 
 ## Deploy order (production)
 
-1. Confirm all required env vars are present in Vercel project settings.
-2. Trigger production deploy from `main`.
-3. Run migration step before app promotion:
-   - `pnpm --filter @stay-ops/db migrate:deploy` **or** GitHub Actions **Migrate production DB** ([workflow](../../.github/workflows/migrate-production.yml)) against environment `production`
-4. If migration fails, stop deployment and mark release as failed.
-5. Run seed bootstrap for operator accounts:
+1. Confirm all required env vars are present in Vercel project settings (**`DATABASE_URL` enabled for Build + Runtime** on Production).
+2. Trigger production deploy from `main` (auto or manual). The Vercel **build** runs **`migrate deploy` → `migrate status` → `next build`**; if migrate fails, the deployment **does not complete**.
+3. Optional break-glass: run **`pnpm --filter @stay-ops/db migrate:deploy`** locally or GitHub Actions **Migrate production DB** ([workflow](../../.github/workflows/migrate-production.yml)) when you need to migrate **before** shipping dependent app code.
+4. Run seed bootstrap for operator accounts (when identity is not yet provisioned):
    - `pnpm --filter @stay-ops/db seed`
-6. Verify health endpoints:
+5. Verify health endpoints:
    - `GET /api/health/live` -> `200`
    - `GET /api/health/ready` -> `200`
-7. Verify sync behavior:
+6. Verify sync behavior:
    - login-triggered sync is debounced
    - manual trigger works for authorized role
    - overlap returns `409` + `sync already running`
-8. Verify cron behavior:
+7. Verify cron behavior:
    - hourly schedule is active in daytime window only
    - cron endpoint auth/secret guard is enforced
 

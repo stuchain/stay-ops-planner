@@ -150,12 +150,13 @@ Prechecks:
 Checklist:
 - [ ] Ensure migration files in [../packages/db/prisma/migrations](../packages/db/prisma/migrations)
   are current for the release branch.
-- [ ] Run `migrate:deploy` in deploy pipeline before production release.
-- [ ] Block deployment if migration step fails.
-- [ ] Validate post-migration schema status and key table presence.
+- [ ] **`DATABASE_URL`** is exposed to **Vercel builds** (Build + Runtime) for Production and Preview as appropriate; Preview and Production DB targets match your intent ([production-deploy.md](./runbooks/production-deploy.md)).
+- [ ] **`apps/web`** Vercel **`buildCommand`** runs **`prisma migrate deploy`** then **`prisma migrate status`** before **`pnpm build:web`** (see [../apps/web/vercel.json](../apps/web/vercel.json)).
+- [ ] Block deployment if migration step fails (non‑zero exit from **`buildCommand`**).
+- [ ] Validate post-migration schema status (**`migrate status`** in build logs or `pnpm --filter @stay-ops/db exec prisma migrate status` against prod) and key table presence.
 
 Commands:
-- `pnpm --filter @stay-ops/db migrate:deploy`
+- `pnpm --filter @stay-ops/db migrate:deploy` (local / break-glass; production path is migrate inside Vercel build)
 
 Expected result:
 - Schema on production DB is at expected migration head for the deployed revision.
@@ -165,8 +166,8 @@ Failure triage:
 - If migration succeeds locally but fails in deploy pipeline, verify production env parity.
 
 Evidence:
-- CI/deploy log showing successful migration step.
-- Deployment log proving production promotion is blocked on migration failure.
+- Vercel (or CI) deployment log showing **`prisma migrate deploy`** and **`prisma migrate status`** succeeded before **`next build`**, **or** a completed **Migrate production DB** Actions run summary.
+- A failed-deploy example (staging or aborted release) proving a non‑zero migrate step **blocked** promotion, **or** operator confirmation via `pnpm --filter @stay-ops/db exec prisma migrate deploy` against a disposable DB exiting non‑zero aborts your pipeline (see runbook).
 
 Gate:
 - Latest deploy target has clean migration execution and expected schema.
