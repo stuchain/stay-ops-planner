@@ -55,7 +55,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
   - Corrupt/expired cookies are cleared
 - Persistence/bootstrap
   - `packages/db/prisma/schema.prisma` includes a `User` model mapped to the `users` table
-  - `packages/db/prisma/seed.ts` supports idempotent admin upsert via `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`
+  - `packages/db/prisma/seed.ts` supports idempotent upsert of bootstrap **admin** and **father** accounts via `BOOTSTRAP_ADMIN_*`, `BOOTSTRAP_FATHER_*`, and optional `BOOTSTRAP_FATHER_ROLE` (default `operator`)
 - Recovery documentation: `docs/runbooks/auth-recovery.md`
 
 ### Allocation (room assignment)
@@ -117,7 +117,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
 ### How to verify
 - Start local services: `docker compose up -d` (or `docker compose up --build` the first time)
 - Copy env: `.env.example` → `.env` / `apps/web/.env.local` as needed (never commit secrets)
-- Apply DB + bootstrap admin: `pnpm --filter @stay-ops/db migrate:deploy` then `pnpm --filter @stay-ops/db seed` (with `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` set). For Playwright, also run `pnpm --filter @stay-ops/db seed:e2e` and align `E2E_ADMIN_*` with the bootstrap user — or run **`pnpm e2e:local`** once Chromium is installed to do Docker + migrate + both seeds + E2E with CI-aligned defaults.
+- Apply DB + bootstrap users: `pnpm --filter @stay-ops/db migrate:deploy` then `pnpm --filter @stay-ops/db seed` (with `BOOTSTRAP_ADMIN_*` and `BOOTSTRAP_FATHER_*` set for household bootstrap; admin-only is ok for quick local experiments). For Playwright, also run `pnpm --filter @stay-ops/db seed:e2e` and align `E2E_ADMIN_*` with the bootstrap admin — or run **`pnpm e2e:local`** once Chromium is installed to do Docker + migrate + both seeds + E2E with CI-aligned defaults.
 - Run the app: `pnpm --filter @stay-ops/web dev`
 - Run the full check from repo root: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test`
 
@@ -125,7 +125,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
 - Required-check workflows (push and PR): [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`lint`, `typecheck`, `unit`) and [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) (`schema-drift`, `integration`, `playwright`).
 - Optional light ruleset (no PR, no push-blocking checks) in [`.github/rulesets/main.json`](.github/rulesets/main.json) — see [`.github/rulesets/README.md`](.github/rulesets/README.md) for import/update commands.
 - Post-deploy health probe: [`.github/workflows/health-check.yml`](.github/workflows/health-check.yml) listens on `deployment_status: success` and pings `/api/health/ready` on the deployment URL, surfacing the result as the `post-deploy-health` commit status. If **Vercel Deployment Protection** is on, configure **Protection Bypass for Automation** in Vercel and mirror it as repo secret **`VERCEL_AUTOMATION_BYPASS_SECRET`** (see [production deploy runbook](docs/runbooks/production-deploy.md)).
-- Production DB (EPICS S3): Vercel **`buildCommand`** runs **`prisma migrate deploy`** then **`migrate status`** before `next build` ([`apps/web/vercel.json`](apps/web/vercel.json)); optional break-glass **[Migrate production DB](.github/workflows/migrate-production.yml)** (`workflow_dispatch`, GitHub Environment `production` + `DATABASE_URL`) and **[Verify production readiness](.github/workflows/verify-production-readiness.yml)** — see [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
+- Production DB (EPICS S3): Vercel **`buildCommand`** runs **`prisma migrate deploy`** then **`migrate status`** before `next build` ([`apps/web/vercel.json`](apps/web/vercel.json)); optional break-glass **[Migrate production DB](.github/workflows/migrate-production.yml)** (`workflow_dispatch`, GitHub Environment `production` + `DATABASE_URL`), **[Seed production DB](.github/workflows/seed-production.yml)** (EPICS S4: `DATABASE_URL` plus `BOOTSTRAP_ADMIN_*` / `BOOTSTRAP_FATHER_*` from GitHub Environment **`production`** secrets; optional Environment **variables** for bootstrap emails — see runbook), and **[Verify production readiness](.github/workflows/verify-production-readiness.yml)** — see [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
 
 ### Roadmap / deeper spec
 - Phased execution and acceptance criteria: [docs/phases/README.md](docs/phases/README.md) and individual phase files (calendar UX, suggestions, production readiness, etc. are specified there even when not yet built in code).

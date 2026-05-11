@@ -1,0 +1,47 @@
+# Idempotent Prisma seed against the production Neon database (bootstrap admin + father).
+# Trigger manually only — requires GitHub Environment `production` (name must match exactly).
+#
+# Configure on GitHub → Settings → Environments → production:
+#   Secrets (recommended for all sensitive values):
+#     DATABASE_URL (same Neon URL as Migrate production DB)
+#     BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_PASSWORD
+#     BOOTSTRAP_FATHER_EMAIL, BOOTSTRAP_FATHER_PASSWORD
+#     Optional: BOOTSTRAP_FATHER_ROLE
+#   Optional Environment variables (non-sensitive): BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_FATHER_EMAIL
+#   if you prefer email as a Variable; password must always be a Secret.
+#
+# See docs/runbooks/production-deploy.md § Seed production DB via GitHub Actions.
+
+name: Seed production DB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-production
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: prisma db seed
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Admin: Environment Variable OR Secret for email; password must be a Secret on `production`.
+      BOOTSTRAP_ADMIN_EMAIL: ${{ vars.BOOTSTRAP_ADMIN_EMAIL || secrets.BOOTSTRAP_ADMIN_EMAIL }}
+      BOOTSTRAP_ADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}
+      BOOTSTRAP_FATHER_EMAIL: ${{ vars.BOOTSTRAP_FATHER_EMAIL || secrets.BOOTSTRAP_FATHER_EMAIL }}
+      BOOTSTRAP_FATHER_PASSWORD: ${{ secrets.BOOTSTRAP_FATHER_PASSWORD }}
+      BOOTSTRAP_FATHER_ROLE: ${{ secrets.BOOTSTRAP_FATHER_ROLE }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Prisma db seed
+        run: pnpm --filter @stay-ops/db seed

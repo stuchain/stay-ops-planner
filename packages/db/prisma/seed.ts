@@ -16,28 +16,52 @@ function resolveCost(): number {
   return cost;
 }
 
-async function upsertAdmin(email: string, passwordPlain: string, cost: number): Promise<void> {
+function parseBootstrapRole(
+  raw: string | undefined,
+  envName: string,
+  defaultRole: UserRole,
+): UserRole {
+  if (raw === undefined || raw === "") {
+    return defaultRole;
+  }
+  const key = raw.trim().toLowerCase();
+  if (key === "viewer") return UserRole.viewer;
+  if (key === "operator") return UserRole.operator;
+  if (key === "admin") return UserRole.admin;
+  throw new Error(`${envName} must be one of: viewer, operator, admin`);
+}
+
+async function upsertBootstrapUser(
+  email: string,
+  passwordPlain: string,
+  cost: number,
+  role: UserRole,
+): Promise<void> {
   const passwordHash = await bcrypt.hash(passwordPlain, cost);
   await prisma.user.upsert({
     where: { email },
-    update: { passwordHash, isActive: true, role: UserRole.admin },
+    update: { passwordHash, isActive: true, role },
     create: {
       email,
       passwordHash,
       isActive: true,
-      role: UserRole.admin,
+      role,
     },
   });
+}
+
+async function upsertAdmin(email: string, passwordPlain: string, cost: number): Promise<void> {
+  await upsertBootstrapUser(email, passwordPlain, cost, UserRole.admin);
 }
 
 async function main() {
   await prisma.$connect();
   const cost = resolveCost();
 
-  const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL;
-  const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+  const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim();
+  const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD ?? "";
 
-  if (bootstrapEmail && bootstrapPassword) {
+  if (bootstrapEmail && bootstrapPassword.length > 0) {
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bootstrapEmail);
     if (!emailOk) {
       throw new Error("BOOTSTRAP_ADMIN_EMAIL must be a valid email address");
@@ -51,6 +75,39 @@ async function main() {
     console.log("seed: bootstrap admin upserted");
   } else {
     console.log("seed: skipped BOOTSTRAP_ADMIN_* (not set)");
+  }
+
+  const fatherEmail = process.env.BOOTSTRAP_FATHER_EMAIL?.trim();
+  const fatherPassword = process.env.BOOTSTRAP_FATHER_PASSWORD ?? "";
+  const fatherEmailSet = Boolean(fatherEmail);
+  const fatherPasswordSet = fatherPassword.length > 0;
+
+  if (fatherEmailSet !== fatherPasswordSet) {
+    throw new Error(
+      "Set both BOOTSTRAP_FATHER_EMAIL and BOOTSTRAP_FATHER_PASSWORD, or omit both",
+    );
+  }
+
+  if (fatherEmail && fatherPassword) {
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fatherEmail);
+    if (!emailOk) {
+      throw new Error("BOOTSTRAP_FATHER_EMAIL must be a valid email address");
+    }
+
+    if (fatherPassword.length < 8) {
+      throw new Error("BOOTSTRAP_FATHER_PASSWORD must be at least 8 characters");
+    }
+
+    const fatherRole = parseBootstrapRole(
+      process.env.BOOTSTRAP_FATHER_ROLE,
+      "BOOTSTRAP_FATHER_ROLE",
+      UserRole.operator,
+    );
+
+    await upsertBootstrapUser(fatherEmail, fatherPassword, cost, fatherRole);
+    console.log("seed: bootstrap father upserted");
+  } else {
+    console.log("seed: skipped BOOTSTRAP_FATHER_* (not set)");
   }
 
   // Insecure local-only account (explicit opt-in). User model has no display name; login is email + password.

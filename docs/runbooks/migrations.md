@@ -9,7 +9,7 @@ All schema and migrations live in `packages/db/prisma/`. Run Prisma CLI from the
 | `pnpm --filter @stay-ops/db generate` | After dependency install or schema change; **always** before `pnpm -r build` in CI. |
 | `pnpm --filter @stay-ops/db migrate:dev` | **Local only** — creates a new migration from schema edits and applies it to your dev database. |
 | `pnpm --filter @stay-ops/db migrate:deploy` | **CI / production** — applies pending migrations only; never creates new migration files. |
-| `pnpm --filter @stay-ops/db seed` | Local / test — runs `prisma/seed.ts` after migrations when you need bootstrap data. |
+| `pnpm --filter @stay-ops/db seed` | Local / test — runs `prisma/seed.ts` after migrations to upsert bootstrap **admin** and **father** users when `BOOTSTRAP_ADMIN_*` / `BOOTSTRAP_FATHER_*` are set. |
 
 ## Pipeline order (reference)
 

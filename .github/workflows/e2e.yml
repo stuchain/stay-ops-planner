@@ -102,6 +102,8 @@ jobs:
       APP_TIMEZONE: Etc/UTC
       BOOTSTRAP_ADMIN_EMAIL: integration-admin@stayops.local
       BOOTSTRAP_ADMIN_PASSWORD: Integration_Test_Password_12+
+      BOOTSTRAP_FATHER_EMAIL: integration-father@stayops.local
+      BOOTSTRAP_FATHER_PASSWORD: Integration_Father_Test_12+
       CI: true
 
     steps:

@@ -30,9 +30,9 @@ After rotation, any previously issued `stay_ops_session` cookie will fail signat
 This section documents safe password reset options without exposing plaintext passwords in application logs.
 
 ### Option A (recommended): One-off seed upsert with bootstrap env
-Phase 1 supports bootstrapping/upserting the admin user via the Prisma seed command using:
-- `BOOTSTRAP_ADMIN_EMAIL`
-- `BOOTSTRAP_ADMIN_PASSWORD`
+Phase 1 supports bootstrapping/upserting users via the Prisma seed command using:
+- `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (admin role)
+- `BOOTSTRAP_FATHER_EMAIL` / `BOOTSTRAP_FATHER_PASSWORD` (default role `operator`; optional `BOOTSTRAP_FATHER_ROLE`)
 
 Use this only as an operator recovery step, not as a normal workflow.
 1. Take a database backup/snapshot before making changes.
@@ -42,8 +42,11 @@ Example (local or emergency shell context):
 ```bash
 BOOTSTRAP_ADMIN_EMAIL="admin@example.com" \
 BOOTSTRAP_ADMIN_PASSWORD="replace-with-new-strong-password" \
+BOOTSTRAP_FATHER_EMAIL="co-owner@example.com" \
+BOOTSTRAP_FATHER_PASSWORD="replace-with-second-strong-password" \
 pnpm --filter @stay-ops/db seed
 ```
+(Omit `BOOTSTRAP_FATHER_*` if you only need to reset the admin account.)
 
 3. Validate by logging in via `POST /api/auth/login` using the new password.
 
