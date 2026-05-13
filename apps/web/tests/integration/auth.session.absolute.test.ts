@@ -25,9 +25,11 @@ describe("session absolute expiry (Epic 7)", () => {
   });
 
   beforeEach(async () => {
+    // Do not TRUNCATE `users` — CI seeds bootstrap admin/father; other integration tests rely on them.
     await prisma.$executeRawUnsafe(`
-      TRUNCATE TABLE "login_attempts", "rate_limit_counters", "idempotency_keys", "audit_events", "users" RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE "login_attempts", "rate_limit_counters", "idempotency_keys", "audit_events" RESTART IDENTITY CASCADE;
     `);
+    await prisma.user.deleteMany({ where: { email } });
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.user.create({
       data: { email, passwordHash, isActive: true, role: "operator" },
