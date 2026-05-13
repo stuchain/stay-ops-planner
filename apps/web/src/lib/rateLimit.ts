@@ -16,6 +16,32 @@ export const SYNC_USER_RATE_RULES: RateLimitRule[] = [{ key: "user", limit: 5, w
 /** Login is unauthenticated — limit by IP only. */
 export const LOGIN_IP_RATE_RULES: RateLimitRule[] = [{ key: "ip", limit: 60, windowMs: 60_000 }];
 
+const HEARTBEAT_DEBOUNCE_SCOPE = "hosthub_reconcile_heartbeat_debounce";
+
+/**
+ * At most one successful heartbeat-triggered reconcile per user per fixed window (Postgres).
+ * First call in window returns `allow`; further calls return `debounced`.
+ */
+export async function consumeHeartbeatReconcileDebounce(userId: string, windowMs: number): Promise<"allow" | "debounced"> {
+  const now = Date.now();
+  const windowStartMs = Math.floor(now / windowMs) * windowMs;
+  const windowStart = new Date(windowStartMs);
+  const bucketKey = `user:${userId}`;
+  try {
+    const count = await bumpCounter(HEARTBEAT_DEBOUNCE_SCOPE, bucketKey, windowStart);
+    if (count > 1) {
+      return "debounced";
+    }
+    opportunisticCleanup();
+    return "allow";
+  } catch (err) {
+    log("warn", "heartbeat_debounce_degraded", {
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return "allow";
+  }
+}
+
 async function bumpCounter(scope: string, bucketKey: string, windowStart: Date): Promise<number> {
   const rows = await prisma.$queryRaw<[{ count: number }]>`
     INSERT INTO rate_limit_counters (scope, bucket_key, window_start, count)

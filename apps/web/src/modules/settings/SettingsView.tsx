@@ -311,7 +311,7 @@ export function SettingsView() {
       const res = await fetch("/api/sync/hosthub/reconcile", { method: "POST", credentials: "include" });
       if (res.status === 200) {
         setFlash("Sync completed.");
-      } else if (res.status === 202) {
+      } else if (res.status === 409) {
         setFlash(opts?.fromSave ? "Token saved. Sync already running." : "Sync already running.");
       } else if (res.status === 503) {
         setFlash("Hosthub token is not configured.");
@@ -340,7 +340,7 @@ export function SettingsView() {
       });
       if (res.status === 200) {
         setFlash("Full sync completed.");
-      } else if (res.status === 202) {
+      } else if (res.status === 409) {
         setFlash("Full sync already running.");
       } else if (res.status === 503) {
         setFlash("Hosthub token is not configured.");

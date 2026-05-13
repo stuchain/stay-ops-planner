@@ -56,4 +56,14 @@ describe("EnvSchema", () => {
     expect(r2.success).toBe(true);
     if (r2.success) expect(r2.data.SESSION_COOKIE_SECURE).toBe("false");
   });
+
+  it("rejects short CRON_SECRET when provided", () => {
+    const result = EnvSchema.safeParse({ ...base, CRON_SECRET: "short" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts CRON_SECRET when long enough", () => {
+    const result = EnvSchema.safeParse({ ...base, CRON_SECRET: "0123456789abcdef" });
+    expect(result.success).toBe(true);
+  });
 });

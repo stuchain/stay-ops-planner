@@ -92,6 +92,7 @@ Required:
 - `BOOTSTRAP_FATHER_PASSWORD`
 - (Optional) `BOOTSTRAP_FATHER_ROLE` — `viewer`, `operator` (default), or `admin`
 - Hosthub integration secrets (`HOSTHUB_*`, `WEBHOOK_SECRET`)
+- `CRON_SECRET` (16+ characters) for `GET /api/cron/sync-hosthub` — set in Vercel **Production** (and Preview if cron should run there). Vercel sends `Authorization: Bearer <CRON_SECRET>` when invoking the job defined in [`apps/web/vercel.json`](../../apps/web/vercel.json) (`crons`). After deploy, confirm **Cron Jobs** lists `/api/cron/sync-hosthub` on an hourly schedule. Daytime-only execution uses `APP_TIMEZONE` and optional `SYNC_CRON_LOCAL_START_HOUR` / `SYNC_CRON_LOCAL_END_HOUR` (defaults 08–20 local).
 
 Optional but selected baseline:
 - `SENTRY_DSN`

@@ -4,6 +4,7 @@ import { yearMonthsAroundPivot, yearMonthsOverlappingUtcRange } from "./yearMont
 export {
   addCalendarMonth,
   formatYearMonthInTimeZone,
+  getLocalHourInTimeZone,
   listYearMonthsInclusive,
   resolveAppTimeZone,
   subtractCalendarMonth,

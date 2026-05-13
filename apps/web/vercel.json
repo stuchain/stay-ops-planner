@@ -7,5 +7,6 @@
     "env": {
       "SKIP_STAYOPS_ENV_VALIDATE": "1"
     }
-  }
+  },
+  "crons": [{ "path": "/api/cron/sync-hosthub", "schedule": "0 * * * *" }]
 }

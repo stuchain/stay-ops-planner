@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addCalendarMonth,
   formatYearMonthInTimeZone,
+  getLocalHourInTimeZone,
   listYearMonthsInclusive,
   subtractCalendarMonth,
   yearMonthsAroundPivot,
@@ -36,6 +37,12 @@ describe("yearMonthBuckets", () => {
     const months = yearMonthsOverlappingUtcRange(tz, from, to);
     expect(months).toContain("2024-05");
     expect(months).toContain("2024-06");
+  });
+
+  it("getLocalHourInTimeZone returns wall clock hour in IANA zone", () => {
+    const noonUtc = new Date("2024-06-15T12:00:00.000Z");
+    expect(getLocalHourInTimeZone(noonUtc, "Etc/UTC")).toBe(12);
+    expect(getLocalHourInTimeZone(noonUtc, "Europe/Athens")).toBe(15);
   });
 
   it("formatYearMonthInTimeZone respects Europe/Athens offset for late UTC", () => {

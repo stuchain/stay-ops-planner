@@ -8,10 +8,16 @@ async function triggerReconcile() {
   const res = await fetch("/api/sync/hosthub/reconcile", {
     method: "POST",
     credentials: "include",
+    headers: { "X-StayOps-Sync-Trigger": "heartbeat" },
   }).catch(() => null);
-  if (res && (res.status === 200 || res.status === 202)) {
-    window.dispatchEvent(new CustomEvent("ops:hosthub-sync-tick"));
+  if (res && res.status === 200) {
+    const body = (await res.json().catch(() => null)) as { data?: { status?: string; reason?: string } } | null;
+    const skipped = body?.data?.status === "skipped";
+    if (!skipped) {
+      window.dispatchEvent(new CustomEvent("ops:hosthub-sync-tick"));
+    }
   }
+  // 409 overlap and debounced skips: no tick (avoid reload storms).
 }
 
 export function SyncHeartbeat() {

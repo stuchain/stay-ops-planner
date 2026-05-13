@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { log, withRetry, type DryRunResult } from "@stay-ops/shared";
 import { attachTraceToResponse, apiError } from "@/lib/apiError";
-import { SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
+import { consumeHeartbeatReconcileDebounce, SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { newTraceId, readTraceId } from "@/lib/traceId";
 import { prisma } from "@/lib/prisma";
 import { isTransientSyncError, runHosthubReconcile } from "@stay-ops/sync";
@@ -10,7 +10,28 @@ import { AuthError } from "@/modules/auth/errors";
 import { requireAnyRole, requireSession } from "@/modules/auth/guard";
 import { resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
 import { syncJsonError } from "@/modules/sync/errors";
-const RECONCILE_LOCK_KEY = BigInt("848424015");
+import {
+  findInFlightHosthubPoll,
+  releaseHosthubReconcileLock,
+  tryAcquireHosthubReconcileLock,
+} from "@/modules/sync/hosthubPollLock";
+
+export const maxDuration = 300;
+
+const HEARTBEAT_TRIGGER = "heartbeat";
+
+function resolveHeartbeatDebounceWindowMs(): number {
+  const raw = process.env.SYNC_HEARTBEAT_DEBOUNCE_MS?.trim();
+  if (!raw) return 900_000;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 60_000 || n > 86_400_000) return 900_000;
+  return n;
+}
+
+function readSyncTrigger(request: NextRequest): string | null {
+  const v = request.headers.get("x-stayops-sync-trigger")?.trim().toLowerCase();
+  return v && v.length > 0 ? v : null;
+}
 
 type ReconcileBodyOptions = {
   dryRun: boolean;
@@ -80,31 +101,37 @@ async function postHosthubReconcile(request: NextRequest) {
     );
   }
 
-  const running = await prisma.syncRun.findFirst({
-    where: {
-      source: "hosthub_poll",
-      completedAt: null,
-      startedAt: { gte: new Date(Date.now() - 2 * 60_000) },
-    },
-    orderBy: { startedAt: "desc" },
-    select: { id: true, startedAt: true },
-  });
+  const syncTrigger = readSyncTrigger(request);
+  if (syncTrigger === HEARTBEAT_TRIGGER && !dryRun) {
+    const debounceMs = resolveHeartbeatDebounceWindowMs();
+    const gate = await consumeHeartbeatReconcileDebounce(ctx.userId, debounceMs);
+    if (gate === "debounced") {
+      log("info", "hosthub_reconcile_heartbeat_debounced", {
+        route: "/api/sync/hosthub/reconcile",
+        userId: ctx.userId,
+        debounceMs,
+      });
+      return attachTraceToResponse(
+        request,
+        NextResponse.json({ data: { status: "skipped", reason: "debounced" } }, { status: 200 }),
+      );
+    }
+  }
+
+  const running = await findInFlightHosthubPoll(prisma);
   if (running) {
     return attachTraceToResponse(
       request,
-      NextResponse.json(
-        { data: { status: "running", runId: running.id, startedAt: running.startedAt.toISOString() } },
-        { status: 202 },
-      ),
+      apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409, {
+        runId: running.id,
+        startedAt: running.startedAt.toISOString(),
+      }),
     );
   }
 
-  const lockRows = await prisma.$queryRaw<Array<{ acquired: boolean }>>`
-    SELECT pg_try_advisory_lock(${RECONCILE_LOCK_KEY}) AS acquired
-  `;
-  const acquired = Boolean(lockRows[0]?.acquired);
+  const acquired = await tryAcquireHosthubReconcileLock(prisma);
   if (!acquired) {
-    return attachTraceToResponse(request, NextResponse.json({ data: { status: "running" } }, { status: 202 }));
+    return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409));
   }
 
   const traceId = readTraceId(request) || undefined;
@@ -191,7 +218,7 @@ async function postHosthubReconcile(request: NextRequest) {
       traceId,
     );
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(${RECONCILE_LOCK_KEY})`;
+    await releaseHosthubReconcileLock(prisma);
   }
 }
 

@@ -41,13 +41,14 @@ export function middleware(request: NextRequest) {
     pathname === "/api/auth/_diag" &&
     method === "GET" &&
     process.env.NODE_ENV !== "production";
+  const isCronHosthubSync = isApi && pathname === "/api/cron/sync-hosthub" && method === "GET";
 
   if (!isApi && !isApp) {
     const res = NextResponse.next();
     res.headers.set(TRACE_HEADER, traceId);
     return res;
   }
-  if (isHealth || isLogin || isHosthubWebhook || isAuthDiag) {
+  if (isHealth || isLogin || isHosthubWebhook || isAuthDiag || isCronHosthubSync) {
     return nextWithTrace(request, traceId);
   }
 

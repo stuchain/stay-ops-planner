@@ -11,8 +11,13 @@ import { AuthError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
 import { resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
 import { syncJsonError } from "@/modules/sync/errors";
+import {
+  findInFlightHosthubPoll,
+  releaseHosthubReconcileLock,
+  tryAcquireHosthubReconcileLock,
+} from "@/modules/sync/hosthubPollLock";
 
-const RECONCILE_LOCK_KEY = BigInt("848424015");
+export const maxDuration = 300;
 
 async function postFullResync(request: NextRequest): Promise<Response> {
   let ctx;
@@ -34,6 +39,19 @@ async function postFullResync(request: NextRequest): Promise<Response> {
       NextResponse.json(syncJsonError("SERVICE_UNAVAILABLE", "Hosthub token is not configured", undefined, traceId), {
         status: 503,
       }),
+      traceId,
+    );
+  }
+
+  const running = await findInFlightHosthubPoll(prisma);
+  if (running) {
+    return attachTraceToResponse(
+      request,
+      apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409, {
+        runId: running.id,
+        startedAt: running.startedAt.toISOString(),
+      }),
+      traceId,
     );
   }
 
@@ -69,18 +87,9 @@ async function postFullResync(request: NextRequest): Promise<Response> {
     );
   }
 
-  const lockRows = await prisma.$queryRaw<Array<{ acquired: boolean }>>`
-    SELECT pg_try_advisory_lock(${RECONCILE_LOCK_KEY}) AS acquired
-  `;
-  const acquired = Boolean(lockRows[0]?.acquired);
+  const acquired = await tryAcquireHosthubReconcileLock(prisma);
   if (!acquired) {
-    return attachTraceToResponse(
-      request,
-      NextResponse.json(
-        { data: { status: "running", cursorReset: true, runsCursorCleared } },
-        { status: 202 },
-      ),
-    );
+    return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409), traceId);
   }
 
   try {
@@ -113,6 +122,7 @@ async function postFullResync(request: NextRequest): Promise<Response> {
       NextResponse.json({
         data: { status: "completed", cursorReset: true, runsUpdated: runsCursorCleared, fullSync: true },
       }),
+      traceId,
     );
   } catch (err) {
     return apiError(
@@ -125,7 +135,7 @@ async function postFullResync(request: NextRequest): Promise<Response> {
       err,
     );
   } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(${RECONCILE_LOCK_KEY})`;
+    await releaseHosthubReconcileLock(prisma);
   }
 }
 

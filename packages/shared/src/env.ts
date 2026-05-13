@@ -56,6 +56,13 @@ export const EnvSchema = z.object({
   SENTRY_USER_ID_PEPPER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** When `1`, production builds should configure Sentry DSN (enforced in CI workflows, not parseEnv). */
   STAYOPS_SENTRY_REQUIRED: z.preprocess(emptyToUndefined, z.enum(["0", "1"]).optional()),
+  /** Vercel Cron + manual: `Authorization: Bearer …` for GET /api/cron/sync-hosthub (min 16 chars when set). */
+  CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(16, "CRON_SECRET must be at least 16 characters").optional()),
+  /** Local hour (0–23) in APP_TIMEZONE when cron may run; defaults applied in app if unset. */
+  SYNC_CRON_LOCAL_START_HOUR: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(23).optional()),
+  SYNC_CRON_LOCAL_END_HOUR: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(23).optional()),
+  /** Per-user minimum spacing for `X-StayOps-Sync-Trigger: heartbeat` reconcile POSTs (ms). */
+  SYNC_HEARTBEAT_DEBOUNCE_MS: z.preprocess(emptyToUndefined, z.coerce.number().int().min(60_000).max(86_400_000).optional()),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

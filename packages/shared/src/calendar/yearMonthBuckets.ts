@@ -9,6 +9,18 @@ export function resolveAppTimeZone(): string {
   return t.length > 0 ? t : "Etc/UTC";
 }
 
+/** Local calendar hour (0–23) in `timeZone` for `date` (IANA tz, e.g. Europe/Athens). */
+export function getLocalHourInTimeZone(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(date);
+  const raw = parts.find((p) => p.type === "hour")?.value ?? "0";
+  const h = Number.parseInt(raw, 10);
+  return Number.isFinite(h) ? h : 0;
+}
+
 export function formatYearMonthInTimeZone(date: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,

@@ -223,7 +223,7 @@ describe("api /api/sync/hosthub/reconcile", () => {
     expect(json.data.summary.totals).toBeDefined();
   });
 
-  it("returns 202 when a hosthub poll run is already in progress", async () => {
+  it("returns 409 when a hosthub poll run is already in progress", async () => {
     const adminJar = await loginJar(adminEmail);
     const saveTokenRes = await PUT_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
@@ -252,6 +252,9 @@ describe("api /api/sync/hosthub/reconcile", () => {
         headers: { cookie: operatorJar.getCookieHeader() },
       }),
     );
-    expect(res.status).toBe(202);
+    expect(res.status).toBe(409);
+    const json = (await res.json()) as { error: { code: string; message: string } };
+    expect(json.error.code).toBe("SYNC_ALREADY_RUNNING");
+    expect(json.error.message).toBe("sync already running");
   });
 });
