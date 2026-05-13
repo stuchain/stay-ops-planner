@@ -26,7 +26,6 @@ describe("seed bootstrap users (after pnpm --filter @stay-ops/db seed in CI)", (
       cwd: repoRoot,
       stdio: "pipe",
       env: process.env,
-      shell: process.platform === "win32",
     });
   });
 
