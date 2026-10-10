@@ -1,0 +1,47 @@
+<title>Διαμερίσματα Πρωτότυπο</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&display=swap&subset=greek">
+<link rel="stylesheet" href="styles.css">
+
+<div class="proto-bar" role="region" aria-label="Ρυθμίσεις πρωτοτύπου">
+  <span class="proto-tag">Πρωτότυπο</span>
+  <span class="hide-sm">Δοκιμαστικά δεδομένα. Τίποτα δεν αλλάζει στις πραγματικές κρατήσεις.</span>
+  <span class="spacer"></span>
+  <label for="proto-user" class="hide-sm">Χρήστης</label>
+  <select id="proto-user">
+    <option value="father">Ιδιοκτήτης</option>
+    <option value="stelios">Stelios (διαχειριστής)</option>
+  </select>
+  <button type="button" id="proto-reset">Από την αρχή</button>
+</div>
+
+<div class="app">
+  <nav class="sidebar" aria-label="Κύριο μενού">
+    <div class="brand">
+      <span class="brand-dots" aria-hidden="true">
+        <i style="background:#0F766E"></i><i style="background:#4338CA"></i><i style="background:#BE185D"></i><i style="background:#A65F00"></i>
+      </span>
+      <span class="brand-name">Διαμερίσματα</span>
+    </div>
+    <button type="button" class="nav-item" data-nav="today"><i data-lucide="sun"></i><span>Σήμερα</span></button>
+    <button type="button" class="nav-item" data-nav="calendar"><i data-lucide="calendar-days"></i><span>Ημερολόγιο</span><span class="nav-badge" data-badge hidden></span></button>
+    <button type="button" class="nav-item" data-nav="money"><i data-lucide="wallet"></i><span>Έσοδα</span></button>
+    <button type="button" class="nav-item" data-nav="settings"><i data-lucide="settings"></i><span>Ρυθμίσεις</span></button>
+    <div class="sidebar-foot"><i data-lucide="refresh-cw"></i><span id="sync-foot">Ενημερώθηκε από Hosthub πριν από 5 λεπτά</span></div>
+  </nav>
+  <div class="main">
+    <main class="content" id="content" tabindex="-1"></main>
+    <aside class="panel" id="panel" hidden aria-label="Κράτηση"></aside>
+  </div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="today.js"></script>
+<script src="calendar.js"></script>
+<script src="money.js"></script>
+<script src="settings.js"></script>
+<script>App.start();</script>
