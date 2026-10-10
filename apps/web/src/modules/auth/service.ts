@@ -27,6 +27,7 @@ type UserRowByEmail = {
   password_hash: string;
   is_active: boolean;
   role: string;
+  session_version?: number;
 };
 
 type UserRowById = {
@@ -90,7 +91,7 @@ export async function loginWithEmailPassword(body: LoginBody) {
   try {
     // Match stored row case-insensitively (Postgres `=` on text is case-sensitive; throttle already uses `emailNorm`).
     userRows = await prisma.$queryRaw<UserRowByEmail[]>`
-      SELECT id, email, password_hash, is_active, role::text as role
+      SELECT id, email, password_hash, is_active, role::text as role, session_version
       FROM users
       WHERE LOWER(TRIM(email)) = ${emailNorm}
       LIMIT 1
@@ -115,7 +116,7 @@ export async function loginWithEmailPassword(body: LoginBody) {
   if (!ok) throw invalidCredentials();
 
   const role = toSessionRole(user.role);
-  const { token, expiresAt } = createSessionToken(user.id, role);
+  const { token, expiresAt } = createSessionToken(user.id, role, Date.now(), user.session_version ?? 0);
 
   return {
     token,
@@ -172,6 +173,8 @@ export async function getMeFromSessionToken(token: string) {
   const user = userRows[0];
   if (!user) throw unauthorized();
   if (!user.is_active) throw accountDisabled();
+  const current = await prisma.user.findUnique({ where: { id: user.id }, select: { sessionVersion: true } });
+  if ((current?.sessionVersion ?? 0) !== session.sessionVersion) throw unauthorized();
 
   const uiLocale: UiLocaleCode = user.ui_locale === "el" ? "el" : "en";
 

@@ -1,7 +1,12 @@
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { DomainError } from "@stay-ops/domain";
-import { userProcedure, createTRPCRouter } from "../trpc";
+import { comparePassword, hashPassword, isAcceptablePasswordLength } from "@/modules/auth/password";
+import { adminProcedure, createTRPCRouter, userProcedure } from "../trpc";
 import { readFlags } from "@/server/flags";
+
+/** Text size choices, saved in `users.text_size`. */
+export const TEXT_SIZES = ["normal", "large", "xlarge"] as const;
 
 export const meRouter = createTRPCRouter({
   /** Who is signed in and how their screens should look. */
@@ -19,5 +24,48 @@ export const meRouter = createTRPCRouter({
       devMode: user.devMode,
       textSize: user.textSize,
     };
+  }),
+
+  /** Language and text size, per user. Only the fields sent are changed. */
+  updatePreferences: userProcedure
+    .input(z.object({ locale: z.enum(["el", "en"]).optional(), textSize: z.enum(TEXT_SIZES).optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await prisma.user.update({
+        where: { id: ctx.user.userId },
+        data: {
+          ...(input.locale ? { uiLocale: input.locale } : {}),
+          ...(input.textSize ? { textSize: input.textSize } : {}),
+        },
+        select: { uiLocale: true, textSize: true },
+      });
+      return { locale: user.uiLocale, textSize: user.textSize };
+    }),
+
+  /** The signed-in user changes their own password; the current one must match. */
+  changePassword: userProcedure
+    .input(z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.user.userId },
+        select: { passwordHash: true },
+      });
+      if (!user) throw new DomainError("UNAUTHORIZED");
+      if (!(await comparePassword(input.currentPassword, user.passwordHash))) throw new DomainError("WRONG_PASSWORD");
+      if (!isAcceptablePasswordLength(input.newPassword)) throw new DomainError("PASSWORD_TOO_SHORT");
+      await prisma.user.update({
+        where: { id: ctx.user.userId },
+        data: { passwordHash: await hashPassword(input.newPassword) },
+      });
+      return { ok: true as const };
+    }),
+
+  /** Dev mode switch. Admins only, checked on the server; it only saves the flag. */
+  setDevMode: adminProcedure.input(z.object({ enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
+    const user = await prisma.user.update({
+      where: { id: ctx.user.userId },
+      data: { devMode: input.enabled },
+      select: { devMode: true },
+    });
+    return { devMode: user.devMode };
   }),
 });

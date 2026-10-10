@@ -38,6 +38,8 @@ function httpCodeFor(code: DomainErrorCode): TRPCError["code"] {
       return code;
     case "VALIDATION":
     case "INVALID_STAY":
+    case "WRONG_PASSWORD":
+    case "PASSWORD_TOO_SHORT":
       return "BAD_REQUEST";
     case "INTERNAL":
     case "HOSTHUB_DISCONNECTED":

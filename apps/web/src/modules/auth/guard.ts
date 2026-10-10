@@ -39,11 +39,13 @@ export async function verifyAndLoadAuthContext(token: string | null): Promise<Au
   let role: SessionRole | null = null;
   let isActive = false;
   try {
-    const rows = await prisma.$queryRaw<Array<{ role: string; is_active: boolean }>>`
-      SELECT role::text as role, is_active FROM users WHERE id = ${session.userId} LIMIT 1
+    const rows = await prisma.$queryRaw<Array<{ role: string; is_active: boolean; session_version: number }>>`
+      SELECT role::text as role, is_active, session_version FROM users WHERE id = ${session.userId} LIMIT 1
     `;
     const row = rows[0];
     if (!row || !row.is_active) return null;
+    // "Sign out everywhere" bumps the stored version, so older sessions stop working.
+    if (row.session_version !== session.sessionVersion) return null;
     isActive = row.is_active;
     role = parseDbRole(row.role);
   } catch (err) {

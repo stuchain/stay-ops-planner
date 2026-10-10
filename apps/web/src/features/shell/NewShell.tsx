@@ -8,6 +8,8 @@ import type { ReactNode } from "react";
 import { ApiProvider } from "@/api/client";
 import { Sidebar, type SidebarItem } from "@/ui/Sidebar";
 import { Toaster } from "@/ui/Toast";
+import { HosthubBanner } from "./HosthubBanner";
+import { LogoutButton } from "./LogoutButton";
 import { SyncIndicator } from "./SyncIndicator";
 import { useSyncWhileOpen } from "./useSyncWhileOpen";
 
@@ -52,8 +54,21 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
     : undefined;
   return (
     <>
-      <Sidebar items={items} linkComponent={Link} footer={<SyncIndicator />} {...(secondary ? { secondary } : {})} />
-      <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20">{children}</main>
+      <Sidebar
+        items={items}
+        linkComponent={Link}
+        footer={
+          <div className="flex flex-col gap-3">
+            <SyncIndicator />
+            <LogoutButton />
+          </div>
+        }
+        {...(secondary ? { secondary } : {})}
+      />
+      <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20">
+        <HosthubBanner />
+        {children}
+      </main>
       <Toaster />
     </>
   );

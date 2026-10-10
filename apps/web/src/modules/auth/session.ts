@@ -24,6 +24,8 @@ type SessionPayload = {
   exp: number;
   /** Absolute session end (unix seconds). Omitted in legacy tokens (pre–Epic 7). */
   aexp?: number;
+  /** `users.session_version` at login. Omitted in older tokens (treated as 0). */
+  sv?: number;
 };
 
 const SESSION_ROLES: readonly SessionRole[] = ["viewer", "operator", "admin"];
@@ -68,13 +70,15 @@ export type VerifiedSession = {
   iatUnixSeconds: number;
   /** Absolute end of login session; null for legacy tokens without `aexp`. */
   aexpUnixSeconds: number | null;
+  /** `users.session_version` when the session was created; 0 for older tokens. */
+  sessionVersion: number;
 };
 
-export function createSessionToken(userId: string, role: SessionRole, nowMs = Date.now()) {
+export function createSessionToken(userId: string, role: SessionRole, nowMs = Date.now(), sessionVersion = 0) {
   const iat = Math.floor(nowMs / 1000);
   const aexp = iat + SESSION_ABSOLUTE_TTL_SECONDS;
   const exp = Math.min(iat + SESSION_INACTIVITY_TTL_SECONDS, aexp);
-  const payload: SessionPayload = { sub: userId, role, iat, exp, aexp };
+  const payload: SessionPayload = { sub: userId, role, iat, exp, aexp, sv: sessionVersion };
 
   const payloadJson = JSON.stringify(payload);
   const payloadBase64Url = base64UrlEncode(Buffer.from(payloadJson, "utf8"));
@@ -112,6 +116,7 @@ export function refreshSessionTokenIfNeeded(session: VerifiedSession, nowMs = Da
     iat,
     exp,
     aexp,
+    sv: session.sessionVersion,
   };
 
   const payloadJson = JSON.stringify(payload);
@@ -183,6 +188,7 @@ export function verifySessionToken(token: string, nowMs = Date.now()): VerifiedS
     expUnixSeconds: p.exp,
     iatUnixSeconds: p.iat,
     aexpUnixSeconds: aexp,
+    sessionVersion: typeof p.sv === "number" && Number.isInteger(p.sv) ? p.sv : 0,
   };
 }
 

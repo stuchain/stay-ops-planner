@@ -67,6 +67,8 @@ model User {
   devMode      Boolean  @default(false) @map("dev_mode")
   /// Text size setting: normal, large or xlarge.
   textSize     String   @default("normal") @map("text_size")
+  /// Bumped to sign the user out on every device: a session whose stored version differs is rejected.
+  sessionVersion Int    @default(0) @map("session_version")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

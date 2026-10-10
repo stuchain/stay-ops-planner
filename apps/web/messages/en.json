@@ -65,7 +65,10 @@
     "INTERNAL": "Something went wrong. Please try again.",
     "NETWORK": "No internet connection. Please try again.",
     "ROOM_HAS_BOOKINGS": "The apartment still has {count, plural, one {# booking} other {# bookings}}. Move them first.",
-    "CHANGED_MEANWHILE": "Something changed in the meantime. Look again and retry."
+    "CHANGED_MEANWHILE": "Something changed in the meantime. Look again and retry.",
+    "WRONG_PASSWORD": "The current password is not correct.",
+    "PASSWORD_TOO_SHORT": "The new password is too short. It needs at least 8 characters.",
+    "SYNC_RUNNING": "An update from Hosthub is already running. Please wait a moment."
   },
   "nav": {
     "label": "Main navigation",
@@ -289,5 +292,69 @@
       "moveUp": "Move {name} up",
       "moveDown": "Move {name} down"
     }
+  },
+  "settingsScreen": {
+    "title": "Settings",
+    "signedInAs": "Signed in as {email}",
+    "saved": "Saved.",
+    "language": {
+      "title": "Language",
+      "el": "Ελληνικά",
+      "en": "English",
+      "label": "Language of the app"
+    },
+    "textSize": {
+      "title": "Text size",
+      "label": "Text size",
+      "normal": "Normal",
+      "large": "Large",
+      "xlarge": "Extra large",
+      "sample": "This is how the letters look."
+    },
+    "hosthub": {
+      "title": "Hosthub connection",
+      "loading": "Loading…",
+      "never": "No update has been done yet.",
+      "lastSuccess": "Last updated {ago}.",
+      "running": "Updating from Hosthub…",
+      "okState": "The connection is working.",
+      "authProblem": "The connection to Hosthub stopped. Let Stelios know.",
+      "otherProblem": "The last update did not work. Please try again.",
+      "refresh": "Update now",
+      "refreshing": "Updating…",
+      "doneNone": "The update is finished. There were no changes.",
+      "doneChanged": "The update is finished. {count, plural, one {# booking changed.} other {# bookings changed.}}",
+      "doneErrors": "{count, plural, one {One booking could not be saved.} other {# bookings could not be saved.}}",
+      "failedAuth": "Hosthub did not accept the connection key. Let Stelios know.",
+      "failedOther": "The update did not work. Please try again in a moment.",
+      "viewerNote": "The update is done by the people who manage the bookings."
+    },
+    "password": {
+      "title": "Change password",
+      "current": "Current password",
+      "next": "New password",
+      "repeat": "New password again",
+      "hint": "At least {min} characters.",
+      "submit": "Change password",
+      "saving": "Changing the password…",
+      "mismatch": "The two new passwords are not the same.",
+      "fillAll": "Fill in all three fields.",
+      "done": "The password was changed."
+    },
+    "dev": {
+      "title": "Developer mode",
+      "description": "For whoever builds and checks the app. It does not change what you are allowed to do.",
+      "switch": "Developer mode",
+      "on": "On",
+      "off": "Off"
+    }
+  },
+  "session": {
+    "logout": "Sign out",
+    "loggingOut": "Signing out…",
+    "hosthubStopped": "The connection to Hosthub stopped",
+    "hosthubStoppedBody": "New bookings are not arriving right now.",
+    "goToSettings": "Open settings",
+    "askStelios": "Let Stelios know."
   }
 }
