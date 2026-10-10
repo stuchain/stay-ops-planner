@@ -1,8 +1,8 @@
-import { DndContext } from "@dnd-kit/core";
+import { DndContext, useDndContext } from "@dnd-kit/core";
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { CalendarMonthPayload } from "@/modules/calendar/calendarTypes";
+import type { CalendarBookingItem, CalendarMonthPayload } from "@/modules/calendar/calendarTypes";
 import { MonthGrid } from "@/modules/calendar/MonthGrid";
 
 function wrap(ui: ReactElement) {
@@ -164,5 +164,53 @@ describe("MonthGrid", () => {
     );
     expect(screen.getByTestId("ops-booking-card-b_first")).toHaveStyle({ gridRow: "1" });
     expect(screen.getByTestId("ops-booking-card-b_overlap")).toHaveStyle({ gridRow: "2" });
+  });
+
+  const assigned: CalendarMonthPayload = {
+    ...payload,
+    items: [{ ...(payload.items[0] as CalendarBookingItem), id: "b_as", roomId: "room_a", flags: [] }],
+  };
+
+  function renderGrid(sortableRoomIds: string[] | null) {
+    render(
+      wrap(
+        <MonthGrid
+          data={assigned}
+          loading={false}
+          error={null}
+          onPrevMonth={vi.fn()}
+          onNextMonth={vi.fn()}
+          sortableRoomIds={sortableRoomIds}
+        />,
+      ),
+    );
+  }
+
+  it("has no sort handle when reordering is off", () => {
+    renderGrid(null);
+    expect(screen.queryByRole("button", { name: /Reorder/ })).toBeNull();
+  });
+
+  it("shows sort handles when reordering is on", () => {
+    renderGrid(["room_a"]);
+    expect(screen.getByRole("button", { name: "Reorder Alpha" })).toBeInTheDocument();
+  });
+
+  it("scopes draggable ids per grid so the same booking can appear twice", () => {
+    let ids: string[] = [];
+    function Probe() {
+      ids = Array.from(useDndContext().draggableNodes.keys()).map(String);
+      return null;
+    }
+    const common = { data: assigned, loading: false, error: null, onPrevMonth: vi.fn(), onNextMonth: vi.fn() };
+    render(
+      <DndContext onDragEnd={() => {}}>
+        <MonthGrid {...common} laneScope="2026-07" />
+        <MonthGrid {...common} laneScope="2026-08" />
+        <Probe />
+      </DndContext>,
+    );
+    expect(ids).toContain("booking-2026-07-b_as");
+    expect(ids).toContain("booking-2026-08-b_as");
   });
 });

@@ -186,6 +186,7 @@ type TimelineLaneProps = {
   rowRef?: (node: HTMLDivElement | null) => void;
   rowStyle?: CSSProperties;
   onBookingClick?: (bookingId: string) => void;
+  dragScope?: string;
 };
 
 function TimelineLane({
@@ -207,6 +208,7 @@ function TimelineLane({
   rowRef,
   rowStyle,
   onBookingClick,
+  dragScope,
 }: TimelineLaneProps) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id: laneId });
   const laidOut = layoutRows(items, month, monthDayCount);
@@ -217,7 +219,9 @@ function TimelineLane({
 
   return (
     <div
-      ref={rowRef}
+      // Not sortable: the whole row is the drop target. Sortable: the row is the
+      // reorder target and the track stays the lane target (row drops map to the room).
+      ref={rowRef ?? setDroppableRef}
       className={`ops-timeline-row${isOver ? " ops-room-lane-over" : ""}`}
       style={{ ...rowStyle }}
       data-testid={`ops-room-lane-${testIdSuffix}`}
@@ -236,7 +240,7 @@ function TimelineLane({
         ) : null}
         <span className="ops-timeline-room-title">{title}</span>
       </div>
-      <div ref={setDroppableRef} className="ops-timeline-track" style={{ minHeight }}>
+      <div ref={rowRef ? setDroppableRef : undefined} className="ops-timeline-track" style={{ minHeight }}>
         <div className="ops-timeline-day-grid" style={{ gridTemplateColumns: gridCols }}>
           {dayKeys.map((d) => {
             const isoDay = isoDateInMonth(month, d);
@@ -298,6 +302,7 @@ function TimelineLane({
                 nights={nightsLabel(item)}
                 trailClipped={isStayCheckoutAfterVisibleLastDay(item.endDate, lastVisibleIso)}
                 onOpen={onBookingClick ? () => onBookingClick(item.id) : undefined}
+                dragScope={dragScope}
               />
             );
           })}
@@ -459,6 +464,7 @@ export function MonthGrid({
       hintSpan: showHint,
       dailyRatesForRoom: rates[room.id],
       onBookingClick,
+      dragScope: laneScope,
     };
     return sortIds ? (
       <SortableTimelineLane key={room.id} {...common} sortableId={`room-order:${room.id}`} />
@@ -532,6 +538,7 @@ export function MonthGrid({
                 key={b.id}
                 item={b}
                 isMobile
+                dragScope={laneScope}
                 onQuickAssign={onQuickAssign ? () => onQuickAssign(b) : undefined}
               />
             ))}
@@ -557,6 +564,7 @@ export function MonthGrid({
                     key={b.id}
                     item={b}
                     isMobile
+                    dragScope={laneScope}
                     onQuickAssign={onQuickAssign ? () => onQuickAssign(b) : undefined}
                   />
                 ))}

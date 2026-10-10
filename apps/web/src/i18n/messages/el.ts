@@ -23,6 +23,8 @@ export const el: MessageTree = {
     needsAssignment: "Χρειάζεται ανάθεση",
     allAssigned: "Όλες οι κρατήσεις είναι ανατεθειμένες για αυτόν τον μήνα.",
     filtersSoon: "Τα φίλτρα έρχονται σύντομα.",
+    reorderRows: "Ταξινόμηση σειράς",
+    dropOnApartment: "Αφήστε την κράτηση πάνω σε ένα διαμέρισμα.",
     assignedOk: "Η κράτηση ανατέθηκε επιτυχώς.",
     assignFail: "Αποτυχία ανάθεσης κράτησης.",
     refreshing: "Ενημέρωση…",

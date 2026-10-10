@@ -30,12 +30,12 @@ import {
   applyConfirmedAssignmentToMonths,
   applyOptimisticBookingMoveToMonths,
   bookingItemToDragPayload,
-  parseLaneDropTarget,
   restoreBookingInMonths,
   snapshotBookingInMonths,
   type BookingDragPayload,
   type CalendarDataByMonth,
 } from "./optimisticMove";
+import { bookingDropTargetFromOverId } from "./dropTarget";
 import { useIsNarrowViewport } from "./useIsNarrowViewport";
 import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -104,6 +104,7 @@ export function CalendarClient() {
     null | { mode: "create" } | { mode: "edit"; block: CalendarBlockItem }
   >(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [reorderEnabled, setReorderEnabled] = useState(false);
   const [mobileAssignBooking, setMobileAssignBooking] = useState<CalendarBookingItem | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
   const [assigningBookingId, setAssigningBookingId] = useState<string | null>(null);
@@ -354,8 +355,14 @@ export function CalendarClient() {
   const onDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || isMobile) return;
+      if (isMobile) return;
       const activeId = String(active.id);
+      if (!over) {
+        if (activeId.startsWith("room-order:")) return;
+        const dragged = active.data.current as BookingDragPayload | undefined;
+        if (dragged?.type === "booking") setFlash(t("calendar.dropOnApartment"));
+        return;
+      }
       if (activeId.startsWith("room-order:")) {
         const overId = String(over.id);
         if (!overId.startsWith("room-order:") || !orderedRoomIds) return;
@@ -391,16 +398,16 @@ export function CalendarClient() {
 
       const raw = active.data.current as BookingDragPayload | undefined;
       if (!raw || raw.type !== "booking") return;
-      const overId = String(over.id);
-      const targetId = overId.includes(":") ? overId.slice(overId.indexOf(":") + 1) : overId;
-      if (!targetId.startsWith("lane-")) return;
-      const target = parseLaneDropTarget(targetId);
-      if (target === null) return;
+      const target = bookingDropTargetFromOverId(String(over.id));
+      if (target === null) {
+        setFlash(t("calendar.dropOnApartment"));
+        return;
+      }
       const toRoomId = target === "unassigned" ? null : target;
       if (toRoomId === raw.fromRoomId) return;
       await completeAssignment(raw, toRoomId);
     },
-    [completeAssignment, displayMonths, isMobile, load, month, orderedRoomIds],
+    [completeAssignment, displayMonths, isMobile, load, month, orderedRoomIds, t],
   );
 
   const roomOptions: BlockRoomOption[] = (baseData?.rooms ?? []).map((r) => ({
@@ -475,6 +482,17 @@ export function CalendarClient() {
           <button type="button" className="ops-btn" disabled={!baseData} onClick={() => setQueueOpen(true)}>
             {t("calendar.unassignedList")}
           </button>
+          {!isMobile ? (
+            <button
+              type="button"
+              className="ops-btn"
+              aria-pressed={reorderEnabled}
+              data-testid="ops-reorder-toggle"
+              onClick={() => setReorderEnabled((v) => !v)}
+            >
+              {t("calendar.reorderRows")}
+            </button>
+          ) : null}
           <span className="ops-muted" role="status" aria-live="polite">
             {refreshing ? t("calendar.refreshing") : ""}
           </span>
@@ -545,7 +563,7 @@ export function CalendarClient() {
                     error={null}
                     onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
                     onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
-                    sortableRoomIds={orderedRoomIds}
+                    sortableRoomIds={reorderEnabled ? orderedRoomIds : null}
                     onBookingClick={(id) => setDetailBookingId(id)}
                     onMarkerBookingClick={(id) => setDetailBookingId(id)}
                   />
@@ -566,7 +584,7 @@ export function CalendarClient() {
                 onQuickAssign={isMobile ? (b) => setMobileAssignBooking(b) : undefined}
                 laneScope={ym}
                 showNavigation={!isMobile}
-                sortableRoomIds={!isMobile ? orderedRoomIds : null}
+                sortableRoomIds={!isMobile && reorderEnabled ? orderedRoomIds : null}
                 onBookingClick={!isMobile ? (id) => setDetailBookingId(id) : undefined}
                 onMarkerBookingClick={(id) => setDetailBookingId(id)}
               />

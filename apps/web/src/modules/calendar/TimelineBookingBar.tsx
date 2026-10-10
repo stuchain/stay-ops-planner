@@ -18,6 +18,7 @@ export function TimelineBookingBar({
   nights,
   trailClipped,
   onOpen,
+  dragScope,
 }: {
   item: CalendarBookingItem;
   span: BookingSpanInMonth;
@@ -30,9 +31,11 @@ export function TimelineBookingBar({
   /** Stay continues past the last visible column — render a square trailing edge. */
   trailClipped?: boolean;
   onOpen?: () => void;
+  /** Distinguishes the same booking drawn in several grids (e.g. one per month on phones). */
+  dragScope?: string;
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: `booking-${item.id}`,
+    id: dragScope ? `booking-${dragScope}-${item.id}` : `booking-${item.id}`,
     data: bookingItemToDragPayload(item),
   });
   const pointerStart = useRef<{ x: number; y: number } | null>(null);

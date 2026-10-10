@@ -22,6 +22,8 @@ export const en = {
     needsAssignment: "Needs assignment",
     allAssigned: "All bookings are assigned for this month.",
     filtersSoon: "Filters are coming soon.",
+    reorderRows: "Arrange row order",
+    dropOnApartment: "Drop the booking onto an apartment.",
     assignedOk: "Booking assigned successfully.",
     assignFail: "Failed to assign booking.",
     refreshing: "Updating…",

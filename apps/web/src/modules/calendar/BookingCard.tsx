@@ -8,11 +8,13 @@ type Props = {
   item: CalendarBookingItem;
   isMobile?: boolean;
   onQuickAssign?: () => void;
+  /** Distinguishes the same booking drawn in several grids (e.g. one per month on phones). */
+  dragScope?: string;
 };
 
-export function BookingCard({ item, isMobile, onQuickAssign }: Props) {
+export function BookingCard({ item, isMobile, onQuickAssign, dragScope }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `booking-${item.id}`,
+    id: dragScope ? `booking-${dragScope}-${item.id}` : `booking-${item.id}`,
     data: {
       type: "booking" as const,
       bookingId: item.id,

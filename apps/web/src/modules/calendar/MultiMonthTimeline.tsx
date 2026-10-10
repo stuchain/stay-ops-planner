@@ -149,7 +149,9 @@ function UnifiedTimelineLane({
 
   return (
     <div
-      ref={rowRef}
+      // Not sortable: the whole row is the drop target. Sortable: the row is the
+      // reorder target and the track stays the lane target (row drops map to the room).
+      ref={rowRef ?? setDroppableRef}
       className={`ops-timeline-row${isOver ? " ops-room-lane-over" : ""}`}
       style={{ ...rowStyle }}
       data-testid={`ops-room-lane-${testIdSuffix}`}
@@ -168,7 +170,7 @@ function UnifiedTimelineLane({
         ) : null}
         <span className="ops-timeline-room-title">{title}</span>
       </div>
-      <div ref={setDroppableRef} className="ops-timeline-track" style={{ minHeight }}>
+      <div ref={rowRef ? setDroppableRef : undefined} className="ops-timeline-track" style={{ minHeight }}>
         <div className="ops-timeline-day-grid" style={{ gridTemplateColumns: gridCols }}>
           {dayKeys.map((d) => {
             const isoDay = spec.columnToIso(d);
@@ -225,6 +227,7 @@ function UnifiedTimelineLane({
                 nights={nightsLabel(item)}
                 trailClipped={isStayCheckoutAfterVisibleLastDay(item.endDate, lastVisibleIso)}
                 onOpen={onBookingClick ? () => onBookingClick(item.id) : undefined}
+                dragScope="unified"
               />
             );
           })}

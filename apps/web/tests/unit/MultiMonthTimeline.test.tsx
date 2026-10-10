@@ -45,4 +45,19 @@ describe("MultiMonthTimeline", () => {
     expect(screen.getByRole("heading", { name: "July – August 2026" })).toBeInTheDocument();
     expect(screen.getAllByText("Apartments")).toHaveLength(1);
   });
+
+  it("has no sort handles unless sortableRoomIds is given", () => {
+    const props = {
+      monthsData: [july, august],
+      loading: false,
+      error: null,
+      onPrevMonth: vi.fn(),
+      onNextMonth: vi.fn(),
+    };
+    const { unmount } = render(wrap(<MultiMonthTimeline {...props} sortableRoomIds={null} />));
+    expect(screen.queryByRole("button", { name: /Reorder/ })).toBeNull();
+    unmount();
+    render(wrap(<MultiMonthTimeline {...props} sortableRoomIds={["room_a"]} />));
+    expect(screen.getByRole("button", { name: "Reorder Alpha" })).toBeInTheDocument();
+  });
 });
