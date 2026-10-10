@@ -27,8 +27,8 @@
     "smoke:epic7-auth": "corepack pnpm --filter @stay-ops/db run smoke:epic7-auth",
     "db:migrate-docker-to-neon": "node ./scripts/migrate-docker-to-neon.mjs",
     "db:create-user": "node ./scripts/db-create-user.mjs",
-    "format": "prettier --write packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/tests/unit/api",
-    "format:check": "prettier --check packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/tests/unit/api"
+    "format": "prettier --write packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/tests/unit/api apps/web/tests/integration/server apps/web/src/i18n/errors.el.ts apps/web/src/i18n/errors.en.ts",
+    "format:check": "prettier --check packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/tests/unit/api apps/web/tests/integration/server apps/web/src/i18n/errors.el.ts apps/web/src/i18n/errors.en.ts"
   },
   "devDependencies": {
     "prettier": "^3",
