@@ -17,11 +17,15 @@ import {
 import { listBookingsForDebug } from "@/server/useCases/recommenderDebug";
 import { listApartments, reorderApartments, updateApartment } from "@/server/useCases/apartments";
 import { adminProcedure, createTRPCRouter } from "../trpc";
+import { historyRouter, systemRouter, usersRouter } from "./devSystem";
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 /** Dev mode (P2-5). Every procedure is admin-only on the server; the Dev mode switch only decides what is shown. */
 export const devRouter = createTRPCRouter({
+  history: historyRouter,
+  users: usersRouter,
+  system: systemRouter,
   apartments: createTRPCRouter({
     list: adminProcedure.query(() => listApartments()),
 

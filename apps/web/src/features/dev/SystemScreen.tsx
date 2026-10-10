@@ -1,0 +1,125 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useTRPC } from "@/api/client";
+import { useErrorText } from "@/api/errors";
+import { Card } from "@/ui/Card";
+import { ErrorState } from "@/ui/ErrorState";
+import { PageHeader } from "@/ui/PageHeader";
+import { Skeleton } from "@/ui/Skeleton";
+import { showToast } from "@/ui/Toast";
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="border-border flex flex-wrap items-baseline justify-between gap-2 border-b py-3 last:border-b-0">
+      <dt className="text-text-muted">{label}</dt>
+      <dd className="font-medium">{children}</dd>
+    </div>
+  );
+}
+
+function SystemCard() {
+  const t = useTranslations("dev.system");
+  const errorText = useErrorText();
+  const trpc = useTRPC();
+  const info = useQuery(trpc.dev.system.info.queryOptions());
+  if (info.isPending) return <Skeleton variant="block" className="h-48" />;
+  if (info.error) return <ErrorState message={errorText(info.error)} onRetry={() => void info.refetch()} />;
+  const { version, commit, database, sentryUrl } = info.data;
+  return (
+    <Card title={t("systemTitle")}>
+      <dl>
+        <Row label={t("version")}>{version}</Row>
+        <Row label={t("commit")}>
+          {commit ? <span className="font-mono">{commit.slice(0, 7)}</span> : t("localBuild")}
+        </Row>
+        <Row label={t("database")}>
+          {database.ok ? (
+            <span className="text-success-text">{t("databaseOk", { ms: database.pingMs })}</span>
+          ) : (
+            <span className="text-danger">{t("databaseDown")}</span>
+          )}
+        </Row>
+        {database.ok ? <Row label={t("migrations")}>{database.migrations}</Row> : null}
+        <Row label={t("sentry")}>
+          {sentryUrl ? (
+            <a
+              href={sentryUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent inline-flex min-h-target items-center gap-2 underline"
+            >
+              {t("sentryOpen")}
+              <ExternalLink size={18} aria-hidden="true" />
+            </a>
+          ) : (
+            t("sentryNone")
+          )}
+        </Row>
+      </dl>
+    </Card>
+  );
+}
+
+function FlagsCard() {
+  const t = useTranslations("dev.system");
+  const errorText = useErrorText();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const users = useQuery(trpc.dev.users.list.queryOptions());
+  const update = useMutation({
+    ...trpc.dev.users.updateFlags.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: trpc.dev.users.list.queryKey() });
+      showToast({ message: t("flagSaved"), tone: "success" });
+    },
+    onError: (error) => showToast({ message: errorText(error), tone: "danger" }),
+  });
+
+  return (
+    <Card title={t("flagsTitle")}>
+      <p className="text-text-muted">{t("flagsText")}</p>
+      {users.isPending ? (
+        <Skeleton variant="block" className="h-32" />
+      ) : users.error ? (
+        <ErrorState message={errorText(users.error)} onRetry={() => void users.refetch()} />
+      ) : (
+        <div className="flex flex-col gap-5">
+          {users.data.users.map((u) => (
+            <fieldset key={u.id} className="flex flex-col gap-2">
+              <legend className="mb-1 font-semibold break-all">{u.email}</legend>
+              {users.data.flagKeys.map((key) => (
+                <label key={key} className="min-h-target flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="size-6"
+                    checked={u.flags[key]}
+                    disabled={update.isPending}
+                    onChange={(e) => update.mutate({ userId: u.id, patch: { [key]: e.target.checked } })}
+                  />
+                  <span>{t(`flags.${key}`)}</span>
+                </label>
+              ))}
+            </fieldset>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** Dev mode: app version, database status, the Sentry link and the per-user feature flags. */
+export function SystemScreen() {
+  const t = useTranslations("dev.system");
+  return (
+    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <SystemCard />
+        <FlagsCard />
+      </div>
+    </div>
+  );
+}

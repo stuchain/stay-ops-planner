@@ -12,9 +12,9 @@ async function setDevMode(on: boolean): Promise<void> {
 
 async function login(page: Page): Promise<void> {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(CAL_USER.email);
-  await page.getByLabel("Password").fill(CAL_USER.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByTestId("login-email").fill(CAL_USER.email);
+  await page.getByTestId("login-password").fill(CAL_USER.password);
+  await page.getByTestId("login-submit").click();
   await page.waitForURL(/\/app\//);
 }
 

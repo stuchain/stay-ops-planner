@@ -4,21 +4,23 @@ import { EDITABLE_FIELDS, type EditableField } from "./bookingEdit";
 type Dict = Record<string, unknown>;
 
 /** One change, described by data. The client turns it into a sentence in the person's language. */
+export type HistoryEvent =
+  | { kind: "moved"; from: string | null; to: string | null }
+  | { kind: "edited"; fields: EditableField[] }
+  | { kind: "reset"; field: EditableField }
+  | { kind: "created" }
+  | { kind: "synced" }
+  | { kind: "datesFollowed" }
+  | { kind: "movedOutBySync" }
+  | { kind: "cancelled" }
+  /** Anything else: a plain "something changed" sentence, never the code. */
+  | { kind: "other" };
+
 export type HistoryEntry = {
   id: string;
   /** ISO time of the change. */
   at: string;
-  event:
-    | { kind: "moved"; from: string | null; to: string | null }
-    | { kind: "edited"; fields: EditableField[] }
-    | { kind: "reset"; field: EditableField }
-    | { kind: "created" }
-    | { kind: "synced" }
-    | { kind: "datesFollowed" }
-    | { kind: "movedOutBySync" }
-    | { kind: "cancelled" }
-    /** Anything else: a plain "something changed" sentence, never the code. */
-    | { kind: "other" };
+  event: HistoryEvent;
 };
 
 const LIMIT = 10;
@@ -64,29 +66,38 @@ export async function bookingHistory(bookingId: string): Promise<HistoryEntry[]>
     return room ? (room.displayName ?? room.code ?? null) : null;
   };
 
-  return rows.map((r): HistoryEntry => {
-    const base = { id: r.id, at: r.createdAt.toISOString() };
-    const before = dict(r.beforeJson);
-    const after = dict(r.afterJson);
-    const meta = dict(r.metaJson);
-    switch (r.action) {
-      case "booking.move":
-        return { ...base, event: { kind: "moved", from: roomName(before.roomId), to: roomName(after.roomId) } };
-      case "booking.details_edit":
-        return { ...base, event: { kind: "edited", fields: fieldsOf(meta.fields) } };
-      case "booking.field_reset": {
-        const [field] = fieldsOf(meta.fields);
-        return { ...base, event: field ? { kind: "reset", field } : { kind: "other" } };
-      }
-      case "booking.sync_upsert":
-        if (r.beforeJson === null) return { ...base, event: { kind: "created" } };
-        return { ...base, event: after.status === "cancelled" ? { kind: "cancelled" } : { kind: "synced" } };
-      case "assignment.dates_followed_sync":
-        return { ...base, event: { kind: "datesFollowed" } };
-      case "assignment.cleared_on_sync_revalidation":
-        return { ...base, event: { kind: "movedOutBySync" } };
-      default:
-        return { ...base, event: { kind: "other" } };
+  return rows.map((r): HistoryEntry => ({
+    id: r.id,
+    at: r.createdAt.toISOString(),
+    event: describeAuditEvent(r, roomName),
+  }));
+}
+
+/** What one audit row means for a booking, by data. Anything unknown is `other`. */
+export function describeAuditEvent(
+  r: { action: string; beforeJson: unknown; afterJson: unknown; metaJson: unknown },
+  roomName: (id: unknown) => string | null,
+): HistoryEvent {
+  const before = dict(r.beforeJson);
+  const after = dict(r.afterJson);
+  const meta = dict(r.metaJson);
+  switch (r.action) {
+    case "booking.move":
+      return { kind: "moved", from: roomName(before.roomId), to: roomName(after.roomId) };
+    case "booking.details_edit":
+      return { kind: "edited", fields: fieldsOf(meta.fields) };
+    case "booking.field_reset": {
+      const [field] = fieldsOf(meta.fields);
+      return field ? { kind: "reset", field } : { kind: "other" };
     }
-  });
+    case "booking.sync_upsert":
+      if (r.beforeJson === null) return { kind: "created" };
+      return after.status === "cancelled" ? { kind: "cancelled" } : { kind: "synced" };
+    case "assignment.dates_followed_sync":
+      return { kind: "datesFollowed" };
+    case "assignment.cleared_on_sync_revalidation":
+      return { kind: "movedOutBySync" };
+    default:
+      return { kind: "other" };
+  }
 }

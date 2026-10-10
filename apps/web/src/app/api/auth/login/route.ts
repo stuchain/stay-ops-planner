@@ -6,7 +6,7 @@ import { getClientIp } from "@/lib/clientIp";
 import { prisma } from "@/lib/prisma";
 import { LoginBodySchema, loginWithEmailPassword } from "@/modules/auth/service";
 import { AuthError } from "@/modules/auth/errors";
-import { assertLoginAllowed } from "@/modules/auth/loginThrottle";
+import { assertLoginAllowed, clearLoginFailures } from "@/modules/auth/loginThrottle";
 import { setSessionCookie } from "@/modules/auth/session";
 
 function emailNormFromBody(email: string) {
@@ -58,6 +58,7 @@ async function postLogin(request: Request) {
 
   try {
     const result = await loginWithEmailPassword(parsed.data);
+    await clearLoginFailures(emailNorm);
 
     await prisma.$transaction(async (tx) => {
       await tx.loginAttempt.create({

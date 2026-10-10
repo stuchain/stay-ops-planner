@@ -37,9 +37,9 @@ export async function loginAsStaff(page: Page): Promise<void> {
     throw new Error("Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD for E2E login.");
   }
   await page.goto("/login");
-  await page.getByLabel("Email").fill(c.email);
-  await page.getByLabel("Password").fill(c.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByTestId("login-email").fill(c.email);
+  await page.getByTestId("login-password").fill(c.password);
+  await page.getByTestId("login-submit").click();
   // Login lands on /app, which redirects to the calendar for the old UI. Waiting only for the URL (not the
   // full page load) keeps the first, compile-heavy dev-server run inside the test timeout.
   await page.waitForURL(/\/app\/calendar/, { waitUntil: "commit", timeout: 60_000 });

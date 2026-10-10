@@ -10,6 +10,9 @@ export type UserFlags = {
   newUi: boolean;
 };
 
+/** Every flag the Dev mode System page can switch. */
+export const FLAG_KEYS = ["newUi"] as const satisfies ReadonlyArray<keyof UserFlags>;
+
 const DEFAULT_FLAGS: UserFlags = { newUi: false };
 
 export function readFlags(raw: unknown): UserFlags {

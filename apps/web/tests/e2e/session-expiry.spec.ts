@@ -24,9 +24,9 @@ test.describe("Session expiry @calendar", () => {
 
   test("signs in again in place and the save still happens", async ({ page, context }) => {
     await page.goto("/login");
-    await page.getByLabel("Email").fill(CAL_USER.email);
-    await page.getByLabel("Password").fill(CAL_USER.password);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByTestId("login-email").fill(CAL_USER.email);
+    await page.getByTestId("login-password").fill(CAL_USER.password);
+    await page.getByTestId("login-submit").click();
     await page.waitForURL(/\/app\//);
     await page.goto("/app/settings");
     const large = page.getByRole("radio", { name: /Μεγάλο/ });

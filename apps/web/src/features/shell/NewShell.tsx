@@ -2,7 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, CalendarDays, Landmark, ListOrdered, PlugZap, Settings, Sparkles, Sun, Wallet } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  History,
+  Landmark,
+  ListOrdered,
+  PlugZap,
+  Server,
+  Settings,
+  Sparkles,
+  Sun,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ApiProvider } from "@/api/client";
@@ -29,6 +42,9 @@ const DEV_NAV = [
   { href: "/app/dev/hosthub", key: "hosthub", icon: PlugZap },
   { href: "/app/dev/cleaning", key: "cleaning", icon: Sparkles },
   { href: "/app/dev/recommender", key: "recommender", icon: ListOrdered },
+  { href: "/app/dev/history", key: "history", icon: History },
+  { href: "/app/dev/users", key: "users", icon: Users },
+  { href: "/app/dev/system", key: "system", icon: Server },
 ] as const;
 
 export type NewShellProps = {

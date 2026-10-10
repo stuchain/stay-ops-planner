@@ -1,13 +1,39 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useId, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { safeNextPath } from "./safeNextPath";
 
+type ApiBody = { error?: { code?: string; details?: { retryAfterSeconds?: number } } } | null;
+
+/** Whole minutes to wait, at least one. */
+export function waitMinutes(retryAfterSeconds: number | undefined): number {
+  return Math.max(1, Math.ceil((retryAfterSeconds ?? 60) / 60));
+}
+
+function useOnline(): boolean {
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
+  return online;
+}
+
 export function LoginForm() {
+  const t = useTranslations("login");
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNextPath(searchParams.get("next"));
+  const online = useOnline();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +47,10 @@ export function LoginForm() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!navigator.onLine) {
+      setError(t("offline"));
+      return;
+    }
     setPending(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -29,13 +59,25 @@ export function LoginForm() {
         credentials: "include",
         body: JSON.stringify({ email, password }),
       });
-      const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+      const json = (await res.json().catch(() => null)) as ApiBody;
       if (!res.ok) {
-        setError(json?.error?.message ?? "Login failed");
+        const code = json?.error?.code;
+        if (code === "RATE_LIMITED") {
+          setError(t("locked", { minutes: waitMinutes(json?.error?.details?.retryAfterSeconds) }));
+        } else if (code === "INVALID_CREDENTIALS") {
+          setError(t("wrongCredentials"));
+        } else if (code === "ACCOUNT_DISABLED") {
+          setError(t("disabled"));
+        } else {
+          setError(t("failed"));
+        }
         return;
       }
       router.push(next);
       router.refresh();
+    } catch {
+      // The request never reached the server.
+      setError(t("offline"));
     } finally {
       setPending(false);
     }
@@ -43,12 +85,18 @@ export function LoginForm() {
 
   return (
     <form className="ops-login-form" onSubmit={onSubmit}>
-      <h1>Stay Ops Planner</h1>
-      <p className="ops-muted">Sign in to continue.</p>
+      <h1>{t("title")}</h1>
+      <p className="ops-muted">{t("subtitle")}</p>
+      {online ? null : (
+        <p className="ops-error" role="status" data-testid="login-offline">
+          {t("offline")}
+        </p>
+      )}
       <div className="ops-label">
-        <label htmlFor={emailId}>Email</label>
+        <label htmlFor={emailId}>{t("email")}</label>
         <input
           id={emailId}
+          data-testid="login-email"
           className="ops-input"
           type="email"
           autoComplete="username"
@@ -60,9 +108,10 @@ export function LoginForm() {
         />
       </div>
       <div className="ops-label">
-        <label htmlFor={passwordId}>Password</label>
+        <label htmlFor={passwordId}>{t("password")}</label>
         <input
           id={passwordId}
+          data-testid="login-password"
           className="ops-input"
           type="password"
           autoComplete="current-password"
@@ -74,12 +123,12 @@ export function LoginForm() {
         />
       </div>
       {error ? (
-        <p id={errorId} className="ops-error" role="alert">
+        <p id={errorId} className="ops-error" role="alert" data-testid="login-error">
           {error}
         </p>
       ) : null}
-      <button type="submit" className="ops-btn ops-btn-primary" disabled={pending}>
-        {pending ? "Signing in…" : "Sign in"}
+      <button type="submit" data-testid="login-submit" className="ops-btn ops-btn-primary" disabled={pending}>
+        {pending ? t("signingIn") : t("signIn")}
       </button>
     </form>
   );

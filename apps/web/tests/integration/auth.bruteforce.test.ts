@@ -95,7 +95,8 @@ describe("auth login brute-force", () => {
 
   it("returns 429 after too many failures from one IP across different emails", async () => {
     const hdr = { "content-type": "application/json", "x-forwarded-for": "203.0.113.99" };
-    for (let i = 0; i < 10; i += 1) {
+    // Two people share one home IP, so the per-IP limit is 30 (the per-email limit stays 5).
+    for (let i = 0; i < 30; i += 1) {
       const res = await POST_LOGIN(
         new Request("http://localhost/api/auth/login", {
           method: "POST",
@@ -110,9 +111,78 @@ describe("auth login brute-force", () => {
       new Request("http://localhost/api/auth/login", {
         method: "POST",
         headers: hdr,
-        body: JSON.stringify({ email: "nope-11@example.com", password: "x" }),
+        body: JSON.stringify({ email: "nope-31@example.com", password: "x" }),
       }),
     );
     expect(blocked.status).toBe(429);
+  });
+
+  it("lets the right person in after 29 wrong tries from the same IP across other emails", async () => {
+    const hdr = { "content-type": "application/json", "x-forwarded-for": "203.0.113.77" };
+    for (let i = 0; i < 29; i += 1) {
+      await POST_LOGIN(
+        new Request("http://localhost/api/auth/login", {
+          method: "POST",
+          headers: hdr,
+          body: JSON.stringify({ email: `nope-${i}@example.com`, password: "x" }),
+        }),
+      );
+    }
+    const ok = await POST_LOGIN(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: hdr,
+        body: JSON.stringify({ email, password }),
+      }),
+    );
+    expect(ok.status).toBe(200);
+  }, 30_000);
+
+  it("clears the failures after a successful sign-in", async () => {
+    const hdr = { "content-type": "application/json", "x-forwarded-for": "203.0.113.60" };
+    const attempt = (pw: string) =>
+      POST_LOGIN(
+        new Request("http://localhost/api/auth/login", {
+          method: "POST",
+          headers: hdr,
+          body: JSON.stringify({ email, password: pw }),
+        }),
+      );
+    for (let round = 0; round < 2; round += 1) {
+      for (let i = 0; i < 4; i += 1) expect((await attempt("wrong")).status).toBe(401);
+      expect((await attempt(password)).status).toBe(200);
+      expect(await prisma.loginAttempt.count({ where: { email, succeeded: false } })).toBe(0);
+    }
+  }, 30_000);
+
+  it("tells how long to wait, counted from the failure that decides the block", async () => {
+    const hdr = { "content-type": "application/json", "x-forwarded-for": "203.0.113.61" };
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60_000);
+    await prisma.loginAttempt.createMany({
+      data: Array.from({ length: 5 }, () => ({ email, ip: "203.0.113.61", succeeded: false, createdAt: tenMinutesAgo })),
+    });
+    const blocked = await POST_LOGIN(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: hdr,
+        body: JSON.stringify({ email, password }),
+      }),
+    );
+    expect(blocked.status).toBe(429);
+    const json = (await blocked.json()) as { error: { details: { retryAfterSeconds: number } } };
+    expect(json.error.details.retryAfterSeconds).toBeGreaterThan(4 * 60);
+    expect(json.error.details.retryAfterSeconds).toBeLessThanOrEqual(5 * 60);
+    expect(Number(blocked.headers.get("Retry-After"))).toBe(json.error.details.retryAfterSeconds);
+
+    // Failures older than the window no longer count.
+    await prisma.loginAttempt.updateMany({ data: { createdAt: new Date(Date.now() - 16 * 60_000) } });
+    const ok = await POST_LOGIN(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: hdr,
+        body: JSON.stringify({ email, password }),
+      }),
+    );
+    expect(ok.status).toBe(200);
   });
 });
