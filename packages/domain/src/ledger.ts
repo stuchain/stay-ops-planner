@@ -155,7 +155,7 @@ export function readLedgerOverrides(value: unknown): LedgerOverrides {
 }
 
 export interface CountedRow {
-  readonly shown: ShownLedgerRow;
+  readonly shown: Omit<ShownLedgerRow, "overridden">;
   /** False for pending requests and cancellations with nothing paid. */
   readonly counts: boolean;
   /** Check-in month, 1–12. */
