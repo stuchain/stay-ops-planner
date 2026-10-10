@@ -85,8 +85,18 @@ export async function getCalendarMonthAggregate(args: {
 }): Promise<CalendarMonthAggregatePayload> {
   const { monthStartUtc, monthEndExclusiveUtc } = zonedMonthRangeUtc(args.yearMonth, args.timeZone);
 
+  // A switched-off apartment still shows while it has stays this month, so no booking disappears.
   const roomsRaw = await prisma.room.findMany({
-    where: { isActive: true },
+    where: {
+      OR: [
+        { isActive: true },
+        {
+          assignments: {
+            some: { startDate: { lt: monthEndExclusiveUtc }, endDate: { gt: monthStartUtc } },
+          },
+        },
+      ],
+    },
     select: {
       id: true,
       code: true,

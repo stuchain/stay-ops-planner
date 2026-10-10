@@ -152,6 +152,10 @@ model Booking {
   rawPayload        Json?    @map("raw_payload")
   /// Columns the user edited in the app (`{"guestName": true}`); sync never overwrites them.
   localOverrides    Json?    @map("local_overrides")
+  /// Hosthub's `updated` time of the data last applied; an older payload is ignored.
+  hosthubUpdatedAt  DateTime? @map("hosthub_updated_at") @db.Timestamptz(6)
+  /// Status Hosthub last sent. Lets a status changed in the app stand until Hosthub's own status changes.
+  hosthubStatus     BookingStatus? @map("hosthub_status")
   /// Optimistic concurrency for API PATCH / assignment flows that pass `expectedVersion`.
   version           Int      @default(0)
   createdAt         DateTime @default(now()) @map("created_at")

@@ -1,8 +1,8 @@
 import { writeAuditSnapshot } from "@stay-ops/audit";
 import { DryRunRollback, PlanRecorder, log, withRetry } from "@stay-ops/shared";
-import type { Prisma } from "@stay-ops/db";
 import {
   BookingStatus,
+  Prisma,
   ensureTurnoverCleaningTask,
   guessRentalIndexFromTitle,
   PrismaClient,
@@ -13,6 +13,7 @@ import { applyCancellationSideEffects } from "../allocation/cancellation.js";
 import { revalidateAssignmentIfNeeded } from "../allocation/revalidateAssignment.js";
 import { mapHosthubBookingStatus } from "./bookingStatus.js";
 import { mapHosthubListingChannel } from "./mapChannel.js";
+import { parseUpdatedUnix } from "../hosthub/normalize.js";
 import { nightsBetweenCheckinCheckout, parseDateOnlyUtc } from "./dates.js";
 import { isTransientPrismaError, pickPrismaErrorCode } from "../retry/isTransient.js";
 
@@ -106,12 +107,21 @@ function sameValue(a: unknown, b: unknown): boolean {
  * a column actually changes.
  */
 export function buildSyncBookingUpdate(
-  existing: { status: BookingStatus; localOverrides: unknown } & Record<string, unknown>,
+  existing: {
+    status: BookingStatus;
+    localOverrides: unknown;
+    hosthubStatus: BookingStatus | null;
+  } & Record<string, unknown>,
   incoming: SyncedBookingFields,
 ): Prisma.BookingUncheckedUpdateInput {
-  const overrides = asObject(existing.localOverrides) ?? {};
+  const overrides = { ...(asObject(existing.localOverrides) ?? {}) };
   const data: Record<string, unknown> = {};
   let changed = false;
+  if (overrides.status === true && existing.hosthubStatus !== incoming.status) {
+    // Hosthub changed the status itself since the user set it in the app: Hosthub wins again.
+    delete overrides.status;
+    data.localOverrides = Object.keys(overrides).length > 0 ? overrides : Prisma.DbNull;
+  }
   for (const [key, value] of Object.entries(incoming) as Array<[keyof SyncedBookingFields, unknown]>) {
     if (overrides[key] === true) continue;
     let next = value;
@@ -126,6 +136,7 @@ export function buildSyncBookingUpdate(
     if (!sameValue(existing[key], next)) changed = true;
   }
   if (changed) data.version = { increment: 1 };
+  data.hosthubStatus = incoming.status;
   return data as Prisma.BookingUncheckedUpdateInput;
 }
 
@@ -163,6 +174,22 @@ async function upsertListingAndBooking(
       },
     },
   });
+  const incomingUpdatedUnix = parseUpdatedUnix(calendarEventRaw ?? (rawPayload as unknown));
+  const incomingUpdatedAt = incomingUpdatedUnix !== undefined ? new Date(incomingUpdatedUnix * 1000) : null;
+  if (
+    existingBooking?.hosthubUpdatedAt &&
+    incomingUpdatedAt &&
+    incomingUpdatedAt.getTime() < existingBooking.hosthubUpdatedAt.getTime()
+  ) {
+    // An older delivery (a late webhook, or a poll that overlapped one) must not undo newer data.
+    log("info", "hosthub_stale_payload_skipped", {
+      bookingId: existingBooking.id,
+      incomingUpdated: incomingUpdatedUnix,
+      storedUpdated: Math.floor(existingBooking.hosthubUpdatedAt.getTime() / 1000),
+    });
+    return;
+  }
+
   const stayDatesChanged =
     existingBooking !== null &&
     (existingBooking.checkinDate.getTime() !== checkinDate.getTime() ||
@@ -287,6 +314,7 @@ async function upsertListingAndBooking(
       ? { hosthubGrTaxesRaw: extra.hosthubGrTaxesRaw }
       : {}),
     rawPayload,
+    ...(incomingUpdatedAt ? { hosthubUpdatedAt: incomingUpdatedAt } : {}),
   });
 
   const booking = await tx.booking.upsert({
@@ -319,6 +347,8 @@ async function upsertListingAndBooking(
       guestPaidCents: dto.guestPaidCents ?? null,
       action: dto.action ?? null,
       notes: dto.notes ?? null,
+      hosthubStatus: status,
+      ...(incomingUpdatedAt ? { hosthubUpdatedAt: incomingUpdatedAt } : {}),
       ...(calendarEventRaw !== null ? { hosthubCalendarEventRaw: calendarEventRaw } : {}),
       ...(extra?.hosthubNotesRaw !== undefined && extra.hosthubNotesRaw !== null
         ? { hosthubNotesRaw: extra.hosthubNotesRaw }

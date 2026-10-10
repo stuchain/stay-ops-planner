@@ -45,7 +45,7 @@ export function snapshotBookingInMonths(
   const out: BookingItemSnapshot = {};
   for (const [ym, payload] of Object.entries(dataByMonth)) {
     const item = findBooking(payload, bookingId);
-    if (item) out[ym] = structuredClone(item);
+    if (item) out[ym] = { ...item, flags: [...item.flags] };
   }
   return out;
 }
@@ -92,7 +92,7 @@ export function restoreBookingInMonths(
     next[ym] = {
       ...payload,
       items: payload.items.map((item) =>
-        item.kind === "booking" && item.id === bookingId ? structuredClone(saved) : item,
+        item.kind === "booking" && item.id === bookingId ? { ...saved, flags: [...saved.flags] } : item,
       ),
     };
   }

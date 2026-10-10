@@ -199,7 +199,8 @@ function mapStatusRaw(raw: string): HosthubReservationDto["status"] {
   return "confirmed";
 }
 
-function parseUpdatedUnix(raw: unknown): number | undefined {
+/** Hosthub `updated` (Unix seconds) of a raw calendar event, when present. */
+export function parseUpdatedUnix(raw: unknown): number | undefined {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
     return undefined;
   }

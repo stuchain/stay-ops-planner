@@ -164,6 +164,17 @@ describe("Hosthub webhook without Redis", () => {
     expect(after.guestName).toBe("Second Name");
   });
 
+  it("a later delivery of the same event with a newer updated time is applied", async () => {
+    const event = { id: "evt-same", type: "Booking", updated: 1_000, reservation };
+    expect((await post(event)).status).toBe(200);
+    const cancelled = { ...event, updated: 2_000, reservation: { ...reservation, status: "cancelled" } };
+    expect((await post(cancelled)).status).toBe(200);
+
+    const row = await prisma.booking.findFirstOrThrow({ where: { externalBookingId: "webhook-noredis-b1" } });
+    expect(row.status).toBe("cancelled");
+    expect(await prisma.webhookInboundEvent.count()).toBe(2);
+  });
+
   it("does not mark the event as seen when applying fails, so Hosthub retries", async () => {
     const syncMod = await import("@stay-ops/sync");
     const spy = vi.spyOn(syncMod, "applyHosthubReservation").mockRejectedValueOnce(new Error("db down"));

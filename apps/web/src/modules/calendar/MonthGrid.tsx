@@ -4,6 +4,7 @@ import { type CSSProperties } from "react";
 import { useDndContext, useDroppable } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { roomLaneTitle } from "./roomLaneTitle";
 import type {
   CalendarBlockItem,
   CalendarBookingItem,
@@ -447,7 +448,7 @@ export function MonthGrid({
 
   const desktopRows = data.rooms.map((room) => {
     const roomBookings = bookings.filter((b) => b.roomId === room.id);
-    const title = room.name || room.code || room.id;
+    const title = roomLaneTitle(room);
     const showHint = draggedHintSpan && roomCanAcceptDraggedBooking(room.id) ? draggedHintSpan : null;
     const common = {
       laneId: scopedLaneId(`lane-room-${room.id}`),
@@ -548,7 +549,7 @@ export function MonthGrid({
           {data.rooms.map((room) => {
             const roomBookings = bookings.filter((b) => b.roomId === room.id);
             const roomBlocks = blocksByRoom.get(room.id) ?? [];
-            const title = room.name || room.code || room.id;
+            const title = roomLaneTitle(room);
             return (
               <RoomLane
                 key={room.id}

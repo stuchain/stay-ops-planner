@@ -452,6 +452,13 @@ export async function reassignRoom(input: ReassignInput): Promise<AssignmentComm
         },
       });
 
+      if (existing.booking.status === BookingStatus.needs_reassignment) {
+        await tx.booking.update({
+          where: { id: existing.bookingId },
+          data: { status: BookingStatus.confirmed, version: { increment: 1 } },
+        });
+      }
+
       const auditRef = await writeAuditSnapshot(tx, {
         actorUserId,
         action: "assignment.reassign",

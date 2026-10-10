@@ -26,11 +26,12 @@ export function parseWebhookBodyStub(parsed: unknown): { ok: true; data: Hosthub
   return { ok: true, data: r.data };
 }
 
-export function computeWebhookDedupeKey(parsed: unknown, rawBody: string): string {
-  const stub = parseWebhookBodyStub(parsed);
-  if (stub.ok) {
-    if (stub.data.id) return stub.data.id;
-    if (stub.data.eventId) return stub.data.eventId;
-  }
+/**
+ * Dedupe on the whole body: Hosthub sends a new delivery for each change of the same event (same
+ * `id`, newer `updated`), and each one must be applied. Only an identical re-delivery is skipped.
+ */
+// `parsed` is kept for callers; the key no longer depends on the event id.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function computeWebhookDedupeKey(_parsed: unknown, rawBody: string): string {
   return sha256HexUtf8(rawBody);
 }

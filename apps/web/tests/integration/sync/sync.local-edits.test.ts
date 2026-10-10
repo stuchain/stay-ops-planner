@@ -130,6 +130,67 @@ describe("sync keeps the user's edits", () => {
     expect(after.isActive).toBe(false);
   });
 
+  it("an older Hosthub payload never overwrites newer data", async () => {
+    await applyHosthubReservation(prisma, { ...reservation, status: "cancelled" }, { ...reservation, updated: 2_000 });
+    await applyHosthubReservation(prisma, reservation, { ...reservation, updated: 1_000 });
+    const row = await prisma.booking.findFirstOrThrow({ where: { externalBookingId: "local-edit-b1" } });
+    expect(row.status).toBe(BookingStatus.cancelled);
+    expect(row.hosthubUpdatedAt?.getTime()).toBe(2_000_000);
+  });
+
+  it("a cancel made in the app survives a sync with the same Hosthub data", async () => {
+    await applyHosthubReservation(prisma, reservation, { ...reservation, updated: 1_000 });
+    const booking = await prisma.booking.findFirstOrThrow({ where: { externalBookingId: "local-edit-b1" } });
+    const room = await prisma.room.findFirstOrThrow({ where: { code: "local-edit-l1" } });
+    await prisma.assignment.create({
+      data: {
+        bookingId: booking.id,
+        roomId: room.id,
+        startDate: booking.checkinDate,
+        endDate: booking.checkoutDate,
+      },
+    });
+
+    const jar = await loginJar();
+    const res = await PATCH_BOOKING(
+      new NextRequest(`http://localhost/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+        body: JSON.stringify({ status: BookingStatus.cancelled }),
+      }),
+      { params: Promise.resolve({ id: booking.id }) },
+    );
+    expect(res.status).toBe(200);
+
+    await applyHosthubReservation(prisma, reservation, { ...reservation, updated: 1_500 });
+    const after = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+      include: { assignment: true },
+    });
+    expect(after.status).toBe(BookingStatus.cancelled);
+    expect(after.assignment).toBeNull();
+  });
+
+  it("Hosthub wins again once its own status changes after an app cancel", async () => {
+    await applyHosthubReservation(prisma, { ...reservation, status: "pending" }, { ...reservation });
+    const booking = await prisma.booking.findFirstOrThrow({ where: { externalBookingId: "local-edit-b1" } });
+    const jar = await loginJar();
+    const res = await PATCH_BOOKING(
+      new NextRequest(`http://localhost/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+        body: JSON.stringify({ status: BookingStatus.cancelled }),
+      }),
+      { params: Promise.resolve({ id: booking.id }) },
+    );
+    expect(res.status).toBe(200);
+
+    await applyHosthubReservation(prisma, reservation, { ...reservation });
+    const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+    expect(after.status).toBe(BookingStatus.confirmed);
+    expect(after.localOverrides).toBeNull();
+  });
+
   it("keeps the needs-a-new-apartment flag when Hosthub still says confirmed", async () => {
     await applyHosthubReservation(prisma, reservation, { ...reservation });
     const booking = await prisma.booking.findFirstOrThrow({ where: { externalBookingId: "local-edit-b1" } });

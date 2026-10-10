@@ -1,6 +1,7 @@
 import type { Prisma } from "@stay-ops/db";
 import { PrismaClient } from "@stay-ops/db";
 import { HosthubClient } from "../hosthub/client.js";
+import { parseUpdatedUnix } from "../hosthub/normalize.js";
 import { applyHosthubReservation } from "./applyHosthubReservation.js";
 import { backfillSourceListingsFromHosthubRentals } from "./backfillSourceListingsFromRentals.js";
 import {
@@ -32,9 +33,30 @@ export type RunHosthubReconcileOptions = {
   perRentalCalendar?: boolean;
 };
 
-function resolveCalendarListOptions(opts?: RunHosthubReconcileOptions): {
+/**
+ * Watermark for the next poll. It never moves past a row that failed, so that row is fetched
+ * again (`updated_gte` is inclusive); a failed row without `updated` keeps the old cursor.
+ */
+export function nextPollCursor(args: {
+  previous: string | null;
+  runMaxUpdated: number | undefined;
+  failedMinUpdated: number | undefined;
+  failedWithoutUpdated: boolean;
+}): string | null {
+  if (args.failedWithoutUpdated) return args.previous;
+  if (args.failedMinUpdated !== undefined) {
+    return String(
+      args.runMaxUpdated !== undefined
+        ? Math.min(args.runMaxUpdated, args.failedMinUpdated)
+        : args.failedMinUpdated,
+    );
+  }
+  return args.runMaxUpdated !== undefined ? String(args.runMaxUpdated) : args.previous;
+}
+
+export function resolveCalendarListOptions(opts?: RunHosthubReconcileOptions): {
   fullSync: boolean;
-  isVisible: string | undefined;
+  isVisible: string;
   fetchEnrichment: boolean;
 } {
   const envFull =
@@ -50,7 +72,8 @@ function resolveCalendarListOptions(opts?: RunHosthubReconcileOptions): {
     opts?.calendarEventsIsVisible !== undefined
       ? (opts.calendarEventsIsVisible ?? "").trim()
       : envVis;
-  const isVisible = vis && vis.length > 0 ? vis : undefined;
+  // Default to every event, so cancelled and deleted (hidden) events reach the database too.
+  const isVisible = vis && vis.length > 0 ? vis : "all";
 
   const fetchEnrichment =
     opts?.fetchEventEnrichment !== undefined ? opts.fetchEventEnrichment : !envEnrichOff;
@@ -124,6 +147,13 @@ export async function runHosthubReconcile(
 
     let nextPageUrl: string | null = null;
     let runMaxUpdated: number | undefined;
+    /** Rows that failed must be fetched again next run, so the cursor may not pass them. */
+    const failedRows = { minUpdated: undefined as number | undefined, withoutUpdated: false };
+    const noteFailedRow = (rawEvent: unknown) => {
+      const u = parseUpdatedUnix(rawEvent);
+      if (u === undefined) failedRows.withoutUpdated = true;
+      else failedRows.minUpdated = failedRows.minUpdated === undefined ? u : Math.min(failedRows.minUpdated, u);
+    };
     const seenPageUrls = new Set<string>();
     let pagesRead = 0;
 
@@ -183,6 +213,7 @@ export async function runHosthubReconcile(
           stats.upserted += 1;
         } catch (e) {
           stats.errors += 1;
+          noteFailedRow(rawEvent);
           const msg = e instanceof Error ? e.message : String(e);
           await recordImportError(prisma, run.id, "PARSE_ERROR", msg, rowAsJson(row));
         }
@@ -261,6 +292,7 @@ export async function runHosthubReconcile(
               stats.upserted += 1;
             } catch (e) {
               stats.errors += 1;
+              noteFailedRow(rawEvent);
               const msg = e instanceof Error ? e.message : String(e);
               await recordImportError(prisma, run.id, "PARSE_ERROR", msg, rowAsJson(row));
             }
@@ -275,8 +307,12 @@ export async function runHosthubReconcile(
       }
     }
 
-    const cursorOut =
-      runMaxUpdated !== undefined ? String(runMaxUpdated) : (prev?.cursor ?? null);
+    const cursorOut = nextPollCursor({
+      previous: prev?.cursor ?? null,
+      runMaxUpdated,
+      failedMinUpdated: failedRows.minUpdated,
+      failedWithoutUpdated: failedRows.withoutUpdated,
+    });
     await finalizeSyncRun(prisma, run.id, "completed", stats, cursorOut);
   } catch (e) {
     const current = await prisma.syncRun.findUnique({ where: { id: run.id } });
