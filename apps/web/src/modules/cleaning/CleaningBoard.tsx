@@ -82,7 +82,7 @@ export function CleaningBoard() {
   }, [tasks]);
 
   async function patchStatus(task: TaskRow, toStatus: "in_progress" | "done") {
-    const snapshot = structuredClone(tasks);
+    const snapshot = tasks.map((x) => ({ ...x }));
     setTasks((prev) =>
       prev.map((x) => (x.id === task.id ? { ...x, status: toStatus } : x)),
     );
