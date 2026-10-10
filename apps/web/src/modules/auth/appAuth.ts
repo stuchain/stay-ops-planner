@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { verifyAndLoadAuthContext } from "./guard";
 import { rolesForAppPolicy, type AppPolicyKey } from "./rbac";
 import { SESSION_COOKIE_NAME } from "./session";
@@ -20,7 +20,7 @@ export async function requireAppPolicy(policyKey: AppPolicyKey) {
     redirect(loginRedirectUrl());
   }
   if (!allowed.includes(ctx.role)) {
-    notFound();
+    redirect("/no-access");
   }
   return ctx;
 }

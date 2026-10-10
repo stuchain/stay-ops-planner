@@ -431,5 +431,21 @@
     "pendingLabel": "Waiting for confirmation",
     "needsApartment": "Needs an apartment",
     "loading": "Loading today's overview"
+  },
+  "errorPage": {
+    "retry": "Try again",
+    "home": "Go to the home page",
+    "error": {
+      "title": "Something went wrong",
+      "text": "Please try again. If it keeps happening, let Stelios know."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "text": "The link may be old. Go to the home page."
+    },
+    "forbidden": {
+      "title": "You don't have access",
+      "text": "Your account cannot see this page. Let Stelios know if you need it."
+    }
   }
 }

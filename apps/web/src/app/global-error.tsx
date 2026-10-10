@@ -19,13 +19,14 @@ export default function GlobalError({
     });
   }, [error]);
 
+  // The whole app failed, so translations are not available: Greek first, English under it.
   return (
-    <html lang="en">
+    <html lang="el">
       <body>
         <div className="ops-error-boundary-root">
           <ErrorState
-            title="Application error"
-            description={error.message || "A critical error occurred."}
+            title="Κάτι πήγε στραβά · Something went wrong"
+            description="Δοκιμάστε ξανά. Αν συνεχίσει, ενημερώστε τον Στέλιο. · Please try again."
             traceId={error.digest}
             onRetry={() => reset()}
           />
