@@ -1,0 +1,13 @@
+{
+  "data": {
+    "id": "grtax-fake-1",
+    "object": "CalendarEventGrTaxes",
+    "calendar_event_id": "Evt-Fake-0003",
+    "currency": "EUR",
+    "service_fee_host": 58.5,
+    "service_fee_host_base": 47.18,
+    "service_fee_host_vat": 11.32,
+    "extra_taxes": 3.0,
+    "collected_by_channel": 0
+  }
+}

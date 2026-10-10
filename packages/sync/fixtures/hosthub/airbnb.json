@@ -1,0 +1,29 @@
+{
+  "id": "Evt-Fake-0002",
+  "object": "CalendarEvent",
+  "type": "Booking",
+  "status": "confirmed",
+  "is_visible": true,
+  "reservation_id": "HMFAKE0002",
+  "date_from": "2030-08-01T00:00:00+00:00",
+  "date_to": "2030-08-05T00:00:00+00:00",
+  "created": 1780100000,
+  "updated": 1780100050,
+  "rental": { "id": "rent-fake-2", "object": "Rental", "name": "Fake Apartment Two" },
+  "source": { "name": "Airbnb", "channel_type_code": "airbnb" },
+  "guest": {
+    "first_name": "Airbnb",
+    "last_name": "Tester",
+    "email": "airbnb.tester@example.test",
+    "phone": "+30 000 000 0002",
+    "adults": 2,
+    "children": 0,
+    "infants": 1,
+    "total": 3
+  },
+  "booking_value": { "amount": 520, "currency": "EUR" },
+  "total_value": { "amount": 560, "currency": "EUR" },
+  "cleaning_fee": { "amount": 40, "currency": "EUR" },
+  "total_payout": { "amount": 490.75, "currency": "EUR" },
+  "guest_paid": { "amount": 560, "currency": "EUR" }
+}

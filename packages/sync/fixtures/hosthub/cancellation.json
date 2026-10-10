@@ -1,0 +1,20 @@
+{
+  "id": "Evt-Fake-0001",
+  "object": "CalendarEvent",
+  "type": "Booking",
+  "status": "cancelled",
+  "is_visible": false,
+  "reservation_id": "CH-FAKE-0001",
+  "date_from": "2030-07-12",
+  "date_to": "2030-07-17",
+  "cancelled_at": "2030-06-01T09:30:00+00:00",
+  "created": 1780000000,
+  "updated": 1780007200,
+  "rental": { "id": "rent-fake-1", "object": "Rental", "name": "Fake Apartment One" },
+  "source": { "name": "Direct", "channel_type_code": "direct" },
+  "guest": {
+    "name": "Test Guest One",
+    "email": "guest.one@example.test",
+    "phone": "+30 000 000 0001"
+  }
+}

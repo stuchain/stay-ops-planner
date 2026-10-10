@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": "note-fake-1",
+      "object": "Note",
+      "status": "active",
+      "created": "2030-06-01T08:00:00+00:00",
+      "updated": "2030-06-01T08:00:00+00:00",
+      "content": "Synthetic note: guest asked for early check-in."
+    },
+    {
+      "id": "note-fake-2",
+      "object": "Note",
+      "status": "active",
+      "created": "2030-06-02T10:15:00+00:00",
+      "updated": "2030-06-02T10:20:00+00:00",
+      "content": "Synthetic note: baby cot requested."
+    }
+  ],
+  "navigation": { "next": null, "previous": null }
+}

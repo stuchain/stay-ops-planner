@@ -1,0 +1,14 @@
+{
+  "id": "Evt-Fake-0005",
+  "object": "CalendarEvent",
+  "type": "Hold",
+  "status": "confirmed",
+  "is_visible": true,
+  "date_from": "2030-11-01",
+  "date_to": "2030-11-10",
+  "created": 1780400000,
+  "updated": 1780400005,
+  "rental": { "id": "rent-fake-1", "object": "Rental", "name": "Fake Apartment One" },
+  "source": { "name": "Owner", "channel_type_code": "owner" },
+  "notes": "Synthetic owner stay / maintenance hold."
+}

@@ -1,0 +1,24 @@
+{
+  "id": "Evt-Fake-0004",
+  "object": "CalendarEvent",
+  "type": "Booking",
+  "status": "accepted",
+  "is_visible": true,
+  "date_from": "2030-10-15",
+  "date_to": "2030-10-18",
+  "created": 1780300000,
+  "updated": 1780300010,
+  "rental": { "id": "rent-fake-4", "object": "Rental", "name": "Fake Apartment Four" },
+  "source": { "name": "Direct", "channel_type_code": "direct" },
+  "guest": {
+    "name": "Direct Tester",
+    "email": "direct.tester@example.test",
+    "phone": "+30 000 000 0004",
+    "adults": 1,
+    "children": 0,
+    "infants": 0,
+    "total": 1
+  },
+  "booking_value": { "amount": 255, "currency": "EUR" },
+  "total_payout": { "amount": 255, "currency": "EUR" }
+}

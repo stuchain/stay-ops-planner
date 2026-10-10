@@ -1,0 +1,29 @@
+{
+  "id": "Evt-Fake-0003",
+  "object": "CalendarEvent",
+  "type": "Booking",
+  "status": "confirmed",
+  "is_visible": true,
+  "reservation_id": "BDC-0000003",
+  "date_from": "2030-09-03",
+  "date_to": "2030-09-06",
+  "created": 1780200000,
+  "updated": 1780200020,
+  "rental": { "id": "rent-fake-3", "object": "Rental", "name": "Fake Apartment Three" },
+  "source": { "name": "Booking.com", "channel_type_code": "booking.com" },
+  "guest": {
+    "name": "Booking Tester",
+    "email": "booking.tester@example.test",
+    "adults": 3,
+    "children": 0,
+    "infants": 0,
+    "total": 3
+  },
+  "booking_value": { "amount": 390, "currency": "EUR" },
+  "total_value": { "amount": 405.5, "currency": "EUR" },
+  "cleaning_fee": { "amount": 30, "currency": "EUR" },
+  "taxes": { "amount": 15.5, "currency": "EUR" },
+  "total_payout": { "amount": 331.5, "currency": "EUR" },
+  "guest_paid": { "amount": 0, "currency": "EUR" },
+  "special_requests": "Synthetic: ground floor if possible."
+}

@@ -1,0 +1,29 @@
+{
+  "id": "Evt-Fake-0001",
+  "object": "CalendarEvent",
+  "type": "Booking",
+  "status": "confirmed",
+  "is_visible": true,
+  "reservation_id": "CH-FAKE-0001",
+  "date_from": "2030-07-10",
+  "date_to": "2030-07-14",
+  "created": 1780000000,
+  "updated": 1780000100,
+  "rental": { "id": "rent-fake-1", "object": "Rental", "name": "Fake Apartment One" },
+  "source": { "name": "Direct", "channel_type_code": "direct" },
+  "guest": {
+    "name": "Test Guest One",
+    "email": "guest.one@example.test",
+    "phone": "+30 000 000 0001",
+    "adults": 2,
+    "children": 1,
+    "infants": 0,
+    "total": 3
+  },
+  "booking_value": { "amount": 480, "currency": "EUR" },
+  "cleaning_fee": { "amount": 40, "currency": "EUR" },
+  "taxes": { "amount": 12.5, "currency": "EUR" },
+  "total_payout": { "amount": 440, "currency": "EUR" },
+  "guest_paid": { "amount": 480, "currency": "EUR" },
+  "notes": "Synthetic booking for fixtures. Arrives late."
+}

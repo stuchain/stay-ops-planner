@@ -25,6 +25,7 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           include: ["tests/integration/**/*.test.ts"],
+          globalSetup: ["tests/integration/globalSetup.ts"],
           setupFiles: ["tests/integration/setup.ts"],
           fileParallelism: false,
           /** Many suites TRUNCATE shared tables; avoid cross-file deadlocks on one DB. */
