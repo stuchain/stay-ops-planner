@@ -62,6 +62,7 @@
     state: {
       screen: "today",
       selectedId: null,
+      confirmMove: null,
       user: "father",
       devMode: false,
       textSize: storage("proto.textSize") || "normal",
@@ -124,6 +125,7 @@
 
   App.select = function (id) {
     App.state.selectedId = id;
+    App.state.confirmMove = null;
     App.render();
   };
 
@@ -131,7 +133,8 @@
   function roomPhrase(room) { return "στο " + room.name; }
 
   /** Moves (or places) a booking. Returns true on success; explains the problem in a toast otherwise. */
-  App.move = function (bookingId, roomId) {
+  App.move = function (bookingId, roomId, opts) {
+    opts = opts || {};
     const b = App.booking(bookingId);
     const room = App.room(roomId);
     if (!b || !room || b.roomId === roomId) return false;
@@ -148,17 +151,23 @@
       App.toast("Το " + room.name + " είναι κλεισμένο εκείνες τις μέρες (" + who + ")." + tryAlt, { kind: "error" });
       return false;
     }
-    if (!target.fits) {
-      App.toast("Το " + room.name + " χωράει έως " + room.capacity + " άτομα και η κράτηση είναι για " + P.party(b) + "." + tryAlt, { kind: "error" });
+    // A guest who is already staying there: ask first, in the panel (edge case E1-1).
+    if (b.roomId && b.checkin <= App.db.today && !opts.confirmed) {
+      App.state.selectedId = b.id;
+      App.state.confirmMove = { id: b.id, roomId };
+      App.render();
       return false;
     }
+    App.state.confirmMove = null;
     const from = b.roomId;
     b.roomId = roomId;
     App.lastMovedId = b.id;
     const msg = from
       ? fmt.short(b.guest) + ": μετακινήθηκε " + roomPhrase(room) + "."
       : fmt.short(b.guest) + ": μπήκε " + roomPhrase(room) + ".";
-    App.toast(msg, {
+    // Too small is allowed, with a warning (edge case E1-2).
+    const warn = target.fits ? "" : " Προσοχή: χωράει έως " + room.capacity + " άτομα και είναι " + P.party(b) + ".";
+    App.toast(msg + warn, {
       undo() {
         b.roomId = from;
         App.lastMovedId = b.id;
@@ -205,6 +214,7 @@
     const n = P.nights(b);
     const pending = b.status === "pending";
     const over = b.checkout <= App.db.today;
+    const confirm = App.state.confirmMove && App.state.confirmMove.id === b.id ? App.state.confirmMove : null;
 
     let status;
     if (pending) status = '<span class="pill pill-muted">' + icon("hourglass") + "Αναμένει επιβεβαίωση</span>";
@@ -219,7 +229,7 @@
         const o = r.busy[0];
         why = "Κλεισμένο: " + fmt.short(o.guest) + " (" + fmt.range(o.checkin, o.checkout) + ")" + (r.busy.length > 1 ? " και άλλοι" : "");
         disabled = true;
-      } else if (!r.fits) { why = "Χωράει έως " + r.room.capacity + " άτομα"; disabled = true; }
+      } else if (!r.fits) { why = "Μικρό: χωράει έως " + r.room.capacity + " άτομα, η κράτηση είναι για " + P.party(b); cls += " warn"; }
       else if (r.recommended) { why = "Προτείνεται: " + r.reason; cls += " rec"; }
       else why = "Ελεύθερο όλες τις νύχτες";
       if (pending) disabled = true;
@@ -232,6 +242,8 @@
       '<div class="panel-head"><div class="grow"><h2>' + esc(b.guest) + "</h2>" + status + "</div>" +
       '<button type="button" class="btn icon-btn" data-close-panel aria-label="Κλείσιμο">' + icon("x") + "</button></div>" +
       '<div class="panel-body">' +
+      (confirm ? '<div class="confirm" role="alert"><p><strong>' + esc(fmt.short(b.guest)) + " μένει ήδη " + roomPhrase(room) + " από " + fmt.day(b.checkin) + ".</strong> Να μετακινηθεί " + roomPhrase(App.room(confirm.roomId)) + " για τις υπόλοιπες νύχτες;</p>" +
+        '<div class="confirm-actions"><button type="button" class="btn btn-primary btn-big" data-confirm-yes>Ναι, μετακίνηση ' + roomPhrase(App.room(confirm.roomId)) + '</button><button type="button" class="btn btn-big" data-confirm-no>Όχι</button></div></div>' : "") +
       (pending ? '<div class="notice">' + icon("hourglass") + "<span>Η κράτηση δεν έχει επιβεβαιωθεί ακόμα από το " + esc(b.channel) + ". Θα μπορείτε να τη βάλετε σε διαμέρισμα όταν επιβεβαιωθεί.</span></div>" : "") +
       '<dl class="facts">' +
       "<dt>Άφιξη</dt><dd>" + fmt.day(b.checkin) + "</dd>" +
@@ -253,6 +265,11 @@
 
     panel.querySelector("[data-close-panel]").onclick = () => App.select(null);
     panel.querySelectorAll("[data-move]").forEach((btn) => { btn.onclick = () => App.move(b.id, btn.dataset.move); });
+    if (confirm) {
+      panel.querySelector("[data-confirm-yes]").onclick = () => App.move(b.id, confirm.roomId, { confirmed: true });
+      panel.querySelector("[data-confirm-no]").onclick = () => { App.state.confirmMove = null; App.render(); };
+      panel.scrollTop = 0;
+    }
     if (isNew) { panel.scrollTop = 0; panel.querySelector("[data-close-panel]").focus({ preventScroll: true }); }
   }
 

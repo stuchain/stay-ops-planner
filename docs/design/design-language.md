@@ -61,6 +61,21 @@ Lucide only, 24 px in the sidebar and buttons, 2 px stroke, always next to a wor
 5. **No dead ends.** Every empty state says what to do next. Every error says what happened and what to try.
 6. **Pending bookings** are shown greyed with "Αναμένει επιβεβαίωση" and cannot be placed until confirmed.
 
+## States the screens must show
+
+From the edge-case audit (`foundation-review/edge-cases.md`, task ids in brackets):
+
+| Situation | What he sees |
+|---|---|
+| Party bigger than the apartment (E1-2) | Allowed. The button and the row say "Μικρό: χωράει έως 3 άτομα" in amber; the undo message repeats the warning. |
+| Moving a guest who has already arrived (E1-1) | The panel asks first: "Ο Γιώργος Α. μένει ήδη στο Onar από Σαβ 10 Οκτ. Να μετακινηθεί στο Helios για τις υπόλοιπες νύχτες;" with "Ναι, μετακίνηση" and "Όχι". |
+| Stay already over | No move buttons; "Η διαμονή τελείωσε …, οπότε δεν μετακινείται." |
+| Apartment switched off but holding bookings (E0-9, E1-18) | The row stays, greyed, labelled "Απενεργοποιημένο"; nothing new can be placed there. |
+| More stays than apartments on a night (E1-6) | A red marker on that night in the calendar and a card on Σήμερα. |
+| Booking reactivated in Hosthub (E1-11) | It returns to the tray with "Η κράτηση ενεργοποιήθηκε ξανά". |
+| Guest changed listing in Hosthub (E1-13) | The placement stays; a note "Άλλαξε καταχώριση στο Hosthub" on the booking and in the tray. |
+| Cancelled booking | Leaves the calendar and the tray; never counted in Έσοδα unless a fee was paid (Phase 3). |
+
 ## Copy rules
 
 - Greek first. English is an option in Settings.

@@ -134,7 +134,7 @@
         const row = el.querySelector('[data-row="' + r.room.id + '"]');
         const status = el.querySelector('[data-status="' + r.room.id + '"]');
         const g = barHtml(sel, r.room, i);
-        const ghost = document.createElement(r.free && r.fits && !r.current ? "button" : "div");
+        const ghost = document.createElement(r.free && !r.current ? "button" : "div");
         ghost.style.left = g.left + "px";
         ghost.style.width = g.width + "px";
         ghost.style.top = g.top + "px";
@@ -148,10 +148,13 @@
           status.textContent = "Κλεισμένο: " + r.busy.map((o) => fmt.short(o.guest)).join(", ");
           status.style.color = "var(--text-muted)";
         } else if (!r.fits) {
+          ghost.type = "button";
           ghost.className = "ghost small";
-          ghost.textContent = "Χωράει έως " + r.room.capacity + " άτομα";
-          row.classList.add("drop-busy");
+          ghost.innerHTML = icon("triangle-alert") + (g.width >= 130 ? "Μικρό" : "");
+          ghost.setAttribute("aria-label", "Στο " + r.room.name + ", χωράει έως " + r.room.capacity + " άτομα");
+          ghost.onclick = () => App.move(sel.id, r.room.id);
           status.textContent = "Μικρό για " + fmt.party(sel);
+          status.style.color = "var(--warning-text)";
         } else {
           ghost.type = "button";
           ghost.className = "ghost free" + (r.recommended ? " rec" : "");
@@ -164,7 +167,7 @@
           status.style.color = "var(--success-text)";
         }
         status.style.fontWeight = "700";
-        if (drag && drag.active && drag.overRoom === r.room.id && !r.current) row.classList.add(r.free && r.fits ? "drop-hover" : "drop-hover-busy");
+        if (drag && drag.active && drag.overRoom === r.room.id && !r.current) row.classList.add(r.free ? "drop-hover" : "drop-hover-busy");
         layer.appendChild(ghost);
       });
     }
