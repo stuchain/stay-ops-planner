@@ -79,7 +79,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const { id } = await ctx.params;
     const existing = await prisma.booking.findUnique({
       where: { id },
-      select: { id: true, status: true, version: true, localOverrides: true, hosthubStatus: true },
     });
     if (!existing) {
       return apiError(request, "NOT_FOUND", "Booking not found", 404);
@@ -113,6 +112,10 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         ? (existing.localOverrides as Record<string, boolean>)
         : {}),
     };
+    const hosthubValues: Record<string, unknown> =
+      existing.hosthubValues && typeof existing.hosthubValues === "object" && !Array.isArray(existing.hosthubValues)
+        ? { ...(existing.hosthubValues as Record<string, unknown>) }
+        : {};
     if (updateData.status !== undefined) {
       overrides.status = true;
       // Sync compares Hosthub's status with this one to tell whether Hosthub changed it since.
@@ -136,6 +139,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       for (const [column, value] of Object.entries(edited)) {
         if (value === undefined) continue;
         (updateData as Record<string, unknown>)[column] = value;
+        // The first edit of a column keeps Hosthub's value, so the booking panel can show and restore it.
+        if (overrides[column] !== true) hosthubValues[column] = (existing as Record<string, unknown>)[column] ?? null;
         overrides[column] = true;
       }
     }
@@ -143,6 +148,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       return apiError(request, "VALIDATION_ERROR", "No changes provided", 400);
     }
     updateData.localOverrides = overrides;
+    updateData.hosthubValues = hosthubValues as Prisma.InputJsonValue;
 
     const auditMeta = auditMetaFromRequest(request);
 

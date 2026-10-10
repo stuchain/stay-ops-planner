@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { EDITABLE_FIELDS, resetBookingField, updateBookingDetails } from "@/server/useCases/bookingEdit";
+import { bookingHistory } from "@/server/useCases/bookingHistory";
 import { getBookingDetails } from "@/server/useCases/bookingDetails";
 import { bookingSuggestions } from "@/server/useCases/bookingSuggestions";
 import { moveBooking } from "@/server/useCases/moveBooking";
@@ -26,4 +28,33 @@ export const bookingRouter = createTRPCRouter({
   suggestions: userProcedure
     .input(z.object({ bookingId: z.string().min(1) }))
     .query(({ input }) => bookingSuggestions(input.bookingId)),
+
+  /** Change the guest name, number of people or notes. Hosthub's value is kept so it can be restored. */
+  updateDetails: operatorProcedure
+    .input(
+      z.object({
+        bookingId: z.string().min(1),
+        expectedVersion: z.number().int().nonnegative(),
+        guestName: z.string().max(160).optional(),
+        partySize: z.number().int().min(1).max(99).optional(),
+        notes: z.string().max(5000).optional(),
+      }),
+    )
+    .mutation(({ ctx, input }) => updateBookingDetails({ ...input, actorUserId: ctx.user.userId })),
+
+  /** Bring back what Hosthub says for one changed field. */
+  resetField: operatorProcedure
+    .input(
+      z.object({
+        bookingId: z.string().min(1),
+        field: z.enum(EDITABLE_FIELDS),
+        expectedVersion: z.number().int().nonnegative(),
+      }),
+    )
+    .mutation(({ ctx, input }) => resetBookingField({ ...input, actorUserId: ctx.user.userId })),
+
+  /** The last changes to this booking, newest first. */
+  history: userProcedure
+    .input(z.object({ bookingId: z.string().min(1) }))
+    .query(({ input }) => bookingHistory(input.bookingId)),
 });

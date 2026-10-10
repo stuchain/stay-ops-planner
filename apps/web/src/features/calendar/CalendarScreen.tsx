@@ -23,6 +23,7 @@ import { IconButton } from "@/ui/IconButton";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { BookingPanel } from "./BookingPanel";
+import { useUnsavedGuard } from "./useUnsavedGuard";
 import { CalendarGrid, LABEL_WIDTH, type DropState } from "./CalendarGrid";
 import { Tray } from "./Tray";
 import { addMonths, blocksToLoad, DAY_WIDTH, dateAt, dayIndex, monthStart, spanAround, type Zoom } from "./timeline";
@@ -82,6 +83,18 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<MoveRequest | null>(null);
+  const { setDirty, run, dialog } = useUnsavedGuard();
+  // Opening another booking or closing the panel asks first when the edit form has unsaved changes.
+  const select = useCallback(
+    (id: string | null) => {
+      if (id === selectedId) return;
+      run(() => {
+        setSelectedId(id);
+        if (id === null) setConfirm(null);
+      });
+    },
+    [run, selectedId],
+  );
 
   const firstDay = Math.floor(view.left / dayWidth) - 7;
   const lastDay = Math.ceil((view.left + view.width - LABEL_WIDTH) / dayWidth) + 7;
@@ -147,13 +160,13 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable=true]")) return;
-      if (event.key === "Escape") setSelectedId(null);
+      if (event.key === "Escape") select(null);
       if (event.key === "ArrowLeft" && !event.altKey) shiftMonth(-1);
       if (event.key === "ArrowRight" && !event.altKey) shiftMonth(1);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shiftMonth]);
+  }, [shiftMonth, select]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -174,7 +187,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     const drop = dropStates.get(roomId);
     if (drop?.state === "busy") {
       // The server would refuse; open the panel so the reason and the free apartments are visible.
-      setSelectedId(booking.id);
+      select(booking.id);
       return;
     }
     void move({ booking, roomId });
@@ -230,7 +243,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
           bookings={data.unassigned}
           selectedId={selectedId}
           acceptsDrop={Boolean(dragging?.assignment)}
-          onOpen={setSelectedId}
+          onOpen={select}
         />
 
         {data.error && data.rooms.length === 0 ? (
@@ -264,7 +277,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 overbooked={data.overbooked}
                 selectedId={selectedId}
                 dropStates={dropStates}
-                onOpen={setSelectedId}
+                onOpen={select}
               />
             )}
           </div>
@@ -293,11 +306,10 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
         moving={moving}
         onMove={handleMove}
         onCancelConfirm={() => setConfirm(null)}
-        onClose={() => {
-          setSelectedId(null);
-          setConfirm(null);
-        }}
+        onClose={() => select(null)}
+        onDirtyChange={setDirty}
       />
+      {dialog}
     </div>
   );
 }

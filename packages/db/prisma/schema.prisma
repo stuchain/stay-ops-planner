@@ -168,6 +168,8 @@ model Booking {
   rawPayload        Json?    @map("raw_payload")
   /// Columns the user edited in the app (`{"guestName": true}`); sync never overwrites them.
   localOverrides    Json?    @map("local_overrides")
+  /// What Hosthub last sent for each overridden column (`{"guestName": "Maria"}`), for "Από Hosthub" and reset.
+  hosthubValues     Json?    @map("hosthub_values")
   /// Hosthub's `updated` time of the data last applied; an older payload is ignored.
   hosthubUpdatedAt  DateTime? @map("hosthub_updated_at") @db.Timestamptz(6)
   /// Status Hosthub last sent. Lets a status changed in the app stand until Hosthub's own status changes.

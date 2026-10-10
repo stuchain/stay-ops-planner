@@ -91,10 +91,17 @@ function sameValue(a: unknown, b: unknown): boolean {
  * a column actually changes. `changed` says whether anything the app shows is different.
  */
 export function syncedBookingUpdate(
-  existing: { status: BookingStatus; localOverrides: unknown; hosthubStatus: BookingStatus | null } & Dict,
+  existing: {
+    status: BookingStatus;
+    localOverrides: unknown;
+    hosthubValues?: unknown;
+    hosthubStatus: BookingStatus | null;
+  } & Dict,
   incoming: SyncedBookingFields,
 ): { data: Prisma.BookingUncheckedUpdateInput; changed: boolean } {
   const overrides = { ...(asObject(existing.localOverrides) ?? {}) };
+  const hosthubValues = { ...(asObject(existing.hosthubValues) ?? {}) };
+  let hosthubValuesChanged = false;
   const data: Dict = {};
   let changed = false;
   if (overrides.status === true && existing.hosthubStatus !== incoming.status) {
@@ -104,7 +111,15 @@ export function syncedBookingUpdate(
     changed = true;
   }
   for (const [key, value] of Object.entries(incoming) as [keyof SyncedBookingFields, unknown][]) {
-    if (overrides[key] === true) continue;
+    if (overrides[key] === true) {
+      // Keep Hosthub's latest value beside the user's, for "Από Hosthub" and reset.
+      const stored = value instanceof Date ? value.toISOString() : (value ?? null);
+      if (hosthubValues[key] !== stored) {
+        hosthubValues[key] = stored;
+        hosthubValuesChanged = true;
+      }
+      continue;
+    }
     let next = value;
     if (key === "status" && existing.status === BookingStatus.needs_reassignment && value === BookingStatus.confirmed) {
       next = BookingStatus.needs_reassignment;
@@ -112,6 +127,7 @@ export function syncedBookingUpdate(
     data[key] = next;
     if (!sameValue(existing[key], next)) changed = true;
   }
+  if (hosthubValuesChanged) data.hosthubValues = hosthubValues as Prisma.InputJsonValue;
   if (changed) data.version = { increment: 1 };
   data.hosthubStatus = incoming.status;
   return { data: data as Prisma.BookingUncheckedUpdateInput, changed };

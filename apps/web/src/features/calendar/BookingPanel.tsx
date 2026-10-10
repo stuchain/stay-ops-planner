@@ -13,13 +13,17 @@ import { cn } from "@/ui/cn";
 import { DateText } from "@/ui/DateText";
 import { ErrorState } from "@/ui/ErrorState";
 import { formatDay } from "@/ui/format";
-import { MoneyText } from "@/ui/MoneyText";
 import { SidePanel } from "@/ui/SidePanel";
 import { Skeleton } from "@/ui/Skeleton";
+import { BookingEdit } from "./BookingEdit";
+import { BookingHistory } from "./BookingHistory";
+import { BookingPrice } from "./BookingPrice";
 import { recommendationText } from "./recommendation";
 import type { MoveRequest } from "./useMoveBooking";
 
 const NEUTRAL = "#5B5852";
+
+function noop() {}
 
 export type BookingPanelProps = {
   booking: CalendarBooking | null;
@@ -31,6 +35,8 @@ export type BookingPanelProps = {
   onMove: (request: MoveRequest) => void;
   onCancelConfirm: () => void;
   onClose: () => void;
+  /** Tells the screen whether the edit form has unsaved changes. */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
@@ -130,6 +136,7 @@ export function BookingPanel({
   onMove,
   onCancelConfirm,
   onClose,
+  onDirtyChange = noop,
 }: BookingPanelProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -151,22 +158,17 @@ export function BookingPanel({
       {booking ? (
         <div className="flex flex-col gap-6">
           <dl className="text-sm divide-border divide-y">
-            <Detail label={t("booking.people")}>
-              {booking.partySize === null
-                ? t("common.unknownPeople")
-                : t("common.people", { count: booking.partySize })}
-            </Detail>
             <Detail label={t("booking.channel")}>{t(`channel.${booking.channel}`)}</Detail>
             <Detail label={t("booking.apartment")}>
               {booking.assignment ? roomName(booking.assignment.roomId) : t("booking.needsApartment")}
             </Detail>
-            {details.data?.totalAmountCents != null ? (
-              <Detail label={t("booking.amount")}>
-                <MoneyText cents={details.data.totalAmountCents} />
-              </Detail>
-            ) : null}
-            {details.data?.notes ? <Detail label={t("booking.notes")}>{details.data.notes}</Detail> : null}
           </dl>
+
+          {details.data ? (
+            <BookingEdit key={booking.id} booking={booking} details={details.data} onDirtyChange={onDirtyChange} />
+          ) : details.isPending ? (
+            <Skeleton variant="block" className="h-40" />
+          ) : null}
 
           {confirm && confirm.booking.id === booking.id ? (
             <div
@@ -225,6 +227,9 @@ export function BookingPanel({
               ) : null}
             </section>
           )}
+
+          {details.data ? <BookingPrice price={details.data.price} /> : null}
+          <BookingHistory bookingId={booking.id} />
         </div>
       ) : null}
     </SidePanel>
