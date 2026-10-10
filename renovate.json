@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Athens",
+  "schedule": ["before 6am on monday"],
+  "packageRules": [
+    {
+      "description": "One weekly update for all minor and patch versions",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "minor and patch updates"
+    },
+    {
+      "description": "Patch updates of dev dependencies merge on their own when CI is green",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "dev dependency patches",
+      "automerge": true,
+      "automergeType": "branch"
+    }
+  ]
+}
