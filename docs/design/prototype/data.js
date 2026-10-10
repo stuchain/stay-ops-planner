@@ -47,7 +47,7 @@
   ];
   // Names used by the fixed bookings below; kept out of the random pool so nobody appears twice.
   const fixedNames = ["Hannah Weber", "Γιώργος Αλεξίου", "Ελένη Δημητρίου", "Νίκος Παπαδόπουλος", "Sophie Martin",
-    "Laura García", "Luca Rossi", "Αθηνά Σταύρου", "Katarzyna Nowak", "Tom Becker"];
+    "Laura García", "Luca Rossi", "Αθηνά Σταύρου", "Katarzyna Nowak", "Tom Becker", "Μαρία Κωνσταντίνου"];
   const pool = guests.filter((g) => !fixedNames.includes(g));
   const notes = [
     "Έρχονται με το πλοίο των 14:00.",
@@ -120,6 +120,9 @@
         { in: T(4), out: T(9), extra: { guest: "Katarzyna Nowak", adults: 2, children: 2, channel: "Airbnb", bookedRoomId: "iris", unassign: true, notes: "Θα ήθελαν βρεφικό κρεβάτι." } },
       ],
     };
+    // Usability task "move a booking": Μαρία in Iris, with Onar kept free for the same nights.
+    fixed.iris.push({ in: T(19), out: T(23), extra: { guest: "Μαρία Κωνσταντίνου", adults: 2, children: 0, channel: "Airbnb", bookedRoomId: "iris", notes: "Επέτειος γάμου, ζήτησαν ήσυχο διαμέρισμα." } });
+    fixed.onar.push({ in: T(19), out: T(23), extra: { remove: true } });
     // New 2-person booking that needs an apartment; Onar is kept free for it.
     fixed.onar.push({ in: T(7), out: T(10), extra: { guest: "Tom Becker", adults: 2, children: 0, channel: "Booking.com", bookedRoomId: "onar", unassign: true } });
 
@@ -142,6 +145,7 @@
         const b = makeBooking(room.id, a.in, diffDays(a.in, a.out), a.extra);
         cursor = a.out;
         if (b.unassign) { b.roomId = null; delete b.unassign; }
+        if (b.remove) bookings.splice(bookings.indexOf(b), 1); // a reserved gap, not a booking
       });
       fill(end);
     });
