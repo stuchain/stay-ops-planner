@@ -20,7 +20,7 @@ export function middleware(request: NextRequest) {
   const method = request.method.toUpperCase();
 
   const isApi = pathname.startsWith("/api/");
-  const isApp = pathname.startsWith("/app/");
+  const isApp = pathname === "/app" || pathname.startsWith("/app/");
 
   // Public allowlist (Phase 1)
   // Health endpoints must remain reachable for platform/uptime probes that

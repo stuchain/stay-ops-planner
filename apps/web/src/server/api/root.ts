@@ -6,6 +6,7 @@ import { devRouter } from "./routers/dev";
 import { meRouter } from "./routers/me";
 import { moneyRouter } from "./routers/money";
 import { syncRouter } from "./routers/sync";
+import { todayRouter } from "./routers/today";
 
 export const appRouter = createTRPCRouter({
   me: meRouter,
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
   sync: syncRouter,
   dev: devRouter,
   money: moneyRouter,
+  today: todayRouter,
 });
 
 export type AppRouter = typeof appRouter;

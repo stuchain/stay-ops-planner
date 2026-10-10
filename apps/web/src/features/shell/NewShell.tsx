@@ -13,9 +13,9 @@ import { LogoutButton } from "./LogoutButton";
 import { SyncIndicator } from "./SyncIndicator";
 import { useSyncWhileOpen } from "./useSyncWhileOpen";
 
-/** Until Σήμερα and Έσοδα are rebuilt (Phase 2 and 3), those items open the current screens. */
+/** Until Income is rebuilt (Phase 3), that item opens the current screen. */
 const NAV = [
-  { href: "/app/dashboard", key: "today", icon: Sun },
+  { href: "/app/today", key: "today", icon: Sun },
   { href: "/app/calendar", key: "calendar", icon: CalendarDays },
   { href: "/app/excel", key: "income", icon: Wallet },
   { href: "/app/settings", key: "settings", icon: Settings },

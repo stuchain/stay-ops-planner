@@ -33,7 +33,7 @@ test.describe("calendar Lighthouse budget @lighthouse", () => {
     await page.getByLabel("Email").fill(CAL_USER.email);
     await page.getByLabel("Password").fill(CAL_USER.password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await page.waitForURL(/\/app\/calendar/);
+    await page.waitForURL(/\/app\/(today|calendar)/);
     await page.close();
   });
 

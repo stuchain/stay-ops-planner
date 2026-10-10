@@ -10,6 +10,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { canPlace, type IsoDate, type Occupant } from "@stay-ops/domain";
@@ -75,12 +76,14 @@ function dropStatesFor(
 export function CalendarScreen({ today }: CalendarScreenProps) {
   const t = useTranslations();
   const errorText = useErrorText();
+  const searchParams = useSearchParams();
   const span = useMemo(() => spanAround(today), [today]);
   const [zoom, setZoom] = useState<Zoom>("month");
   const dayWidth = DAY_WIDTH[zoom];
   const scroller = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ left: 0, width: 1200 });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // /app/calendar?booking=<id> (from the Today screen) opens that booking's panel.
+  const [selectedId, setSelectedId] = useState<string | null>(() => searchParams?.get("booking") || null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<MoveRequest | null>(null);
   const { setDirty, run, dialog } = useUnsavedGuard();

@@ -21,6 +21,9 @@ export const GUEST = {
   pending: "Pam Pending",
   boundary: "Boris Boundary",
   late: "Carol Late",
+  arrivesTomorrow: "Nikos Tomorrow",
+  leavesTomorrow: "Dimitra Leaving",
+  cancelledTomorrow: "Cora Cancelled",
 } as const;
 
 let client: PrismaClient | undefined;
@@ -150,6 +153,11 @@ export async function resetCalendarFixtures(): Promise<CalendarFixtures> {
     { key: "pam", guest: GUEST.pending, from: 14, nights: 3, status: BookingStatus.pending },
     // Four nights across the first of a month, in Gamma.
     { key: "boris", guest: GUEST.boundary, from: boundary - 2, nights: 4, roomId: roomIds.get("gamma")! },
+    // The Today screen: one stay ends and one begins tomorrow (both in Gamma, which is free then), and a
+    // cancelled arrival tomorrow that must not show.
+    { key: "nikos", guest: GUEST.arrivesTomorrow, from: 1, nights: 2, roomId: roomIds.get("gamma")! },
+    { key: "dimitra", guest: GUEST.leavesTomorrow, from: -2, nights: 3, roomId: roomIds.get("gamma")! },
+    { key: "cora", guest: GUEST.cancelledTomorrow, from: 1, nights: 2, status: BookingStatus.cancelled },
   ];
   for (const b of bookings) await createBooking(b);
 

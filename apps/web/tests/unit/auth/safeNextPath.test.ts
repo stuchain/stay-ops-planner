@@ -10,11 +10,11 @@ describe("safeNextPath", () => {
   it.each(["//evil.com", "/\\evil.com", "https://evil.com", "", "app", "javascript:alert(1)"])(
     "falls back to the default for %j",
     (value) => {
-      expect(safeNextPath(value)).toBe("/app/calendar");
+      expect(safeNextPath(value)).toBe("/app");
     },
   );
 
   it("falls back to the default for null", () => {
-    expect(safeNextPath(null)).toBe("/app/calendar");
+    expect(safeNextPath(null)).toBe("/app");
   });
 });

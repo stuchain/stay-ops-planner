@@ -409,5 +409,27 @@
     "movedOutBySync": "Βγήκε από το διαμέρισμα επειδή άλλαξαν οι ημερομηνίες στο Hosthub, {when}",
     "cancelled": "Ακυρώθηκε από το Hosthub, {when}",
     "other": "Έγινε μια αλλαγή, {when}"
+  },
+  "today": {
+    "title": "Σήμερα",
+    "arrivals": "Αφίξεις σήμερα",
+    "departures": "Αναχωρήσεις σήμερα",
+    "needs": "Χρειάζονται διαμέρισμα",
+    "tomorrow": "Αύριο",
+    "tomorrowArrivals": "Αφίξεις αύριο",
+    "tomorrowDepartures": "Αναχωρήσεις αύριο",
+    "noArrivals": "Καμία άφιξη σήμερα.",
+    "noDepartures": "Καμία αναχώρηση σήμερα.",
+    "noTomorrowArrivals": "Καμία άφιξη αύριο.",
+    "noTomorrowDepartures": "Καμία αναχώρηση αύριο.",
+    "allPlaced": "Όλες οι κρατήσεις έχουν διαμέρισμα.",
+    "needsSentence": "{count, plural, one {Μία κράτηση περιμένει διαμέρισμα.} other {# κρατήσεις περιμένουν διαμέρισμα.}}",
+    "placeThem": "Βάλτε τις σε διαμέρισμα",
+    "toCalendar": "Στο ημερολόγιο",
+    "arrivalLine": "{people} · {nights}",
+    "departureLine": "Έμειναν {nights}",
+    "pendingLabel": "Αναμένει επιβεβαίωση",
+    "needsApartment": "Χρειάζεται διαμέρισμα",
+    "loading": "Φόρτωση της σημερινής εικόνας"
   }
 }

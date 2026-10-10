@@ -409,5 +409,27 @@
     "movedOutBySync": "Taken out of the apartment because the dates changed in Hosthub, {when}",
     "cancelled": "Cancelled in Hosthub, {when}",
     "other": "A change was made, {when}"
+  },
+  "today": {
+    "title": "Today",
+    "arrivals": "Arrivals today",
+    "departures": "Departures today",
+    "needs": "Need an apartment",
+    "tomorrow": "Tomorrow",
+    "tomorrowArrivals": "Arrivals tomorrow",
+    "tomorrowDepartures": "Departures tomorrow",
+    "noArrivals": "No arrivals today.",
+    "noDepartures": "No departures today.",
+    "noTomorrowArrivals": "No arrivals tomorrow.",
+    "noTomorrowDepartures": "No departures tomorrow.",
+    "allPlaced": "Every booking has an apartment.",
+    "needsSentence": "{count, plural, one {One booking is waiting for an apartment.} other {# bookings are waiting for an apartment.}}",
+    "placeThem": "Put them in an apartment",
+    "toCalendar": "Open the calendar",
+    "arrivalLine": "{people} · {nights}",
+    "departureLine": "Stayed {nights}",
+    "pendingLabel": "Waiting for confirmation",
+    "needsApartment": "Needs an apartment",
+    "loading": "Loading today's overview"
   }
 }

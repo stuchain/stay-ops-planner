@@ -1,4 +1,4 @@
-const DEFAULT_NEXT_PATH = "/app/calendar";
+const DEFAULT_NEXT_PATH = "/app";
 
 /** Only follow same-site paths: a single leading "/" and not "//" or "/\\" (browsers treat those as other hosts). */
 export function safeNextPath(next: string | null): string {

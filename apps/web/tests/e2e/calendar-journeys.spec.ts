@@ -28,7 +28,9 @@ async function login(page: Page): Promise<void> {
   await page.getByLabel("Email").fill(CAL_USER.email);
   await page.getByLabel("Password").fill(CAL_USER.password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/app\/calendar/);
+  // New-UI users land on Today.
+  await page.waitForURL(/\/app\/today/);
+  await page.goto("/app/calendar");
   await waitForCalendar(page);
 }
 
