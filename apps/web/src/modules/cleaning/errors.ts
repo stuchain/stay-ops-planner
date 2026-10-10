@@ -31,6 +31,16 @@ export class InvalidStateTransitionError extends Error {
   }
 }
 
+export class StaleCleaningTaskError extends Error {
+  readonly code = "STALE_TASK" as const;
+  readonly status = 409;
+
+  constructor() {
+    super("Cleaning task was changed by someone else");
+    this.name = "StaleCleaningTaskError";
+  }
+}
+
 export function cleaningErrorEnvelope(
   err: {
     code: string;

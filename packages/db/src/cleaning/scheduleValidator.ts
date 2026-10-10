@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { dateOnlyToDay, DEFAULT_CHECKIN_TIME, zonedTimeToUtc } from "./settings.js";
 
 /** User-facing copy aligned with Phase 5 API appendix (`CLEANING_WINDOW_INVALID`). */
 export const CLEANING_WINDOW_INVALID_MESSAGE = "Cleaning does not fit available room window";
@@ -16,9 +17,12 @@ export class CleaningWindowInvalidError extends Error {
 /**
  * Validates a proposed cleaning window against checkout, next room occupancy, and maintenance blocks.
  *
- * - **After checkout:** `plannedStart` must be at or after the booking's `checkoutDate` (UTC midnight DATE = start of checkout calendar day; aligns with half-open stay end).
- * - **Before next check-in:** `plannedEnd` must not extend past the next assignment's `startDate` on the same room (other bookings only).
- * - **Blocks:** `[plannedStart, plannedEnd)` must not intersect a manual block `[startDate, endDate)` on the room (DATE half-open).
+ * All day boundaries are read in the business time zone (Athens), not UTC.
+ * - **After checkout:** `plannedStart` must be at or after the start of the booking's checkout day.
+ * - **Before next check-in:** `plannedEnd` must not extend past the next guest's check-in *time* (15:00) on the next
+ *   assignment's start day, so a same-day turnover fits (E4-1).
+ * - **Blocks:** `[plannedStart, plannedEnd)` must not intersect a manual block on the room; a block starts at the
+ *   check-in time of its first day, like a stay, and ends at the start of its end day.
  * - **Room active:** room must exist and `Room.isActive`.
  */
 export async function validateCleaningSchedule(
@@ -47,7 +51,7 @@ export async function validateCleaningSchedule(
     throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
   }
 
-  const checkoutStart = booking.checkoutDate.getTime();
+  const checkoutStart = zonedTimeToUtc(dateOnlyToDay(booking.checkoutDate), "00:00").getTime();
   if (params.plannedStart.getTime() < checkoutStart) {
     throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
   }
@@ -62,7 +66,7 @@ export async function validateCleaningSchedule(
   });
 
   if (nextStay) {
-    const nextCheckin = nextStay.startDate.getTime();
+    const nextCheckin = zonedTimeToUtc(dateOnlyToDay(nextStay.startDate), DEFAULT_CHECKIN_TIME).getTime();
     if (params.plannedEnd.getTime() > nextCheckin) {
       throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
     }
@@ -76,8 +80,8 @@ export async function validateCleaningSchedule(
   const p1 = params.plannedEnd.getTime();
 
   for (const b of blocks) {
-    const b0 = b.startDate.getTime();
-    const b1 = b.endDate.getTime();
+    const b0 = zonedTimeToUtc(dateOnlyToDay(b.startDate), DEFAULT_CHECKIN_TIME).getTime();
+    const b1 = zonedTimeToUtc(dateOnlyToDay(b.endDate), "00:00").getTime();
     if (p0 < b1 && p1 > b0) {
       throw new CleaningWindowInvalidError(CLEANING_WINDOW_INVALID_MESSAGE);
     }

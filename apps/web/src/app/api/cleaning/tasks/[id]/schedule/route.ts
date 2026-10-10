@@ -3,7 +3,11 @@ import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
-import { CleaningTaskNotFoundError } from "@/modules/cleaning/errors";
+import {
+  CleaningTaskNotFoundError,
+  InvalidStateTransitionError,
+  StaleCleaningTaskError,
+} from "@/modules/cleaning/errors";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { updateCleaningTaskSchedule } from "@/modules/cleaning/taskSchedule";
 import { AuthError, jsonError } from "@/modules/auth/errors";
@@ -14,6 +18,7 @@ const PatchBodySchema = z
     plannedStart: z.string().min(1),
     plannedEnd: z.string().min(1),
     assigneeName: z.string().nullable().optional(),
+    expectedUpdatedAt: z.string().min(1).optional(),
   })
   .strict();
 
@@ -43,18 +48,24 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid datetime"), { status: 400 });
     }
 
+    const expectedUpdatedAt = parsed.data.expectedUpdatedAt ? new Date(parsed.data.expectedUpdatedAt) : undefined;
+    if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAt.getTime())) {
+      return NextResponse.json(jsonError("VALIDATION_ERROR", "Invalid datetime"), { status: 400 });
+    }
+
     try {
       await updateCleaningTaskSchedule({
         taskId: id,
         plannedStart,
         plannedEnd,
         assigneeName: parsed.data.assigneeName,
+        expectedUpdatedAt,
         actorUserId: session.userId,
         auditMeta: auditMetaFromRequest(request),
       });
       return NextResponse.json({ data: { ok: true } }, { status: 200 });
     } catch (err) {
-      if (err instanceof CleaningTaskNotFoundError) {
+      if (err instanceof CleaningTaskNotFoundError || err instanceof InvalidStateTransitionError || err instanceof StaleCleaningTaskError) {
         return NextResponse.json(
           { error: { code: err.code, message: err.message } },
           { status: err.status },

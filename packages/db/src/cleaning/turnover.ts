@@ -1,35 +1,19 @@
 import { createHash } from "node:crypto";
 import { BookingStatus, Prisma } from "@prisma/client";
+import { dateOnlyToDay, DEFAULT_CHECKOUT_TIME, zonedTimeToUtc } from "./settings.js";
 
 export const TURNOVER_TASK_TYPE = "turnover";
 export const TURNOVER_MINUTES = 120;
 
 /**
- * Default local clock hour (UTC placeholder until property timezone settings).
- * Override with `CLEANING_DEFAULT_START_HOUR` (0–23).
- */
-function defaultStartHourUtc(): number {
-  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
-  const env = proc?.env;
-  const raw = env?.CLEANING_DEFAULT_START_HOUR;
-  if (raw === undefined || raw === "") return 10;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 && n <= 23 ? n : 10;
-}
-
-/**
- * Half-open stay ends at the start of `checkoutDate` (DATE at UTC midnight).
- * Default turnover starts that same calendar day at `defaultStartHourUtc` (UTC).
+ * Default turnover window for a checkout day: starts at the checkout time (11:00) on that calendar day in the
+ * business time zone (Athens) and lasts `durationMinutes`. Correct across the summer/winter clock change.
  */
 export function computeTurnoverPlannedWindowUTC(
   checkoutDate: Date,
   durationMinutes: number = TURNOVER_MINUTES,
 ): { plannedStart: Date; plannedEnd: Date } {
-  const y = checkoutDate.getUTCFullYear();
-  const m = checkoutDate.getUTCMonth();
-  const d = checkoutDate.getUTCDate();
-  const hour = defaultStartHourUtc();
-  const plannedStart = new Date(Date.UTC(y, m, d, hour, 0, 0, 0));
+  const plannedStart = zonedTimeToUtc(dateOnlyToDay(checkoutDate), DEFAULT_CHECKOUT_TIME);
   const plannedEnd = new Date(plannedStart.getTime() + durationMinutes * 60_000);
   return { plannedStart, plannedEnd };
 }
@@ -44,8 +28,21 @@ export function turnoverSourceEventId(bookingId: string, checkoutDate: Date, roo
 }
 
 /**
+ * Takes a booking out of its apartment: open turnover cleanings (to do, in progress) are cancelled,
+ * finished ones are kept (E4-4). Placing the booking again brings the cancelled task back.
+ */
+export async function cancelOpenTurnoverTasks(tx: Prisma.TransactionClient, bookingId: string): Promise<number> {
+  const result = await tx.cleaningTask.updateMany({
+    where: { bookingId, taskType: TURNOVER_TASK_TYPE, status: { in: ["todo", "in_progress"] } },
+    data: { status: "cancelled" },
+  });
+  return result.count;
+}
+
+/**
  * Ensures exactly one turnover cleaning task per assigned booking (DB partial unique on booking_id where turnover).
- * Skips cancelled bookings, missing assignment, or terminal task statuses (done / cancelled).
+ * Skips cancelled bookings, a missing assignment, or a finished task; a cancelled task comes back when the booking
+ * is placed again. Times set by hand are kept while the checkout day is the same.
  */
 export async function ensureTurnoverCleaningTask(
   tx: Prisma.TransactionClient,
@@ -77,16 +74,21 @@ export async function ensureTurnoverCleaningTask(
   });
 
   if (existing) {
-    if (existing.status === "done" || existing.status === "cancelled") {
+    if (existing.status === "done") {
       return;
     }
+    // A manual reschedule stays unless the checkout moved. The key carries the checkout day, so it tells
+    // whether the stored times were made for this checkout.
+    const sameCheckout =
+      existing.sourceEventId === turnoverSourceEventId(params.bookingId, params.checkoutDate, existing.roomId);
+    const keepTimes = sameCheckout && existing.plannedStart !== null && existing.plannedEnd !== null;
     await tx.cleaningTask.update({
       where: { id: existing.id },
       data: {
         roomId: params.roomId,
-        plannedStart,
-        plannedEnd,
-        durationMinutes: TURNOVER_MINUTES,
+        // Put back when an earlier unassign cancelled it and the booking is placed again.
+        ...(existing.status === "cancelled" ? { status: "todo" } : {}),
+        ...(keepTimes ? {} : { plannedStart, plannedEnd, durationMinutes: TURNOVER_MINUTES }),
         sourceEventId,
       },
     });

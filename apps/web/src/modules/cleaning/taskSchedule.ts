@@ -5,6 +5,7 @@ import {
   Prisma,
   SERVICE_MINUTES,
   validateCleaningSchedule,
+  zonedTimeToUtc,
 } from "@stay-ops/db";
 import { DryRunRollback, isDryRunRollback, PlanRecorder, type DryRunResult } from "@stay-ops/shared";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +13,7 @@ import {
   CleaningBookingNotFoundError,
   CleaningTaskNotFoundError,
   InvalidStateTransitionError,
+  StaleCleaningTaskError,
 } from "./errors";
 
 function cleaningTaskSnapshot(t: {
@@ -55,10 +57,11 @@ export async function listCleaningTasks(q: ListCleaningTasksQuery) {
   }
 
   if (q.date) {
-    const day = new Date(`${q.date}T00:00:00.000Z`);
-    const next = new Date(day);
+    // The day is the Athens calendar day, not the UTC one (E4-2).
+    const day = zonedTimeToUtc(q.date, "00:00");
+    const next = new Date(`${q.date}T00:00:00.000Z`);
     next.setUTCDate(next.getUTCDate() + 1);
-    where.plannedStart = { gte: day, lt: next };
+    where.plannedStart = { gte: day, lt: zonedTimeToUtc(next.toISOString().slice(0, 10), "00:00") };
   }
 
   return prisma.cleaningTask.findMany({
@@ -72,6 +75,8 @@ export async function updateCleaningTaskSchedule(params: {
   plannedStart: Date;
   plannedEnd: Date;
   assigneeName?: string | null | undefined;
+  /** The `updatedAt` the person was looking at; a different one means the task changed meanwhile. */
+  expectedUpdatedAt?: Date | undefined;
   actorUserId: string;
   auditMeta?: Record<string, unknown> | undefined;
 }): Promise<void> {
@@ -79,6 +84,13 @@ export async function updateCleaningTaskSchedule(params: {
     const task = await tx.cleaningTask.findUnique({ where: { id: params.taskId } });
     if (!task) {
       throw new CleaningTaskNotFoundError(params.taskId);
+    }
+    // A finished or cancelled cleaning is history; it cannot be moved (E4-5).
+    if (task.status === "done" || task.status === "cancelled") {
+      throw new InvalidStateTransitionError(`Cannot reschedule a ${task.status} cleaning task`);
+    }
+    if (params.expectedUpdatedAt && task.updatedAt.getTime() !== params.expectedUpdatedAt.getTime()) {
+      throw new StaleCleaningTaskError();
     }
 
     await validateCleaningSchedule(tx, {
