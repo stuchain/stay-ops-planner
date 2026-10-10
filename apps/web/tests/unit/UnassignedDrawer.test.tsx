@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnassignedDrawer } from "@/modules/bookings/UnassignedDrawer";
@@ -32,6 +32,7 @@ describe("UnassignedDrawer", () => {
                   id: "b1",
                   channel: "direct",
                   externalBookingId: "keep-me",
+                  status: "confirmed",
                   checkinDate: "2026-07-01",
                   checkoutDate: "2026-07-05",
                   nights: 4,
@@ -44,6 +45,7 @@ describe("UnassignedDrawer", () => {
                   id: "b2",
                   channel: "direct",
                   externalBookingId: "filter-me-out",
+                  status: "pending",
                   checkinDate: "2026-07-06",
                   checkoutDate: "2026-07-08",
                   nights: 2,
@@ -131,5 +133,19 @@ describe("UnassignedDrawer", () => {
     await user.click(screen.getAllByRole("button", { name: /Apply suggestion/i })[0]!);
     expect(applyBookingSuggestionMutation).toHaveBeenCalledWith("b1", "r1", 0);
     expect(performBookingAssignmentMutation).not.toHaveBeenCalled();
+  });
+
+  it("greys out a pending booking with a label and a disabled Assign button", async () => {
+    render(
+      <UnassignedDrawer open month="2026-07" rooms={rooms} onClose={vi.fn()} onAssigned={vi.fn()} />,
+    );
+    await waitFor(() => expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument());
+    expect(screen.getByText("Αναμένει επιβεβαίωση")).toBeInTheDocument();
+    const rowEls = screen.getAllByRole("listitem");
+    const pendingRow = rowEls.find((li) => li.textContent?.includes("filter-me-out"))!;
+    const confirmedRow = rowEls.find((li) => li.textContent?.includes("keep-me"))!;
+    expect(pendingRow).toHaveAttribute("data-pending", "true");
+    expect(within(pendingRow).getByRole("button", { name: "Assign" })).toBeDisabled();
+    expect(within(confirmedRow).getByRole("button", { name: "Assign" })).toBeEnabled();
   });
 });

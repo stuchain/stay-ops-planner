@@ -5,15 +5,13 @@ import {
   KeyboardSensor,
   PointerSensor,
   pointerWithin,
-  useDraggable,
-  useDroppable,
   useSensor,
   useSensors,
   type CollisionDetection,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookingDetailModal } from "@/modules/bookings/BookingDetailModal";
 import { UnassignedDrawer } from "@/modules/bookings/UnassignedDrawer";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
@@ -27,6 +25,11 @@ import { MultiMonthTimeline } from "./MultiMonthTimeline";
 import { performBookingAssignmentMutation } from "./assignmentMutations";
 import { MobileAssignSheet } from "./MobileAssignSheet";
 import {
+  NeedsAssignmentDragCard,
+  NeedsAssignmentDropZone,
+  type OverviewUnassignedBooking,
+} from "./NeedsAssignmentStrip";
+import {
   applyConfirmedAssignmentToMonths,
   applyOptimisticBookingMoveToMonths,
   bookingItemToDragPayload,
@@ -37,7 +40,6 @@ import {
 } from "./optimisticMove";
 import { bookingDropTargetFromOverId } from "./dropTarget";
 import { useIsNarrowViewport } from "./useIsNarrowViewport";
-import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 import { useI18n } from "@/i18n/I18nProvider";
 import { ToastBanner } from "@/modules/ui";
 import { suggestDefaultRoomForBooking } from "./assignmentSuggest";
@@ -59,19 +61,6 @@ function defaultMonthYm(): string {
 
 const CALENDAR_MONTH_STORAGE_KEY = "ops.calendar.month";
 const CALENDAR_DISPLAY_MONTHS_STORAGE_KEY = "ops.calendar.displayMonths";
-
-type OverviewUnassignedBooking = {
-  bookingId: string;
-  guestName: string;
-  guestTotal: number | null;
-  guestAdults: number | null;
-  guestChildren: number | null;
-  guestInfants: number | null;
-  channel: "airbnb" | "booking" | "direct";
-  checkinDate: string;
-  checkoutDate: string;
-  status: string;
-};
 
 export function CalendarClient() {
   const { t } = useI18n();
@@ -633,104 +622,5 @@ export function CalendarClient() {
         />
       </main>
     </DndContext>
-  );
-}
-
-function NeedsAssignmentDragCard({
-  booking,
-  roomValue,
-  rooms,
-  assigning,
-  onRoomChange,
-  onAssign,
-}: {
-  booking: OverviewUnassignedBooking;
-  roomValue: string;
-  rooms: Array<{ id: string; label: string; maxGuests?: number | null }>;
-  assigning: boolean;
-  onRoomChange: (roomId: string) => void;
-  onAssign: () => void;
-}) {
-  const { setNodeRef, listeners, attributes, transform, isDragging } = useDraggable({
-    id: `needs-booking-${booking.bookingId}`,
-    data: {
-      type: "booking",
-      bookingId: booking.bookingId,
-      assignmentId: null,
-      assignmentVersion: null,
-      fromRoomId: null,
-    } satisfies BookingDragPayload,
-  });
-
-  const dragStyle = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
-
-  const channelClass =
-    booking.channel === "airbnb"
-      ? "ops-booking-channel-airbnb"
-      : booking.channel === "booking"
-        ? "ops-booking-channel-booking"
-        : "ops-booking-channel-direct";
-
-  return (
-    <article
-      ref={setNodeRef}
-      className={`ops-needs-card ${channelClass}`}
-      style={{
-        ...dragStyle,
-        opacity: isDragging ? 0.85 : 1,
-      }}
-    >
-      <button
-        type="button"
-        className="ops-needs-drag-handle"
-        title="Drag to an apartment row to assign"
-        aria-label={`Drag booking ${booking.guestName}`}
-        {...listeners}
-        {...attributes}
-      >
-        Drag
-      </button>
-      <strong className="ops-name-with-logo">
-        <ChannelLogo channel={booking.channel} className="ops-channel-logo" />
-        <span>{booking.guestName}</span>
-      </strong>
-      <div className="ops-needs-dates">
-        {booking.checkinDate} → {booking.checkoutDate}
-      </div>
-      <div className="ops-needs-actions">
-        <select
-          className="ops-input"
-          value={roomValue}
-          onChange={(ev) => onRoomChange(ev.target.value)}
-          aria-label={`Apartment for booking ${booking.bookingId}`}
-        >
-          {rooms.map((room) => (
-            <option key={room.id} value={room.id}>
-              {room.label}
-            </option>
-          ))}
-        </select>
-        <button type="button" className="ops-btn ops-btn-primary" disabled={assigning || rooms.length === 0} onClick={onAssign}>
-          {assigning ? "Assigning..." : "Assign"}
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function NeedsAssignmentDropZone({
-  laneId,
-  children,
-}: {
-  laneId: string;
-  children: ReactNode;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: laneId });
-  return (
-    <div ref={setNodeRef} className={`ops-needs-cells${isOver ? " ops-needs-cells-over" : ""}`}>
-      {children}
-    </div>
   );
 }

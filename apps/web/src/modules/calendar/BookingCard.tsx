@@ -2,6 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import type { CalendarBookingItem } from "./calendarTypes";
+import { isPendingBooking } from "@/modules/bookings/bookingStatusLabel";
 import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 
 type Props = {
@@ -13,8 +14,10 @@ type Props = {
 };
 
 export function BookingCard({ item, isMobile, onQuickAssign, dragScope }: Props) {
+  const pending = isPendingBooking(item.status);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: dragScope ? `booking-${dragScope}-${item.id}` : `booking-${item.id}`,
+    disabled: pending,
     data: {
       type: "booking" as const,
       bookingId: item.id,
@@ -46,7 +49,7 @@ export function BookingCard({ item, isMobile, onQuickAssign, dragScope }: Props)
   return (
     <div
       ref={setNodeRef}
-      style={{ ...style, touchAction: isMobile ? "manipulation" : "none" }}
+      style={{ ...style, ...(pending ? { opacity: 0.5 } : {}), touchAction: isMobile ? "manipulation" : "none" }}
       className={`ops-booking-card ${stateClass} ${channelClass}`}
       data-testid={`ops-booking-card-${item.id}`}
       aria-label={isMobile ? undefined : dragLabel}

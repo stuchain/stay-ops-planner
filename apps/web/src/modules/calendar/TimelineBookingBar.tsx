@@ -2,6 +2,7 @@
 
 import { useRef, type PointerEvent } from "react";
 import { useDraggable } from "@dnd-kit/core";
+import { isPendingBooking } from "@/modules/bookings/bookingStatusLabel";
 import type { CalendarBookingItem } from "./calendarTypes";
 import type { BookingSpanInMonth } from "./monthSpan";
 import { bookingItemToDragPayload } from "./optimisticMove";
@@ -34,8 +35,10 @@ export function TimelineBookingBar({
   /** Distinguishes the same booking drawn in several grids (e.g. one per month on phones). */
   dragScope?: string;
 }) {
+  const pending = isPendingBooking(item.status);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: dragScope ? `booking-${dragScope}-${item.id}` : `booking-${item.id}`,
+    disabled: pending,
     data: bookingItemToDragPayload(item),
   });
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
@@ -185,6 +188,7 @@ export function TimelineBookingBar({
       title={item.guestName}
       style={{
         ...style,
+        ...(pending ? { opacity: 0.5 } : {}),
         gridColumn: `${barStart} / ${layoutEndExclusive}`,
         gridRow: `${lane + 1}`,
         display: "grid",

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOverlayAccessibility } from "@/modules/ui/useOverlayAccessibility";
 import type { BookingStatus } from "@stay-ops/db";
+import { bookingStatusLabel } from "./bookingStatusLabel";
 import { ChannelLogo } from "./ChannelLogo";
 import type { BookingDetailDto } from "./details";
 import { PriceDetailsAirbnb } from "./PriceDetailsAirbnb";
@@ -46,8 +47,7 @@ function fmtDateTimeLocal(value: string): string {
 }
 
 function statusLabel(status: BookingStatus): string {
-  if (status === "needs_reassignment") return "Needs reassignment";
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  return bookingStatusLabel(status);
 }
 
 export type BookingDetailModalProps = {
@@ -137,7 +137,7 @@ export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingD
       `Check-out: ${detail.checkoutDate}`,
       `Guests: ${detail.guests.total ?? detail.guestCount ?? "-"}`,
       `Value: ${fmtMoney(detail.money.total, detail.money.currency)}`,
-      `Status: ${detail.status}`,
+      `Status: ${bookingStatusLabel(detail.status)}`,
       `Channel: ${detail.channel}`,
     ].join("\n");
     await navigator.clipboard.writeText(text);
@@ -451,12 +451,12 @@ export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingD
                       disabled={!editing}
                       onChange={(e) => setEditStatus(e.target.value as BookingStatus)}
                     >
-                      <option value="pending">pending</option>
-                      <option value="confirmed">confirmed</option>
-                      <option value="cancelled">cancelled</option>
-                      <option value="completed">completed</option>
-                      <option value="no_show">no_show</option>
-                      <option value="needs_reassignment">needs_reassignment</option>
+                      <option value="pending">{bookingStatusLabel("pending")}</option>
+                      <option value="confirmed">{bookingStatusLabel("confirmed")}</option>
+                      <option value="cancelled">{bookingStatusLabel("cancelled")}</option>
+                      <option value="completed">{bookingStatusLabel("completed")}</option>
+                      <option value="no_show">{bookingStatusLabel("no_show")}</option>
+                      <option value="needs_reassignment">{bookingStatusLabel("needs_reassignment")}</option>
                     </select>
                   </label>
                   <label className="ops-label">

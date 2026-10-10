@@ -17,12 +17,14 @@ import type {
 } from "@/modules/calendar/calendarTypes";
 import { SUGGESTION_REASON_CODE_LABELS, type SuggestionReasonCode } from "@/modules/suggestions/types";
 import { ChannelLogo } from "./ChannelLogo";
+import { bookingStatusLabel, isPendingBooking } from "./bookingStatusLabel";
 import { suggestDefaultRoomForBooking } from "@/modules/calendar/assignmentSuggest";
 
 type UnassignedRow = {
   id: string;
   channel: string;
   externalBookingId: string;
+  status?: string;
   checkinDate: string;
   checkoutDate: string;
   nights: number;
@@ -222,6 +224,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
   const fallbackRoomId = rooms[0]?.id ?? "";
 
   function toggleSelect(bookingId: string) {
+    if (isPendingBooking(rows.find((x) => x.id === bookingId)?.status)) return;
     setSelectedIds((prev) => (prev.includes(bookingId) ? prev.filter((id) => id !== bookingId) : [...prev, bookingId]));
   }
 
@@ -229,6 +232,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
     if (selectedIds.length === 0 || rooms.length === 0) return;
     const items: BulkAssignBody["items"] = [];
     for (const id of selectedIds) {
+      if (isPendingBooking(rows.find((x) => x.id === id)?.status)) continue;
       const roomId = roomPick[id] ?? defaultRoomByRowId[id] ?? fallbackRoomId;
       if (!roomId) {
         setError("Pick a room for every selected booking.");
@@ -270,6 +274,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
   }
 
   async function assignOne(row: UnassignedRow) {
+    if (isPendingBooking(row.status)) return;
     const roomId = roomPick[row.id] ?? defaultRoomByRowId[row.id] ?? fallbackRoomId;
     if (!roomId) {
       setRowError((r) => ({ ...r, [row.id]: "Pick a room" }));
@@ -289,7 +294,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
       guestChildren: row.guestChildren,
       guestInfants: row.guestInfants,
       channel: row.channel === "airbnb" || row.channel === "booking" ? row.channel : "direct",
-      status: "confirmed",
+      status: row.status ?? "confirmed",
       assignmentId: null,
       assignmentVersion: null,
       flags: ["unassigned"],
@@ -308,6 +313,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
   }
 
   async function applySuggestion(row: UnassignedRow, roomId: string) {
+    if (isPendingBooking(row.status)) return;
     setRowError((r) => ({ ...r, [row.id]: "" }));
     setPendingId(row.id);
     try {
@@ -370,13 +376,21 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
           </div>
         ) : null}
         <ul className="ops-drawer-list">
-          {filtered.map((b) => (
-            <li key={b.id} className="ops-drawer-row">
+          {filtered.map((b) => {
+            const pending = isPendingBooking(b.status);
+            return (
+            <li
+              key={b.id}
+              className="ops-drawer-row"
+              data-pending={pending ? "true" : undefined}
+              style={pending ? { opacity: 0.5 } : undefined}
+            >
               <div className="ops-drawer-row-main">
                 <label className="ops-drawer-select">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(b.id)}
+                    disabled={pending}
                     onChange={() => toggleSelect(b.id)}
                     onClick={(ev) => ev.stopPropagation()}
                     aria-label={`Select booking ${b.externalBookingId}`}
@@ -392,6 +406,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
                   </span>{" "}
                   · {b.externalBookingId}
                 </div>
+                {pending ? <div className="ops-muted">{bookingStatusLabel("pending")}</div> : null}
                 {rowError[b.id] && <p className="ops-error ops-drawer-row-err">{rowError[b.id]}</p>}
                 <div className="ops-suggestion-list" aria-label={`Suggestions for booking ${b.id}`}>
                   {(suggestions[b.id] ?? []).slice(0, 3).map((s) => (
@@ -407,7 +422,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
                       <button
                         type="button"
                         className="ops-btn ops-btn-small"
-                        disabled={pendingId === b.id}
+                        disabled={pending || pendingId === b.id}
                         onClick={() => void applySuggestion(b, s.roomId)}
                       >
                         {pendingId === b.id ? "Applying…" : "Apply suggestion"}
@@ -430,6 +445,7 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
                     }))
                   }
                   aria-label={`Room for booking ${b.id}`}
+                  disabled={pending}
                 >
                   {rooms.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -440,14 +456,15 @@ export function UnassignedDrawer({ open, month, rooms, suggestContext, onClose, 
                 <button
                   type="button"
                   className="ops-btn ops-btn-primary"
-                  disabled={pendingId === b.id || rooms.length === 0}
+                  disabled={pending || pendingId === b.id || rooms.length === 0}
                   onClick={() => void assignOne(b)}
                 >
                   {pendingId === b.id ? "…" : "Assign"}
                 </button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </aside>
     </div>
