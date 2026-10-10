@@ -65,7 +65,12 @@ describe("synthetic Hosthub fixtures", () => {
   });
 
   it("covers the Airbnb, Booking.com and direct channels", () => {
-    expect(normalizeHosthubReservationRecord(load("airbnb.json"))?.listingChannel).toBe("Airbnb");
+    expect(normalizeHosthubReservationRecord(load("airbnb.json"))).toMatchObject({
+      listingChannel: "Airbnb",
+      totalAmountCents: 52000,
+      totalValueCents: 56000,
+      payoutAmountCents: 49075,
+    });
     expect(normalizeHosthubReservationRecord(load("booking-com.json"))?.listingChannel).toBe(
       "Booking.com",
     );

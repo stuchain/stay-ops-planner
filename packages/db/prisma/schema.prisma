@@ -91,6 +91,8 @@ model Room {
   preferredForLargeParty Boolean @default(false) @map("preferred_for_large_party")
   /// Fixed apartment colour used across the new UI, as a hex value.
   color               String?
+  /// Money page column 1–4 (Onar/Cosmos/Iris/Helios) this apartment stands for.
+  rentalIndex         Int?     @map("rental_index")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
@@ -149,6 +151,8 @@ model Booking {
   guestInfants      Int?     @map("guest_infants")
   guestTotal        Int?     @map("guest_total")
   totalAmountCents  Int?     @map("total_amount_cents")
+  /// What the guest pays in total, cleaning included (Hosthub `total_value`); the money page's gross amount.
+  totalValueCents   Int?     @map("total_value_cents")
   currency          String?  @map("currency")
   cleaningFeeCents  Int?     @map("cleaning_fee_cents")
   taxCents          Int?     @map("tax_cents")
@@ -173,6 +177,7 @@ model Booking {
 
   sourceListing SourceListing? @relation(fields: [sourceListingId], references: [id], onDelete: SetNull)
   assignment    Assignment?
+  ledgerEntry   LedgerEntry?
   cleaningTasks CleaningTask[]
   excelLedgerEntries ExcelLedgerEntry[]
 
@@ -198,6 +203,49 @@ model ExcelLedgerEntry {
   @@unique([year, bookingId], map: "excel_ledger_entries_year_booking_id_key")
   @@index([year], map: "excel_ledger_entries_year_idx")
   @@map("excel_ledger_entries")
+}
+
+/// Corrections and manual rows on the money page (Phase 3), amounts in cents.
+/// A booking row follows its booking (and its check-in year); deleting the booking deletes the row.
+model LedgerEntry {
+  id              String   @id @default(cuid())
+  bookingId       String?  @unique @map("booking_id")
+  /// Manual rows only: the year and check-in month they belong to.
+  year            Int?
+  month           Int?
+  /// Manual rows only: the name shown in the first column.
+  label           String?
+  /// Field → value (`null` = left blank on purpose). A field that is absent shows the automatic value.
+  overrides       Json     @default("{}")
+  /// Hosthub's amounts when the correction was made, to flag a later change in Hosthub (E3-6).
+  hosthubSnapshot Json?    @map("hosthub_snapshot")
+  /// The old `excel_ledger_entries` row this came from (one-off migration).
+  legacyEntryId   String?  @unique @map("legacy_entry_id")
+  version         Int      @default(0)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([year])
+  @@map("ledger_entries")
+}
+
+/// Rental income tax brackets per year, edited in Dev mode (Money). Brackets: `[{ upToCents, rateBps }]`.
+model TaxRule {
+  year        Int      @id
+  brackets    Json
+  /// "total" (one owner) or "per_apartment".
+  scope       String   @default("total")
+  /// "gross" (what the guest paid) or "payout" (after platform fees).
+  incomeBasis String   @default("gross") @map("income_basis")
+  /// False until the accountant has confirmed the figures.
+  confirmed   Boolean  @default(false)
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("tax_rules")
 }
 
 /// At most one assignment per booking in v1 (`booking_id` unique).

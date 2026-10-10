@@ -16,6 +16,7 @@ export const HosthubReservationDtoSchema = z.object({
   guestInfants: z.number().int().min(0).optional(),
   guestTotal: z.number().int().min(0).optional(),
   totalAmountCents: z.number().int().optional(),
+  totalValueCents: z.number().int().optional(),
   currency: z.string().min(1).optional(),
   cleaningFeeCents: z.number().int().optional(),
   taxCents: z.number().int().optional(),

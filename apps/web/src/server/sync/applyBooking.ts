@@ -70,6 +70,7 @@ export type SyncedBookingFields = {
   guestInfants: number | null;
   guestTotal: number | null;
   totalAmountCents: number | null;
+  totalValueCents: number | null;
   currency: string | null;
   cleaningFeeCents: number | null;
   taxCents: number | null;
@@ -279,6 +280,7 @@ export async function applyHosthubBooking(tx: Prisma.TransactionClient, item: In
     guestInfants: dto.guestInfants ?? null,
     guestTotal: dto.guestTotal ?? null,
     totalAmountCents: dto.totalAmountCents ?? null,
+    totalValueCents: dto.totalValueCents ?? null,
     currency: dto.currency ?? null,
     cleaningFeeCents: dto.cleaningFeeCents ?? null,
     taxCents: dto.taxCents ?? null,

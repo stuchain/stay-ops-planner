@@ -343,6 +343,7 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
     pickNumber(guestObj, "total", "count", "guest_count", "number_of_guests") ??
     pickNumber(r, "guest_total", "guestTotal", "guest_count", "guestCount", "number_of_guests");
   const totalAmountCents = pickMoneyCents(r, "booking_value", "total_value", "total", "total_price");
+  const totalValueCents = pickMoneyCents(r, "total_value");
   const cleaningFeeCents = pickMoneyCents(r, "cleaning_fee", "cleaningFee", "cleaning");
   const taxCents = pickMoneyCents(r, "taxes", "tax", "tax_amount");
   const payoutAmountCents = pickMoneyCents(r, "total_payout", "payout", "host_payout", "net_payout");
@@ -364,6 +365,7 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
     ...(guestTotal !== undefined ? { guestTotal } : {}),
     ...(totalAmountCents !== undefined ? { totalAmountCents } : {}),
     ...(currency !== undefined ? { currency } : {}),
+    ...(totalValueCents !== undefined ? { totalValueCents } : {}),
     ...(cleaningFeeCents !== undefined ? { cleaningFeeCents } : {}),
     ...(taxCents !== undefined ? { taxCents } : {}),
     ...(payoutAmountCents !== undefined ? { payoutAmountCents } : {}),
