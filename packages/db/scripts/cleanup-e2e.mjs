@@ -12,6 +12,8 @@ const E2E_EXTERNAL = [
   "e2e-seed-echo",
 ];
 const E2E_ROOM_CODES = ["E2E-A", "E2E-B", "E2E-C", "R1"];
+/** Bookings the new-calendar specs create (apps/web/tests/e2e/calendarFixtures.ts); left behind they fail later a11y runs. */
+const CALENDAR_FIXTURE_PREFIX = "cal-e2e-";
 
 async function cleanupE2eFixtures() {
   const roomIds = (
@@ -55,6 +57,11 @@ async function cleanupE2eFixtures() {
     },
   });
 
+  const calendarWhere = { externalBookingId: { startsWith: CALENDAR_FIXTURE_PREFIX } };
+  const calendarCleaning = await prisma.cleaningTask.deleteMany({ where: { booking: calendarWhere } });
+  const calendarAssignments = await prisma.assignment.deleteMany({ where: { booking: calendarWhere } });
+  const calendarBookings = await prisma.booking.deleteMany({ where: calendarWhere });
+
   const rooms = await prisma.room.deleteMany({
     where: { code: { in: E2E_ROOM_CODES } },
   });
@@ -62,10 +69,10 @@ async function cleanupE2eFixtures() {
   return {
     cleaned: true,
     deleted: {
-      cleaningTasks: cleaningFromRooms.count + cleaningFromBookings.count,
-      assignments: assignmentsFromRooms.count + assignmentsFromBookings.count,
+      cleaningTasks: cleaningFromRooms.count + cleaningFromBookings.count + calendarCleaning.count,
+      assignments: assignmentsFromRooms.count + assignmentsFromBookings.count + calendarAssignments.count,
       manualBlocks: blocksFromRooms.count,
-      bookings: seededBookings.count,
+      bookings: seededBookings.count + calendarBookings.count,
       rooms: rooms.count,
     },
   };

@@ -37,7 +37,7 @@ test.describe("a11y core routes", { tag: "@a11y" }, () => {
 
   test("login page", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("heading", { level: 1, name: "Stay Ops Planner" })).toBeVisible({
+    await expect(page.getByRole("heading", { level: 1, name: "Σύνδεση" })).toBeVisible({
       timeout: 15_000,
     });
     await assertAxeClean(page, "login");
