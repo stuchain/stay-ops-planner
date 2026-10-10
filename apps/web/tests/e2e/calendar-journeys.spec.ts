@@ -123,7 +123,8 @@ for (const viewport of VIEWPORTS) {
     });
 
     test("places a tray booking with the panel buttons", async ({ page }) => {
-      await expect(tray(page).getByRole("heading", { name: /Χρειάζονται διαμέρισμα/ })).toContainText("3");
+      // Other specs' seed data can add tray bookings of their own, so check this test's ones, not the total.
+      await expect(bar(tray(page), GUEST.trayClick)).toBeVisible();
       await openPanel(page, bar(tray(page), GUEST.trayClick));
 
       await expect(panel(page)).toBeVisible();
