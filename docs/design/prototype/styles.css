@@ -420,6 +420,8 @@ svg.lucide { width: 1.25em; height: 1.25em; stroke-width: 2; flex: none; }
 @media (max-width: 760px) {
   .audit li { flex-direction: column; gap: 2px; }
   .settings .seg button { padding: 0 14px; }
+}
+
 /* ---------- money (Έσοδα) ---------- */
 .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .stat { gap: 6px; }
