@@ -2,7 +2,6 @@ import {
   addDays,
   DomainError,
   rankRoomsDetailed,
-  type Occupant,
   type RankedRoomDetail,
   type RecommenderConfig,
   type RuleContribution,
@@ -12,6 +11,7 @@ import { dbDateToIso, isoToDbDate } from "@/server/time";
 import { partyOf } from "./bookingSlice";
 import { listCalendarRooms } from "./calendarRange";
 import { loadRecommenderConfig } from "./recommenderConfig";
+import { loadTimelines } from "./roomTimelines";
 
 export type Suggestion = Omit<RankedRoomDetail, "contributions"> & {
   /** Guest in the way, for "Κλεισμένο: Νίκος Π.". */
@@ -55,43 +55,7 @@ export async function rankBooking(bookingId: string, config?: RecommenderConfig)
   const windowStart = isoToDbDate(addDays(stay.checkin, -1));
   const windowEnd = isoToDbDate(addDays(stay.checkout, 1));
 
-  const [rooms, assignments, blocks] = await Promise.all([
-    listCalendarRooms(),
-    prisma.assignment.findMany({
-      where: { startDate: { lt: windowEnd }, endDate: { gt: windowStart } },
-      select: {
-        roomId: true,
-        bookingId: true,
-        startDate: true,
-        endDate: true,
-        booking: { select: { guestName: true } },
-      },
-    }),
-    prisma.manualBlock.findMany({
-      where: { startDate: { lt: windowEnd }, endDate: { gt: windowStart } },
-      select: { id: true, roomId: true, startDate: true, endDate: true, reason: true },
-    }),
-  ]);
-
-  const timelines = new Map<string, Occupant[]>();
-  const add = (roomId: string, occupant: Occupant) =>
-    timelines.set(roomId, [...(timelines.get(roomId) ?? []), occupant]);
-  for (const a of assignments) {
-    add(a.roomId, {
-      kind: "booking",
-      id: a.bookingId,
-      stay: { checkin: dbDateToIso(a.startDate), checkout: dbDateToIso(a.endDate) },
-      guestName: a.booking.guestName ?? undefined,
-    });
-  }
-  for (const b of blocks) {
-    add(b.roomId, {
-      kind: "block",
-      id: b.id,
-      stay: { checkin: dbDateToIso(b.startDate), checkout: dbDateToIso(b.endDate) },
-      reason: b.reason ?? undefined,
-    });
-  }
+  const [rooms, timelines] = await Promise.all([listCalendarRooms(), loadTimelines(windowStart, windowEnd)]);
 
   const rules = config ?? (await loadRecommenderConfig());
   const ranked = rankRoomsDetailed(

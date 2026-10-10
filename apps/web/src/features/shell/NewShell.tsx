@@ -9,6 +9,7 @@ import {
   Landmark,
   ListOrdered,
   PlugZap,
+  SearchCheck,
   Server,
   Settings,
   Sparkles,
@@ -31,6 +32,7 @@ import { useSyncWhileOpen } from "./useSyncWhileOpen";
 const NAV = [
   { href: "/app/today", key: "today", icon: Sun },
   { href: "/app/calendar", key: "calendar", icon: CalendarDays },
+  { href: "/app/free", key: "free", icon: SearchCheck },
   { href: "/app/excel", key: "income", icon: Wallet },
   { href: "/app/settings", key: "settings", icon: Settings },
 ] as const;

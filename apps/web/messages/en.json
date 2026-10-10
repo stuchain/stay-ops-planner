@@ -76,6 +76,7 @@
     "label": "Main navigation",
     "today": "Today",
     "calendar": "Calendar",
+    "free": "Free",
     "income": "Income",
     "settings": "Settings"
   },
@@ -781,6 +782,28 @@
     "movedOutBySync": "Taken out of the apartment because the dates changed in Hosthub, {when}",
     "cancelled": "Cancelled in Hosthub, {when}",
     "other": "A change was made, {when}"
+  },
+  "free": {
+    "title": "What is free?",
+    "subtitle": "Enter the dates and the number of people. You will see which apartment is free.",
+    "arrival": "Arrival",
+    "departure": "Departure",
+    "nights": "Nights",
+    "guests": "People",
+    "fewerGuests": "One person fewer",
+    "moreGuests": "One more person",
+    "invalidDates": "The departure must be after the arrival.",
+    "tooLong": "You can ask for up to 60 nights.",
+    "loading": "Checking what is free…",
+    "freeCount": "Free: {free} of {total}",
+    "noneFree": "No apartment is free on these days.",
+    "freeSection": "Free",
+    "busySection": "Taken",
+    "recommendedBadge": "Recommended",
+    "small": "{guests, plural, one {Small for # person (fits {capacity})} other {Small for # people (fits {capacity})}}",
+    "unassigned": "{count, plural, one {Careful: # booking on these days has no apartment yet} other {Careful: # bookings on these days have no apartment yet}}",
+    "unassignedHint": "Once they get an apartment, one of the free ones may fill up.",
+    "toCalendar": "See in the calendar"
   },
   "today": {
     "title": "Today",

@@ -50,7 +50,7 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
 
 type T = ReturnType<typeof useTranslations<"booking">>;
 
-function busyText(t: T, s: Suggestion): string {
+export function busyText(t: T, s: Pick<Suggestion, "reasons" | "blockedByGuest">): string {
   if (s.reasons.includes("ROOM_INACTIVE")) return t("inactive");
   if (s.reasons.includes("ROOM_CLOSED")) return t("closedThoseDays");
   return s.blockedByGuest ? t("busyBy", { guest: s.blockedByGuest }) : t("busy");
