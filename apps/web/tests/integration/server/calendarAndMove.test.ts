@@ -239,6 +239,20 @@ describe("calendar range and move command", () => {
     expect(range.overbookedNights).toEqual(["2030-07-02"]);
   });
 
+  it("adds the price per night only when asked (Dev mode)", async () => {
+    const { getCalendarRange } = await import("@/server/useCases/calendarRange");
+    const b = await booking("Priced", "2030-07-01", "2030-07-05");
+    await prisma.booking.update({ where: { id: b.id }, data: { totalAmountCents: 40_000 } });
+    await booking("Unpriced", "2030-07-02", "2030-07-04");
+    const plain = await getCalendarRange(isoDate("2030-07-01"), isoDate("2030-08-01"), NOW);
+    expect(plain.bookings.every((x) => x.nightlyCents === undefined)).toBe(true);
+    const dev = await getCalendarRange(isoDate("2030-07-01"), isoDate("2030-08-01"), NOW, { withPrices: true });
+    expect(dev.bookings.map((x) => [x.guestName, x.nightlyCents])).toEqual([
+      ["Priced", 10_000],
+      ["Unpriced", undefined],
+    ]);
+  });
+
   it("suggests rooms for the whole stay with the guest in the way", async () => {
     const { bookingSuggestions } = await import("@/server/useCases/bookingSuggestions");
     const onar = await room("Onar", 3);

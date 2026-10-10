@@ -23,6 +23,8 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" 
   pendingLabel?: string;
   needsRoomLabel?: string;
   channelLabels?: Partial<Record<BookingChannel, string>>;
+  /** Extra text after the nights, such as the Dev mode price per night. */
+  detail?: string | undefined;
 };
 
 function ChannelIcon({ channel, label, muted }: { channel: BookingChannel; label: string; muted: boolean }) {
@@ -54,6 +56,7 @@ export function BookingBar({
   pendingLabel,
   needsRoomLabel,
   channelLabels,
+  detail,
   className,
   style,
   type = "button",
@@ -98,7 +101,7 @@ export function BookingBar({
       <ChannelIcon channel={channel} label={channelLabel} muted={pending || needsRoom} />
       <span className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-bold">{guest}</span>
-        <span className="truncate text-xs">{status ? `${nights} · ${status}` : nights}</span>
+        <span className="truncate text-xs">{[nights, status, detail].filter(Boolean).join(" · ")}</span>
       </span>
     </button>
   );

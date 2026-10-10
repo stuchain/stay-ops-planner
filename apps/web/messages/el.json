@@ -112,7 +112,8 @@
     "toast": {
       "moved": "Μετακινήθηκε στο {room}",
       "removed": "Η κράτηση βγήκε από το {room}"
-    }
+    },
+    "perNight": "{price}/νύχτα"
   },
   "booking": {
     "title": "Κράτηση",

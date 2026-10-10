@@ -1,10 +1,11 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
+import { formatMoney, type UiLocale } from "@/ui/format";
 
 const NEUTRAL = "#5B5852";
 
@@ -29,7 +30,13 @@ export function DraggableBar({
   onOpen,
 }: DraggableBarProps) {
   const t = useTranslations("common");
+  const tCalendar = useTranslations("calendar");
+  const locale = useLocale() as UiLocale;
   const pending = booking.status === "pending";
+  const priceDetail =
+    booking.nightlyCents === undefined
+      ? undefined
+      : tCalendar("perNight", { price: formatMoney(booking.nightlyCents, locale) });
   const { listeners, setNodeRef, isDragging } = useDraggable({
     id: `booking:${booking.id}`,
     data: { bookingId: booking.id },
@@ -49,6 +56,7 @@ export function DraggableBar({
         dragging={isDragging}
         pending={pending}
         needsRoom={needsRoom && !pending}
+        detail={priceDetail}
         className="w-full"
         onClick={() => onOpen(booking.id)}
       />

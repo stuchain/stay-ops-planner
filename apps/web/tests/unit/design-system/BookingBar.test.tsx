@@ -33,6 +33,11 @@ describe("BookingBar", () => {
     await expectNoViolations(container);
   });
 
+  it("shows an extra detail after the nights", () => {
+    render(<BookingBar {...base} detail="100 €/νύχτα" />);
+    expect(screen.getByText("4 νύχτες · 100 €/νύχτα")).toBeInTheDocument();
+  });
+
   it("is keyboard focusable and activates with Enter", async () => {
     const onClick = vi.fn();
     const user = userEvent.setup();

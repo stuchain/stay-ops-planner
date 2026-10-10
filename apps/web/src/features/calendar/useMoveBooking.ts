@@ -30,7 +30,8 @@ export function useMoveBooking(rooms: CalendarRoom[], onNeedsConfirm: (request: 
   function patchBooking(next: CalendarBooking) {
     queryClient.setQueriesData<CalendarRangeData>({ queryKey: rangeKey }, (data) => {
       if (!data || !data.bookings.some((b) => b.id === next.id)) return data;
-      const bookings = data.bookings.map((b) => (b.id === next.id ? next : b));
+      // A move answers without the Dev mode price, so the one already shown is kept.
+      const bookings = data.bookings.map((b) => (b.id === next.id ? { ...b, ...next } : b));
       const unassigned = bookings.filter((b) => b.assignment === null && b.checkout > data.today).map((b) => b.id);
       return { ...data, bookings, unassigned };
     });

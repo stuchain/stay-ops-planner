@@ -112,7 +112,8 @@
     "toast": {
       "moved": "Moved to {room}",
       "removed": "The booking was taken out of {room}"
-    }
+    },
+    "perNight": "{price}/night"
   },
   "booking": {
     "title": "Booking",

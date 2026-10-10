@@ -13,6 +13,8 @@ export type CalendarRoom = {
   isActive: boolean;
 };
 
+export type CalendarRangeBooking = BookingSlice & { nightlyCents?: number };
+
 export type CalendarBlock = { id: string; roomId: string; start: IsoDate; end: IsoDate; reason: string | null };
 
 export type CalendarRange = {
@@ -21,8 +23,11 @@ export type CalendarRange = {
   /** Today in the business time zone, so the browser's clock never decides it (E1-32). */
   today: IsoDate;
   rooms: CalendarRoom[];
-  /** Placed bookings and the unplaced ones, all overlapping `[from, to)`. Cancelled bookings are left out. */
-  bookings: BookingSlice[];
+  /**
+   * Placed bookings and the unplaced ones, all overlapping `[from, to)`. Cancelled bookings are left out.
+   * `nightlyCents` (total ÷ nights) is only filled in for an admin in Dev mode.
+   */
+  bookings: CalendarRangeBooking[];
   blocks: CalendarBlock[];
   /** Ids of bookings that need an apartment, by arrival. Past stays are left out. */
   unassigned: string[];
@@ -59,7 +64,12 @@ export async function listCalendarRooms(): Promise<CalendarRoom[]> {
  * Everything the calendar shows for `[from, to)` in one round trip: rooms, bookings, closed periods,
  * the "needs an apartment" list and overbooked nights. Queries use the date indexes on bookings and blocks.
  */
-export async function getCalendarRange(from: IsoDate, to: IsoDate, now = new Date()): Promise<CalendarRange> {
+export async function getCalendarRange(
+  from: IsoDate,
+  to: IsoDate,
+  now = new Date(),
+  opts: { withPrices?: boolean } = {},
+): Promise<CalendarRange> {
   const fromDate = isoToDbDate(from);
   const toDate = isoToDbDate(to);
   const today = todayIso(now);
@@ -82,7 +92,19 @@ export async function getCalendarRange(from: IsoDate, to: IsoDate, now = new Dat
     }),
   ]);
 
-  const bookings = bookingRows.map(toBookingSlice);
+  const bookings: CalendarRangeBooking[] = bookingRows.map(toBookingSlice);
+  if (opts.withPrices && bookings.length > 0) {
+    // Dev mode extra: the price per night on each bar.
+    const amounts = await prisma.booking.findMany({
+      where: { id: { in: bookings.map((b) => b.id) } },
+      select: { id: true, totalAmountCents: true },
+    });
+    const totals = new Map(amounts.map((a) => [a.id, a.totalAmountCents]));
+    for (const b of bookings) {
+      const total = totals.get(b.id);
+      if (total != null && b.nights > 0) b.nightlyCents = Math.round(total / b.nights);
+    }
+  }
   const unassigned = bookings.filter((b) => b.assignment === null && b.checkout > today).map((b) => b.id);
   const activeRooms = rooms.filter((r) => r.isActive).length;
   const confirmedStays = bookings
