@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
-import { withIdempotency } from "@/lib/idempotency";
-import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { assignBookingToRoom } from "@/modules/allocation/service";
@@ -88,8 +86,4 @@ async function postAssignment(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return withRateLimit("POST:/api/assignments", DEFAULT_USER_RATE_RULES, request, (req) =>
-    withIdempotency("POST:/api/assignments", req as NextRequest, postAssignment),
-  );
-}
+export const POST = postAssignment;

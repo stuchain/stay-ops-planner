@@ -4,7 +4,6 @@ import { writeAuditSnapshot } from "@stay-ops/audit";
 import { attachTraceToResponse, apiError, respondAuthError } from "@/lib/apiError";
 import { getClientIp } from "@/lib/clientIp";
 import { prisma } from "@/lib/prisma";
-import { withRateLimit, LOGIN_IP_RATE_RULES } from "@/lib/rateLimit";
 import { LoginBodySchema, loginWithEmailPassword } from "@/modules/auth/service";
 import { AuthError } from "@/modules/auth/errors";
 import { assertLoginAllowed } from "@/modules/auth/loginThrottle";
@@ -116,6 +115,4 @@ async function postLogin(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
-  return withRateLimit("POST:/api/auth/login", LOGIN_IP_RATE_RULES, request, postLogin);
-}
+export const POST = postLogin;

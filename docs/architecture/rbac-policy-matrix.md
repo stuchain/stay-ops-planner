@@ -11,9 +11,8 @@ Roles are persisted on `users.role`: `viewer`, `operator` (default), `admin`.
 | Path | Roles |
 |------|--------|
 | `/app/*` (shell: calendar, cleaning, bookings, excel, settings, dashboard, audit, …) | `operator`, `admin` |
-| `/app/admin/configuration` | `admin` |
 
-Server enforcement: `apps/web/src/app/app/layout.tsx` (`requireAppPolicy("app_shell")`) and `apps/web/src/app/app/admin/configuration/page.tsx` (`requireAppPolicy("app_admin_configuration")`).
+Server enforcement: `apps/web/src/app/app/layout.tsx` (`requireAppPolicy("app_shell")`).
 
 ## HTTP APIs
 

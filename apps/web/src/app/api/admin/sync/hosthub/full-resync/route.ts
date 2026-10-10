@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { writeAuditSnapshot } from "@stay-ops/audit";
 import { apiError, attachTraceToResponse, respondAuthError } from "@/lib/apiError";
-import { SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { newTraceId, readTraceId } from "@/lib/traceId";
 import { prisma } from "@/lib/prisma";
 import { AuthError } from "@/modules/auth/errors";
@@ -69,8 +68,4 @@ async function postFullResync(request: NextRequest): Promise<Response> {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return withRateLimit("POST:/api/admin/sync/hosthub/full-resync", SYNC_USER_RATE_RULES, request, (req) =>
-    postFullResync(req as NextRequest),
-  );
-}
+export const POST = postFullResync;

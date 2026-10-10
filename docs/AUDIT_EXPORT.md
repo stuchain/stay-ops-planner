@@ -11,7 +11,6 @@ Sensitive mutations should call `writeAuditSnapshot` (from `@stay-ops/audit`) in
 | Bookings | `booking.update`, `booking.cancelled_bulk` | PATCH uses `booking.update`; bulk cancel audited per booking |
 | Cancellation side effects | `assignment.released_on_cancel`, `cleaning_task.cancelled_on_booking_cancel` | Sync package |
 | Cleaning | Task status transitions, scheduling helpers | State machine / taskSchedule |
-| Admin config | Threshold and alert template upserts | `admin-configuration/service` |
 | Hosthub admin | Reset cursor, full resync, etc. | Admin API routes |
 | Sync pipeline | Reservation apply / revalidate | `packages/sync` |
 | Auth | Login success/failure | `api/auth/login` |

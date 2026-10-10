@@ -49,13 +49,10 @@ export function resolveApiPolicy(method: string, pathname: string): readonly Rol
   return best ? [...best.roles] : null;
 }
 
-export type AppPolicyKey =
-  | "app_shell"
-  | "app_admin_configuration";
+export type AppPolicyKey = "app_shell";
 
 const APP_POLICY: Record<AppPolicyKey, readonly Role[]> = {
   app_shell: ["operator", "admin"],
-  app_admin_configuration: ["admin"],
 };
 
 export function rolesForAppPolicy(key: AppPolicyKey): readonly Role[] {
@@ -65,9 +62,6 @@ export function rolesForAppPolicy(key: AppPolicyKey): readonly Role[] {
 /** Map pathname (with or without query) to required roles for server-rendered `/app` pages. */
 export function resolveAppPolicy(pathname: string): { key: AppPolicyKey; roles: readonly Role[] } {
   const path = pathname.split("?")[0] ?? pathname;
-  if (path.startsWith("/app/admin/configuration")) {
-    return { key: "app_admin_configuration", roles: rolesForAppPolicy("app_admin_configuration") };
-  }
   if (path.startsWith("/app")) {
     return { key: "app_shell", roles: rolesForAppPolicy("app_shell") };
   }

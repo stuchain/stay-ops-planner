@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
-import { withIdempotency } from "@/lib/idempotency";
-import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { assignBookingToRoom } from "@/modules/allocation/service";
@@ -93,13 +91,4 @@ async function postSuggestionApply(
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  routeCtx: { params: Promise<{ id: string; roomId: string }> },
-) {
-  const { id, roomId } = await routeCtx.params;
-  const scope = `POST:/api/bookings/${id}/suggestions/${roomId}/apply`;
-  return withRateLimit(scope, DEFAULT_USER_RATE_RULES, request, (req) =>
-    withIdempotency(scope, req as NextRequest, (r) => postSuggestionApply(r, routeCtx)),
-  );
-}
+export const POST = postSuggestionApply;

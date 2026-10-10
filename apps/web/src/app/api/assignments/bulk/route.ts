@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
-import { withIdempotency } from "@/lib/idempotency";
-import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { AllocationError, allocationErrorEnvelope } from "@/modules/allocation/errors";
 import { bulkAssignBookings } from "@/modules/allocation/service";
@@ -120,8 +118,4 @@ async function postAssignmentsBulk(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return withRateLimit("POST:/api/assignments/bulk", DEFAULT_USER_RATE_RULES, request, (req) =>
-    withIdempotency("POST:/api/assignments/bulk", req as NextRequest, postAssignmentsBulk),
-  );
-}
+export const POST = postAssignmentsBulk;

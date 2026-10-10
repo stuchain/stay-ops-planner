@@ -34,7 +34,7 @@ All commands below are mandatory and must pass for MVP release readiness.
 ### Environment preconditions
 - Node version satisfies repository engine requirement (`>=20`).
 - `pnpm` version matches repository package manager pin.
-- Postgres and Redis are running and reachable.
+- Postgres is running and reachable.
 - Required environment variables are present for web, DB, and sync modules.
 - Bootstrap/e2e admin credentials are seeded and aligned with E2E config.
 
@@ -60,9 +60,6 @@ Run these probes in staging immediately before production release.
   - `PATCH /api/assignments/[id]/reassign` with valid target room -> expect success response.
 - Sync visibility flow:
   - `GET /api/sync/runs` with admin session -> expect `200` and recent run list shape.
-- Admin configuration flow:
-  - `GET /api/admin/config/templates` and `GET /api/admin/config/thresholds` with admin session -> expect `200`.
-  - Save one threshold from `/app/admin/configuration` and verify persisted payload is returned after reload.
 
 ### Escalation and stop conditions
 - Any probe failure is an immediate no-go.

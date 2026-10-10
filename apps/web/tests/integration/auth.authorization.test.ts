@@ -10,12 +10,12 @@ const password = "password1234";
 describe("auth.authorization matrix", () => {
   let POST_LOGIN: (req: Request) => Promise<Response>;
   let GET_SYNC_RUNS: (req: NextRequest) => Promise<Response>;
-  let GET_ADMIN_TEMPLATES: (req: NextRequest) => Promise<Response>;
+  let POST_ADMIN_RESET: (req: NextRequest) => Promise<Response>;
 
   beforeAll(async () => {
     POST_LOGIN = (await import("../../src/app/api/auth/login/route")).POST;
     GET_SYNC_RUNS = (await import("../../src/app/api/sync/runs/route")).GET;
-    GET_ADMIN_TEMPLATES = (await import("../../src/app/api/admin/config/templates/route")).GET;
+    POST_ADMIN_RESET = (await import("../../src/app/api/admin/sync/hosthub/reset-cursor/route")).POST;
   });
 
   beforeEach(async () => {
@@ -53,8 +53,7 @@ describe("auth.authorization matrix", () => {
   it("resolveApiPolicy matches routes", () => {
     expect(resolveApiPolicy("POST", "/api/sync/hosthub/webhook")).toEqual([]);
     expect(resolveApiPolicy("GET", "/api/sync/runs")).toEqual(["operator", "admin"]);
-    expect(resolveApiPolicy("GET", "/api/admin/config/templates")).toEqual(["admin"]);
-    expect(resolveApiPolicy("GET", "/api/admin/queue/sync-hosthub")).toEqual(["admin"]);
+    expect(resolveApiPolicy("GET", "/api/admin/sync/hosthub/diag")).toEqual(["admin"]);
     expect(resolveApiPolicy("GET", "/api/audit/export")).toEqual(["operator", "admin"]);
     expect(resolveApiPolicy("GET", "/api/assets/channel-logo/airbnb")).toEqual(["viewer", "operator", "admin"]);
   });
@@ -80,10 +79,10 @@ describe("auth.authorization matrix", () => {
     expect(allowed.status).toBe(200);
   });
 
-  it("admin templates: operator gets FORBIDDEN, admin gets 200", async () => {
+  it("admin-only route: operator gets FORBIDDEN, admin gets 200", async () => {
     const operatorJar = await loginAs("bob@authz.test");
-    const denied = await GET_ADMIN_TEMPLATES(
-      new NextRequest("http://localhost/api/admin/config/templates", { headers: { cookie: operatorJar.getCookieHeader() } }),
+    const denied = await POST_ADMIN_RESET(
+      new NextRequest("http://localhost/api/admin/sync/hosthub/reset-cursor", { method: "POST", headers: { cookie: operatorJar.getCookieHeader() } }),
     );
     expect(denied.status).toBe(403);
     const deniedJson = (await denied.json()) as { error: { code: string; traceId: string } };
@@ -92,8 +91,8 @@ describe("auth.authorization matrix", () => {
     expect(denied.headers.get("x-request-id")).toBeTruthy();
 
     const adminJar = await loginAs("admin@authz.test");
-    const allowed = await GET_ADMIN_TEMPLATES(
-      new NextRequest("http://localhost/api/admin/config/templates", { headers: { cookie: adminJar.getCookieHeader() } }),
+    const allowed = await POST_ADMIN_RESET(
+      new NextRequest("http://localhost/api/admin/sync/hosthub/reset-cursor", { method: "POST", headers: { cookie: adminJar.getCookieHeader() } }),
     );
     expect(allowed.status).toBe(200);
   });

@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { writeAuditSnapshot } from "@stay-ops/audit";
 import { apiError, respondAuthError } from "@/lib/apiError";
-import { SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { AuthError } from "@/modules/auth/errors";
 import { requireAdminSession } from "@/modules/auth/guard";
@@ -52,8 +51,4 @@ async function postResetCursor(request: NextRequest): Promise<Response> {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return withRateLimit("POST:/api/admin/sync/hosthub/reset-cursor", SYNC_USER_RATE_RULES, request, (req) =>
-    postResetCursor(req as NextRequest),
-  );
-}
+export const POST = postResetCursor;

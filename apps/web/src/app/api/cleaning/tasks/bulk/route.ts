@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CleaningWindowInvalidError } from "@stay-ops/db";
 import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
-import { withIdempotency } from "@/lib/idempotency";
-import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
@@ -156,8 +154,4 @@ async function postCleaningTasksBulk(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return withRateLimit("POST:/api/cleaning/tasks/bulk", DEFAULT_USER_RATE_RULES, request, (req) =>
-    withIdempotency("POST:/api/cleaning/tasks/bulk", req as NextRequest, postCleaningTasksBulk),
-  );
-}
+export const POST = postCleaningTasksBulk;

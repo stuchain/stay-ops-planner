@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { attachTraceToResponse, respondAuthError } from "@/lib/apiError";
-import { withIdempotency } from "@/lib/idempotency";
-import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { readTraceId } from "@/lib/traceId";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
 import { AuthError, jsonError } from "@/modules/auth/errors";
@@ -87,8 +85,4 @@ async function postBookingsBulkCancel(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return withRateLimit("POST:/api/bookings/bulk-cancel", DEFAULT_USER_RATE_RULES, request, (req) =>
-    withIdempotency("POST:/api/bookings/bulk-cancel", req as NextRequest, postBookingsBulkCancel),
-  );
-}
+export const POST = postBookingsBulkCancel;
