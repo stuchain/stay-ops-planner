@@ -315,7 +315,7 @@ export function ApartmentsScreen() {
       ) : list.error ? (
         <ErrorState message={errorText(list.error)} onRetry={() => void list.refetch()} />
       ) : (
-        <div className="bg-surface shadow-card rounded-card overflow-x-auto">
+        <div className="bg-surface shadow-card rounded-card relative overflow-x-auto">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <table className="w-full min-w-[860px] text-left">
               <thead className="text-text-muted text-sm">
