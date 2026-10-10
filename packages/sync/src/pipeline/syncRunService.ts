@@ -59,3 +59,19 @@ export async function recordImportError(
     },
   });
 }
+
+/** Records an `UNKNOWN_STATUS` import error when normalization flagged an unmapped Hosthub status. */
+export async function recordUnknownStatus(
+  prisma: PrismaClient,
+  syncRunId: string,
+  row: { reservationId: string; unknownStatusRaw?: string },
+) {
+  if (row.unknownStatusRaw === undefined) return;
+  await recordImportError(
+    prisma,
+    syncRunId,
+    "UNKNOWN_STATUS",
+    `Unknown Hosthub status "${row.unknownStatusRaw}" for reservation ${row.reservationId}; treated as pending`,
+    { reservationId: row.reservationId, status: row.unknownStatusRaw },
+  );
+}

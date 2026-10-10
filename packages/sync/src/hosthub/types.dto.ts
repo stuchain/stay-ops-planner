@@ -24,6 +24,8 @@ export const HosthubReservationDtoSchema = z.object({
   action: z.string().min(1).optional(),
   notes: z.string().min(1).optional(),
   status: z.enum(["confirmed", "cancelled", "pending"]),
+  /** Raw Hosthub status that is not in the explicit mapping (mapped to pending; reconcile records an import error). */
+  unknownStatusRaw: z.string().optional(),
   checkIn: z.string().min(1),
   checkOut: z.string().min(1),
   /** Optional source hint from Hosthub (airbnb, booking.com, etc.). */

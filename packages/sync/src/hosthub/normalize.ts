@@ -188,15 +188,38 @@ export function coerceHosthubDateField(value: string): string {
   return trimmed;
 }
 
-function mapStatusRaw(raw: string): HosthubReservationDto["status"] {
-  const s = raw.toLowerCase();
-  if (s.includes("cancel")) {
-    return "cancelled";
-  }
-  if (s.includes("pending") || s.includes("inquiry") || s.includes("request")) {
-    return "pending";
-  }
-  return "confirmed";
+const CONFIRMED_STATUSES = new Set(["confirmed", "accepted"]);
+const PENDING_STATUSES = new Set([
+  "pending",
+  "request",
+  "requested",
+  "inquiry",
+  "enquiry",
+  "awaiting_confirmation",
+  "awaiting_payment",
+]);
+const CANCELLED_STATUSES = new Set([
+  "cancelled",
+  "canceled",
+  "declined",
+  "expired",
+  "rejected",
+  "no_show_by_host",
+]);
+
+/**
+ * Explicit Hosthub status mapping. Anything not listed maps to `pending` (never `confirmed`)
+ * and is reported via `unknownStatusRaw` so the sync run can record an import error.
+ */
+export function mapStatusRaw(raw: string): {
+  status: HosthubReservationDto["status"];
+  unknownStatusRaw?: string;
+} {
+  const s = raw.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (CONFIRMED_STATUSES.has(s)) return { status: "confirmed" };
+  if (PENDING_STATUSES.has(s)) return { status: "pending" };
+  if (CANCELLED_STATUSES.has(s) || /^cancel(l)?ed_by_/.test(s)) return { status: "cancelled" };
+  return { status: "pending", unknownStatusRaw: raw };
 }
 
 /** Hosthub `updated` (Unix seconds) of a raw calendar event, when present. */
@@ -278,14 +301,18 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
     return null;
   }
 
-  let status = mapStatusRaw(pickString(r, "status", "state", "booking_status", "bookingStatus") ?? "confirmed");
+  const mapped = mapStatusRaw(pickString(r, "status", "state", "booking_status", "bookingStatus") ?? "confirmed");
+  let status = mapped.status;
+  let unknownStatusRaw = mapped.unknownStatusRaw;
 
   if (r.is_visible === false) {
     status = "cancelled";
+    unknownStatusRaw = undefined;
   }
   const cancelledAt = pickString(r, "cancelled_at", "cancelledAt");
   if (cancelledAt) {
     status = "cancelled";
+    unknownStatusRaw = undefined;
   }
 
   const listingChannel = pickListingChannel(r);
@@ -344,6 +371,7 @@ export function normalizeHosthubReservationRecord(raw: unknown): HosthubReservat
     ...(action !== undefined ? { action } : {}),
     ...(notes !== undefined ? { notes } : {}),
     status,
+    ...(unknownStatusRaw !== undefined ? { unknownStatusRaw } : {}),
     checkIn: coerceHosthubDateField(checkInRaw),
     checkOut: coerceHosthubDateField(checkOutRaw),
     ...(listingChannel !== undefined ? { listingChannel } : {}),

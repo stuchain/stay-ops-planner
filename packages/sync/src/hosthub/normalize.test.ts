@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   coerceHosthubDateField,
+  mapStatusRaw,
   normalizeHosthubReservationPagePayload,
   normalizeHosthubReservationRecord,
   parseHosthubGenericDataList,
@@ -237,5 +238,47 @@ describe("normalizeHosthubReservationPagePayload", () => {
       ],
     });
     expect(page?.maxUpdated).toBe(1800);
+  });
+});
+
+describe("mapStatusRaw", () => {
+  const table: Array<[string, "confirmed" | "pending" | "cancelled"]> = [
+    ["confirmed", "confirmed"],
+    ["accepted", "confirmed"],
+    ["Confirmed", "confirmed"],
+    ["pending", "pending"],
+    ["request", "pending"],
+    ["requested", "pending"],
+    ["inquiry", "pending"],
+    ["awaiting_confirmation", "pending"],
+    ["cancelled", "cancelled"],
+    ["canceled", "cancelled"],
+    ["declined", "cancelled"],
+    ["expired", "cancelled"],
+    ["rejected", "cancelled"],
+    ["no-show-by-host", "cancelled"],
+    ["cancelled_by_guest", "cancelled"],
+    ["canceled_by_host", "cancelled"],
+  ];
+  it.each(table)("maps %s to %s without flagging", (raw, expected) => {
+    expect(mapStatusRaw(raw)).toEqual({ status: expected });
+  });
+
+  it("maps an unknown value to pending and flags it", () => {
+    expect(mapStatusRaw("checked_in_maybe")).toEqual({
+      status: "pending",
+      unknownStatusRaw: "checked_in_maybe",
+    });
+  });
+
+  it("carries the flag onto the normalized record, but not when cancelled by other fields", () => {
+    const base = { id: "r1", rental_id: "l1", check_in: "2026-07-01", check_out: "2026-07-05" };
+    expect(normalizeHosthubReservationRecord({ ...base, status: "weird" })).toMatchObject({
+      status: "pending",
+      unknownStatusRaw: "weird",
+    });
+    const hidden = normalizeHosthubReservationRecord({ ...base, status: "weird", is_visible: false });
+    expect(hidden?.status).toBe("cancelled");
+    expect(hidden?.unknownStatusRaw).toBeUndefined();
   });
 });

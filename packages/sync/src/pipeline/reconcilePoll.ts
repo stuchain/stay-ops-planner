@@ -8,6 +8,7 @@ import {
   emptySyncRunStats,
   finalizeSyncRun,
   recordImportError,
+  recordUnknownStatus,
   startSyncRun,
 } from "./syncRunService.js";
 import { isDryRunRollback, mergeDryRunResults, type DryRunResult, type DryRunWarning } from "@stay-ops/shared";
@@ -211,6 +212,7 @@ export async function runHosthubReconcile(
             hosthubGrTaxesRaw,
           });
           stats.upserted += 1;
+          await recordUnknownStatus(prisma, run.id, row);
         } catch (e) {
           stats.errors += 1;
           noteFailedRow(rawEvent);
@@ -290,6 +292,7 @@ export async function runHosthubReconcile(
                 hosthubGrTaxesRaw,
               });
               stats.upserted += 1;
+              await recordUnknownStatus(prisma, run.id, row);
             } catch (e) {
               stats.errors += 1;
               noteFailedRow(rawEvent);
