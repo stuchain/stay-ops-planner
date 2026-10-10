@@ -7,7 +7,6 @@ import {
   planAssignments,
   type BookingToPlace,
   type IsoDate,
-  type Occupant,
   type PinnedPlacement,
   type ReasonCode,
 } from "@stay-ops/domain";
@@ -16,6 +15,7 @@ import { dbDateToIso, isoToDbDate, todayIso } from "@/server/time";
 import { bookingSliceSelect, partyOf, toBookingSlice } from "./bookingSlice";
 import { listCalendarRooms } from "./calendarRange";
 import { loadRecommenderConfig } from "./recommenderConfig";
+import { loadTimelines } from "./roomTimelines";
 
 /** A booking the planner put in an apartment, as shown in the preview. */
 export type ArrangePlacement = {
@@ -98,45 +98,14 @@ export async function proposeArrangement(month: string, now = new Date()): Promi
     ),
   );
 
-  const [rooms, assignments, blocks, config] = await Promise.all([
+  const [rooms, timelines, config] = await Promise.all([
     listCalendarRooms(),
-    prisma.assignment.findMany({
-      where: { startDate: { lt: windowEnd }, endDate: { gt: windowStart } },
-      select: {
-        roomId: true,
-        bookingId: true,
-        startDate: true,
-        endDate: true,
-        booking: { select: { guestName: true } },
-      },
-    }),
-    prisma.manualBlock.findMany({
-      where: { startDate: { lt: windowEnd }, endDate: { gt: windowStart } },
-      select: { id: true, roomId: true, startDate: true, endDate: true, reason: true },
-    }),
+    loadTimelines(windowStart, windowEnd),
     loadRecommenderConfig(),
   ]);
-
-  const pinned: PinnedPlacement[] = [
-    ...assignments.map((a): PinnedPlacement => ({
-      roomId: a.roomId,
-      occupant: {
-        kind: "booking",
-        id: a.bookingId,
-        stay: { checkin: dbDateToIso(a.startDate), checkout: dbDateToIso(a.endDate) },
-        guestName: a.booking.guestName ?? undefined,
-      } satisfies Occupant,
-    })),
-    ...blocks.map((b): PinnedPlacement => ({
-      roomId: b.roomId,
-      occupant: {
-        kind: "block",
-        id: b.id,
-        stay: { checkin: dbDateToIso(b.startDate), checkout: dbDateToIso(b.endDate) },
-        reason: b.reason ?? undefined,
-      },
-    })),
-  ];
+  const pinned: PinnedPlacement[] = [...timelines].flatMap(([roomId, occupants]) =>
+    occupants.map((occupant) => ({ roomId, occupant })),
+  );
 
   const toPlace: BookingToPlace[] = candidates.map((row) => ({
     id: row.id,
