@@ -205,7 +205,7 @@ jobs:
       - name: Run Playwright
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pnpm --filter @stay-ops/web test:e2e -- --grep "@smoke|@a11y"
+            pnpm --filter @stay-ops/web test:e2e --grep "@smoke|@a11y"
           else
             pnpm --filter @stay-ops/web test:e2e
           fi
