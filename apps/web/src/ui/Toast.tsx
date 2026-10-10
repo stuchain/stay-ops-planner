@@ -28,12 +28,20 @@ const toneClass: Record<ToastTone, string> = {
   danger: "bg-danger-soft text-text border-danger",
 };
 
-/** Shows a toast and returns its id. */
+/** How long each tone stays: good news is brief, problems stay long enough to read. */
+export const toastDurationMs: Record<ToastTone, number> = {
+  neutral: 6000,
+  success: 4000,
+  warning: 8000,
+  danger: 8000,
+};
+
+/** Shows a toast and returns its id. Every toast of a tone lasts the same time unless there is an action to wait for. */
 export function showToast({
   message,
   tone = "neutral",
   action,
-  durationMs = 6000,
+  durationMs = toastDurationMs[tone],
   detail,
 }: ShowToastOptions): string | number {
   return sonnerToast(message, {

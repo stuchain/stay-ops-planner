@@ -819,5 +819,8 @@
     "offline": "There is no internet connection. Check the network and try again.",
     "disabled": "This account is not active. Talk to Stelios.",
     "failed": "Something went wrong. Try again."
+  },
+  "polish": {
+    "loading": "Loading…"
   }
 }

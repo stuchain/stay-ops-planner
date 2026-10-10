@@ -46,6 +46,8 @@ export const size = {
 
 export const motion = {
   duration: { fast: 150, base: 200 },
+  /** Booking bars gliding between apartment rows. */
+  layoutMs: 180,
   easing: "cubic-bezier(0.2, 0, 0, 1)", // ease-out
   /** Undo toast stays this long. */
   undoMs: 10_000,

@@ -65,7 +65,7 @@ export function SidePanel({
         >
           <header className="border-border flex items-start gap-3 border-b px-5 py-4">
             <div className="min-w-0 flex-1">
-              <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
+              <Dialog.Title className="text-lg font-semibold [overflow-wrap:anywhere]">{title}</Dialog.Title>
               {description ? (
                 <Dialog.Description className="text-text-muted text-sm">{description}</Dialog.Description>
               ) : null}

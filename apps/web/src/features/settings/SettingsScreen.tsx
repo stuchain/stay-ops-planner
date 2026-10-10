@@ -16,6 +16,7 @@ import { TextSizeCard, toTextSize } from "./TextSizeCard";
 /** /app/settings for the new UI: language, text size, Hosthub, password and (admins) Dev mode. */
 export function SettingsScreen() {
   const t = useTranslations("settingsScreen");
+  const tp = useTranslations("polish");
   const errorText = useErrorText();
   const trpc = useTRPC();
   const me = useQuery(trpc.me.get.queryOptions());
@@ -26,7 +27,11 @@ export function SettingsScreen() {
       {me.isError ? (
         <ErrorState message={errorText(me.error)} onRetry={() => void me.refetch()} />
       ) : !me.data ? (
-        <Skeleton className="h-64 w-full" />
+        <div role="status" aria-label={tp("loading")} className="flex flex-col gap-6">
+          <Skeleton variant="block" className="h-40" />
+          <Skeleton variant="block" className="h-40" />
+          <Skeleton variant="block" className="h-40" />
+        </div>
       ) : (
         <>
           <LanguageCard locale={me.data.locale === "en" ? "en" : "el"} />

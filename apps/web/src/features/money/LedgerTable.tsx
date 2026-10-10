@@ -65,7 +65,7 @@ function useLedgerMutations() {
     update: useMutation({
       ...trpc.money.updateRow.mutationOptions(),
       onSuccess: () => {
-        showToast({ message: t("saved"), tone: "success", durationMs: 2500 });
+        showToast({ message: t("saved"), tone: "success" });
         return refresh();
       },
       onError,

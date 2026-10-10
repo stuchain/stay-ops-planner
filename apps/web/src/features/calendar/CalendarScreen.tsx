@@ -158,18 +158,27 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     [scrollToDate],
   );
 
-  // Arrows change month; Esc closes the panel.
+  // Keyboard (T also works on a Greek layout): ← → change month, T jumps to today, Esc closes the panel. Never while typing,
+  // inside a widget that uses the arrows itself, over an open question, or with a modifier held.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable=true]")) return;
-      if (event.key === "Escape") select(null);
-      if (event.key === "ArrowLeft" && !event.altKey) shiftMonth(-1);
-      if (event.key === "ArrowRight" && !event.altKey) shiftMonth(1);
+      if (target?.closest("input, textarea, select, [contenteditable=true], [contenteditable=''], [role=radio]"))
+        return;
+      if (target?.closest("[role=slider], [role=tab], [role=listbox], [role=menu], [role=combobox]")) return;
+      if (document.querySelector("[role=alertdialog]")) return;
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      if (key === "Escape") select(null);
+      else if (key === "ArrowLeft") shiftMonth(-1);
+      else if (key === "ArrowRight") shiftMonth(1);
+      else if (key === "t" || key === "\u03c4") scrollToDate(today);
+      else return;
+      if (key !== "Escape") event.preventDefault();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shiftMonth, select]);
+  }, [shiftMonth, select, scrollToDate, today]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
