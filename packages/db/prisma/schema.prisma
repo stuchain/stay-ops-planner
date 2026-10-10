@@ -59,8 +59,14 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   role         UserRole @default(operator)
-  uiLocale     UiLocale @default(en) @map("ui_locale")
+  uiLocale     UiLocale @default(el) @map("ui_locale")
   isActive     Boolean  @default(true) @map("is_active")
+  /// Per-user feature flags, for example `{"newUi": true}`. Read on the server.
+  flags        Json     @default("{}")
+  /// Shows the Dev mode sections in Settings. Grants no permissions.
+  devMode      Boolean  @default(false) @map("dev_mode")
+  /// Text size setting: normal, large or xlarge.
+  textSize     String   @default("normal") @map("text_size")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -79,8 +85,12 @@ model Room {
   isActive            Boolean  @default(true) @map("is_active")
   /// Lower sorts first on calendar; null sorts after set values.
   calendarSortIndex   Int?     @map("calendar_sort_index")
-  /// Max sleeping guests; null means no capacity limit for proposals.
+  /// Capacity: adults + children (infants do not count); null means not set up yet.
   maxGuests           Int?     @map("max_guests")
+  /// Suits parties of 3 or 4 (Cosmos, Helios); the recommender prefers it for them.
+  preferredForLargeParty Boolean @default(false) @map("preferred_for_large_party")
+  /// Fixed apartment colour used across the new UI, as a hex value.
+  color               String?
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
@@ -198,6 +208,8 @@ model Assignment {
   startDate   DateTime @db.Date @map("start_date")
   endDate     DateTime @db.Date @map("end_date")
   version     Int      @default(0)
+  /// A manual placement the auto-planner must not change.
+  pinned      Boolean  @default(false)
   createdById String?  @map("created_by_id")
   updatedById String?  @map("updated_by_id")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -408,6 +420,17 @@ model IntegrationSecret {
 
 /// Single-flight lock for Hosthub sync. Works through connection poolers (Neon) and frees itself
 /// when `lockedUntil` passes, so a killed function cannot hold it forever.
+/// Single row (id = 1) with the Hosthub sync cursor and the last outcome.
+model SyncState {
+  id            Int       @id @default(1)
+  cursor        String?
+  lastSuccessAt DateTime? @map("last_success_at") @db.Timestamptz(6)
+  lastError     String?   @map("last_error")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("sync_state")
+}
+
 model SyncLock {
   name        String   @id
   lockedUntil DateTime @map("locked_until") @db.Timestamptz(6)
