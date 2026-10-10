@@ -52,6 +52,40 @@ export interface RankedRoom {
 
 export type Timelines = ReadonlyMap<string, RoomTimeline>;
 
+/**
+ * The ranking rules, by name. Each gives a room a score (0 is best) and rooms are compared
+ * on the rules in the configured order.
+ */
+export const RULE_NAMES = ["free", "capacity", "partyRoom", "bookedRoom", "gaps", "roomOrder"] as const;
+export type RuleName = (typeof RULE_NAMES)[number];
+
+export interface RuleSetting {
+  readonly rule: RuleName;
+  /** Multiplies the rule's score. 0 switches the rule off, a negative number reverses it. */
+  readonly weight: number;
+}
+
+/** The order the rules are applied in (first rule decides first) and how much each counts. */
+export interface RecommenderConfig {
+  readonly rules: readonly RuleSetting[];
+}
+
+/** Today's behaviour: free, capacity, party size, booked room, fewest gaps, room order. */
+export const DEFAULT_RECOMMENDER_CONFIG: RecommenderConfig = {
+  rules: RULE_NAMES.map((rule) => ({ rule, weight: 1 })),
+};
+
+/** What one rule contributed to one room's place in the list. */
+export interface RuleContribution {
+  readonly rule: RuleName;
+  /** The rule's own score for the room; 0 is best. */
+  readonly raw: number;
+  /** `raw` times the rule's weight: the number the rooms are compared on. */
+  readonly value: number;
+}
+
+export type RankedRoomDetail = RankedRoom & { readonly contributions: readonly RuleContribution[] };
+
 const LARGE_PARTY_MIN = 3;
 
 interface Scored {
@@ -60,8 +94,8 @@ interface Scored {
   blockedBy: Occupant | null;
   reasons: ReasonCode[];
   warnings: "OVER_CAPACITY"[];
-  /** Rule scores in priority order; lower is better. Compared element by element. */
-  key: number[];
+  /** Raw rule scores by rule name; lower is better. */
+  scores: Record<RuleName, number>;
 }
 
 function score(booking: BookingToPlace, room: RoomInfo, timeline: RoomTimeline): Scored {
@@ -128,17 +162,20 @@ function score(booking: BookingToPlace, room: RoomInfo, timeline: RoomTimeline):
     blockedBy,
     reasons,
     warnings,
-    // Rule 7 (room order) is the last element.
-    key: [available ? 0 : 1, capacityRank, partyRoomRank, bookedHere ? 0 : 1, gaps, room.sortOrder],
+    // Rule 7 (room order) is the last rule by default.
+    scores: {
+      free: available ? 0 : 1,
+      capacity: capacityRank,
+      partyRoom: partyRoomRank,
+      bookedRoom: bookedHere ? 0 : 1,
+      gaps,
+      roomOrder: room.sortOrder,
+    },
   };
 }
 
-function compareKeys(a: Scored, b: Scored): number {
-  for (let i = 0; i < a.key.length; i++) {
-    const diff = a.key[i]! - b.key[i]!;
-    if (diff !== 0) return diff;
-  }
-  return compareIds(a.room.id, b.room.id);
+function contributionsOf(s: Scored, config: RecommenderConfig): RuleContribution[] {
+  return config.rules.map(({ rule, weight }) => ({ rule, raw: s.scores[rule], value: s.scores[rule] * weight }));
 }
 
 /**
@@ -146,16 +183,46 @@ function compareKeys(a: Scored, b: Scored): number {
  * Rules, in order: free for the whole stay; fits the party (adults + children);
  * parties of 3 or more prefer large-party rooms and parties of 1 or 2 the others;
  * the apartment the guest booked; fewest single empty nights created; room order.
+ * `config` changes the order and weight of the rules; the default is the order above.
  */
-export function rankRooms(booking: BookingToPlace, rooms: readonly RoomInfo[], timelines: Timelines): RankedRoom[] {
-  const scored = rooms.map((room) => score(booking, room, timelines.get(room.id) ?? []));
-  scored.sort(compareKeys);
-  return scored.map((s, index) => ({
+export function rankRooms(
+  booking: BookingToPlace,
+  rooms: readonly RoomInfo[],
+  timelines: Timelines,
+  config: RecommenderConfig = DEFAULT_RECOMMENDER_CONFIG,
+): RankedRoom[] {
+  return rankRoomsDetailed(booking, rooms, timelines, config).map((r) => {
+    const { contributions, ...room } = r;
+    void contributions;
+    return room;
+  });
+}
+
+/** Like `rankRooms`, plus what every rule contributed to every room (for the Dev mode debug screen). */
+export function rankRoomsDetailed(
+  booking: BookingToPlace,
+  rooms: readonly RoomInfo[],
+  timelines: Timelines,
+  config: RecommenderConfig = DEFAULT_RECOMMENDER_CONFIG,
+): RankedRoomDetail[] {
+  const scored = rooms.map((room) => {
+    const s = score(booking, room, timelines.get(room.id) ?? []);
+    return { s, contributions: contributionsOf(s, config) };
+  });
+  scored.sort((a, b) => {
+    for (let i = 0; i < a.contributions.length; i++) {
+      const diff = a.contributions[i]!.value - b.contributions[i]!.value;
+      if (diff !== 0) return diff;
+    }
+    return compareIds(a.s.room.id, b.s.room.id);
+  });
+  return scored.map(({ s, contributions }, index) => ({
     roomId: s.room.id,
     available: s.available,
     blockedBy: s.blockedBy,
     recommended: index === 0 && s.available,
     reasons: s.reasons,
     warnings: s.warnings,
+    contributions,
   }));
 }

@@ -296,7 +296,8 @@
       "apartments": "Apartments",
       "taxes": "Tax brackets",
       "hosthub": "Hosthub",
-      "cleaning": "Cleaning"
+      "cleaning": "Cleaning",
+      "recommender": "Suggestions"
     },
     "noAccess": {
       "title": "You don't have access",
@@ -416,6 +417,66 @@
     "cleaning": {
       "title": "Cleaning",
       "subtitle": "Temporarily here, hidden from everyone else, until it is decided what happens to it (Phase 4)."
+    },
+    "recommender": {
+      "title": "Apartment suggestion",
+      "subtitle": "See why each apartment comes first or last for a booking, and change the rules.",
+      "rulesTitle": "Rules in order of priority",
+      "rulesHint": "The first rule decides first. Weight 0 switches a rule off, a negative weight reverses it. The preview below shows changes before they are saved.",
+      "weight": "Weight",
+      "weightOf": "Weight: {rule}",
+      "moveUp": "Move the rule “{rule}” up",
+      "moveDown": "Move the rule “{rule}” down",
+      "unsaved": "The changes are not saved yet. The app still uses the saved rules.",
+      "save": "Save",
+      "saved": "The rules were saved.",
+      "reset": "Restore defaults",
+      "resetDone": "The default rules were restored.",
+      "pickTitle": "Choose a booking",
+      "pickHint": "Upcoming bookings that need an apartment come first.",
+      "search": "Search by guest name",
+      "searchPlaceholder": "Type a name",
+      "noBookings": "No booking found.",
+      "noName": "No name",
+      "needsApartment": "Needs an apartment",
+      "chooseTitle": "Choose a booking",
+      "chooseText": "You will see every apartment in the order suggested and what each rule contributed.",
+      "rankTitle": "Apartment order",
+      "rankHint": "A lower number is better. In brackets is the rule's score before it is multiplied by the weight.",
+      "place": "Place",
+      "apartment": "Apartment",
+      "availability": "Availability",
+      "reasons": "Reasons",
+      "recommended": "Suggested",
+      "available": "Free",
+      "notAvailable": "Not available",
+      "raw": "raw {raw}",
+      "rules": {
+        "free": {
+          "name": "Free on the dates",
+          "hint": "Apartments that are free for the whole stay come first."
+        },
+        "capacity": {
+          "name": "Fits the guests",
+          "hint": "Apartments with room for every guest come first."
+        },
+        "partyRoom": {
+          "name": "Party size",
+          "hint": "Parties of 3–4 go to the large apartments, smaller ones to the others."
+        },
+        "bookedRoom": {
+          "name": "The one the guest booked",
+          "hint": "The apartment the guest chose comes first."
+        },
+        "gaps": {
+          "name": "Empty nights",
+          "hint": "Fewer single empty nights around the stay."
+        },
+        "roomOrder": {
+          "name": "Calendar order",
+          "hint": "When everything else is equal, the apartments' order on the calendar."
+        }
+      }
     }
   },
   "settingsScreen": {

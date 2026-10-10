@@ -501,3 +501,12 @@ model AlertState {
 
   @@map("alert_states")
 }
+
+/// Generic app settings (P2-6): one JSON value per key, for example the recommender rule order.
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("settings")
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Occupant } from "../allocation.js";
+import * as recommender from "../recommender.js";
 import { rankRooms, type BookingToPlace, type RoomInfo } from "../recommender.js";
 import { isoDate, stay } from "../stay.js";
 
@@ -105,5 +106,62 @@ describe("rankRooms", () => {
     expect(order(rankRooms(want(guest(2)), twins, new Map()))).toEqual(["a", "b"]);
     const bad = want(guest(2), { stay: { checkin: isoDate("2026-10-10"), checkout: isoDate("2026-10-10") } });
     expect(rankRooms(bad, twins, new Map()).every((r) => !r.available && r.blockedBy === null)).toBe(true);
+  });
+});
+
+describe("rankRooms rule config", () => {
+  const { DEFAULT_RECOMMENDER_CONFIG, RULE_NAMES, rankRoomsDetailed } = recommender;
+  const parties = [guest(1), guest(2), guest(2, 1), guest(2, 2, 1), guest(4)];
+  const withWeight = (rule: string, weight: number) => ({
+    rules: DEFAULT_RECOMMENDER_CONFIG.rules.map((r) => (r.rule === rule ? { ...r, weight } : r)),
+  });
+
+  it("the default config gives the same ranking as no config", () => {
+    for (const party of parties) {
+      const timelines = new Map<string, Occupant[]>([
+        ["onar", [busy("x", "2026-10-08", "2026-10-09")]],
+        ["helios", [busy("y", "2026-10-14", "2026-10-16")]],
+      ]);
+      const b = want(party, { bookedRoomId: "iris" });
+      expect(rankRooms(b, rooms, timelines, DEFAULT_RECOMMENDER_CONFIG)).toEqual(rankRooms(b, rooms, timelines));
+    }
+    expect(DEFAULT_RECOMMENDER_CONFIG.rules.map((r) => r.rule)).toEqual([...RULE_NAMES]);
+  });
+
+  it("a changed order changes the ranking", () => {
+    expect(order(rankRooms(want(guest(2)), rooms, new Map()))).toEqual(["onar", "iris", "cosmos", "helios"]);
+    const roomOrderFirst = {
+      rules: [
+        { rule: "roomOrder" as const, weight: 1 },
+        ...DEFAULT_RECOMMENDER_CONFIG.rules.filter((r) => r.rule !== "roomOrder"),
+      ],
+    };
+    expect(order(rankRooms(want(guest(2)), rooms, new Map(), roomOrderFirst))).toEqual([
+      "onar",
+      "cosmos",
+      "iris",
+      "helios",
+    ]);
+  });
+
+  it("weight 0 switches a rule off and a negative weight reverses it", () => {
+    expect(order(rankRooms(want(guest(2)), rooms, new Map(), withWeight("partyRoom", 0)))).toEqual([
+      "onar",
+      "cosmos",
+      "iris",
+      "helios",
+    ]);
+    expect(order(rankRooms(want(guest(2)), rooms, new Map(), withWeight("partyRoom", -1)))).toEqual([
+      "cosmos",
+      "helios",
+      "onar",
+      "iris",
+    ]);
+  });
+
+  it("detailed ranking lists every rule's contribution in config order", () => {
+    const detail = rankRoomsDetailed(want(guest(2)), rooms, new Map());
+    expect(detail[0]!.contributions.map((c) => c.rule)).toEqual([...RULE_NAMES]);
+    expect(detail[0]!.contributions.find((c) => c.rule === "roomOrder")).toMatchObject({ raw: 1, value: 1 });
   });
 });

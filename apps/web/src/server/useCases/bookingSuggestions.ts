@@ -1,10 +1,19 @@
-import { addDays, DomainError, rankRooms, type Occupant, type RankedRoom } from "@stay-ops/domain";
+import {
+  addDays,
+  DomainError,
+  rankRoomsDetailed,
+  type Occupant,
+  type RankedRoomDetail,
+  type RecommenderConfig,
+  type RuleContribution,
+} from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
 import { dbDateToIso, isoToDbDate } from "@/server/time";
 import { partyOf } from "./bookingSlice";
 import { listCalendarRooms } from "./calendarRange";
+import { loadRecommenderConfig } from "./recommenderConfig";
 
-export type Suggestion = RankedRoom & {
+export type Suggestion = Omit<RankedRoomDetail, "contributions"> & {
   /** Guest in the way, for "Κλεισμένο: Νίκος Π.". */
   blockedByGuest: string | null;
 };
@@ -14,6 +23,21 @@ export type Suggestion = RankedRoom & {
  * (never clipped to a month) and the nights either side of it for the single-night-gap rule.
  */
 export async function bookingSuggestions(bookingId: string): Promise<Suggestion[]> {
+  const ranked = await rankBooking(bookingId);
+  return ranked.map((r) => {
+    const { contributions, ...suggestion } = r;
+    void contributions;
+    return suggestion;
+  });
+}
+
+export type DebugSuggestion = Suggestion & { contributions: readonly RuleContribution[] };
+
+/**
+ * The same ranking with what every rule contributed (Dev mode). `config` is a draft to try
+ * out; without it the saved rules are used, as in `bookingSuggestions`.
+ */
+export async function rankBooking(bookingId: string, config?: RecommenderConfig): Promise<DebugSuggestion[]> {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     select: {
@@ -69,7 +93,8 @@ export async function bookingSuggestions(bookingId: string): Promise<Suggestion[
     });
   }
 
-  const ranked = rankRooms(
+  const rules = config ?? (await loadRecommenderConfig());
+  const ranked = rankRoomsDetailed(
     { id: booking.id, stay, party: partyOf(booking) },
     rooms.map((r, index) => ({
       id: r.id,
@@ -79,6 +104,7 @@ export async function bookingSuggestions(bookingId: string): Promise<Suggestion[
       isActive: r.isActive,
     })),
     timelines,
+    rules,
   );
   return ranked.map((r) => ({
     ...r,

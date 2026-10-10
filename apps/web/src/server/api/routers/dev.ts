@@ -7,6 +7,14 @@ import {
   runHosthubSync,
   saveHosthubToken,
 } from "@/server/useCases/devHosthub";
+import { rankBooking } from "@/server/useCases/bookingSuggestions";
+import {
+  loadRecommenderConfig,
+  recommenderConfigSchema,
+  resetRecommenderConfig,
+  saveRecommenderConfig,
+} from "@/server/useCases/recommenderConfig";
+import { listBookingsForDebug } from "@/server/useCases/recommenderDebug";
 import { listApartments, reorderApartments, updateApartment } from "@/server/useCases/apartments";
 import { adminProcedure, createTRPCRouter } from "../trpc";
 
@@ -59,5 +67,26 @@ export const devRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => runHosthubSync({ full: input.full, actorUserId: ctx.user.userId })),
 
     resetCursor: adminProcedure.mutation(({ ctx }) => resetHosthubCursor({ actorUserId: ctx.user.userId })),
+  }),
+
+  recommender: createTRPCRouter({
+    /** The saved rule order and weights (today's behaviour until something is saved). */
+    config: adminProcedure.query(() => loadRecommenderConfig()),
+
+    save: adminProcedure
+      .input(z.object({ config: recommenderConfigSchema }))
+      .mutation(({ ctx, input }) => saveRecommenderConfig({ config: input.config, actorUserId: ctx.user.userId })),
+
+    reset: adminProcedure.mutation(({ ctx }) => resetRecommenderConfig(ctx.user.userId)),
+
+    /** Bookings to pick from: search by guest name, or the upcoming ones that need an apartment first. */
+    bookings: adminProcedure
+      .input(z.object({ query: z.string().max(80).optional() }))
+      .query(({ input }) => listBookingsForDebug(input.query === undefined ? {} : { query: input.query })),
+
+    /** Every apartment for one booking with each rule's contribution. `config` tries unsaved rules. */
+    debug: adminProcedure
+      .input(z.object({ bookingId: z.string().min(1), config: recommenderConfigSchema.optional() }))
+      .query(({ input }) => rankBooking(input.bookingId, input.config)),
   }),
 });
