@@ -129,8 +129,8 @@ async function postHosthubReconcile(request: NextRequest) {
     );
   }
 
-  const acquired = await tryAcquireHosthubReconcileLock(prisma);
-  if (!acquired) {
+  const lockHolder = await tryAcquireHosthubReconcileLock(prisma);
+  if (!lockHolder) {
     return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409));
   }
 
@@ -185,7 +185,10 @@ async function postHosthubReconcile(request: NextRequest) {
       );
     }
 
-    await withRetry(() => runHosthubReconcile(prisma, { apiToken: token, fullSync }), {
+    // The background heartbeat skips the extra notes / GR-tax calls per booking to stay quick;
+    // the manual full sync and the scheduled sync keep them.
+    const fetchEventEnrichment = syncTrigger === HEARTBEAT_TRIGGER ? false : undefined;
+    await withRetry(() => runHosthubReconcile(prisma, { apiToken: token, fullSync, fetchEventEnrichment }), {
       maxAttempts: 2,
       timeoutBudgetMs: reconcileTimeoutMs,
       isTransient: isTransientSyncError,
@@ -218,7 +221,7 @@ async function postHosthubReconcile(request: NextRequest) {
       traceId,
     );
   } finally {
-    await releaseHosthubReconcileLock(prisma);
+    await releaseHosthubReconcileLock(prisma, lockHolder);
   }
 }
 

@@ -401,3 +401,13 @@ model IntegrationSecret {
   @@unique([provider, secretKey], map: "integration_secrets_provider_secret_key_key")
   @@map("integration_secrets")
 }
+
+/// Single-flight lock for Hosthub sync. Works through connection poolers (Neon) and frees itself
+/// when `lockedUntil` passes, so a killed function cannot hold it forever.
+model SyncLock {
+  name        String   @id
+  lockedUntil DateTime @map("locked_until") @db.Timestamptz(6)
+  holder      String?
+
+  @@map("sync_lock")
+}

@@ -87,8 +87,8 @@ async function postFullResync(request: NextRequest): Promise<Response> {
     );
   }
 
-  const acquired = await tryAcquireHosthubReconcileLock(prisma);
-  if (!acquired) {
+  const lockHolder = await tryAcquireHosthubReconcileLock(prisma);
+  if (!lockHolder) {
     return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409), traceId);
   }
 
@@ -135,7 +135,7 @@ async function postFullResync(request: NextRequest): Promise<Response> {
       err,
     );
   } finally {
-    await releaseHosthubReconcileLock(prisma);
+    await releaseHosthubReconcileLock(prisma, lockHolder);
   }
 }
 

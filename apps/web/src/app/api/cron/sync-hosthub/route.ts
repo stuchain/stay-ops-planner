@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const acquired = await tryAcquireHosthubReconcileLock(prisma);
-  if (!acquired) {
+  const lockHolder = await tryAcquireHosthubReconcileLock(prisma);
+  if (!lockHolder) {
     return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409), traceId);
   }
 
@@ -109,6 +109,6 @@ export async function GET(request: NextRequest) {
       traceId,
     );
   } finally {
-    await releaseHosthubReconcileLock(prisma);
+    await releaseHosthubReconcileLock(prisma, lockHolder);
   }
 }
