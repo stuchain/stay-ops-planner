@@ -1,5 +1,6 @@
 name: CI
 
+# Runs on every push to main (work lands on main directly) and on any pull request.
 on:
   push:
     branches: [main]
@@ -8,40 +9,38 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
-    name: lint
+  check:
+    name: typecheck, lint, unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-pnpm
-      - name: Run ESLint
-        run: pnpm lint
+      - name: Typecheck, lint and unit tests (Turborepo)
+        run: pnpm turbo run typecheck lint test
+      - name: Prettier
+        run: pnpm format:check
 
-  typecheck:
-    name: typecheck
+  integration:
+    name: integration tests
     runs-on: ubuntu-latest
+    env:
+      SESSION_SECRET: ci-integration-session-secret-at-least-32-chars-long
+      APP_TIMEZONE: Etc/UTC
+      BOOTSTRAP_ADMIN_EMAIL: integration-admin@stayops.local
+      BOOTSTRAP_ADMIN_PASSWORD: Integration_Test_Password_12+
+      BOOTSTRAP_FATHER_EMAIL: integration-father@stayops.local
+      BOOTSTRAP_FATHER_PASSWORD: Integration_Father_Test_12+
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-pnpm
-      - name: Generate Prisma client (required for cross-package type resolution)
-        run: pnpm --filter @stay-ops/db generate
-      - name: Build workspace packages that emit types consumed by `apps/web`
-        run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/audit build && pnpm --filter @stay-ops/sync build
-      - name: Run TypeScript no-emit check across workspace
-        run: pnpm -r run typecheck
-
-  unit:
-    name: unit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-node-pnpm
-      - name: Generate Prisma client (some unit tests transitively import generated types)
-        run: pnpm --filter @stay-ops/db generate
-      - name: Build workspace packages used by unit tests
-        run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/audit build && pnpm --filter @stay-ops/sync build
-      - name: Run Vitest unit project (jsdom, no DB)
-        run: pnpm --filter @stay-ops/web run test:unit
-      - name: Run sync package unit tests
-        run: pnpm --filter @stay-ops/sync test
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=@stay-ops/web^...
+      # The Vitest globalSetup starts a postgres:16 Testcontainer, migrates and seeds it.
+      - name: Vitest integration (Testcontainers Postgres)
+        run: node scripts/test-integration.mjs
