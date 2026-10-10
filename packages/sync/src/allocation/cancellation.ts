@@ -12,7 +12,7 @@ export const CLEANING_PENDING_STATUSES = ["todo", "in_progress"] as const;
  */
 export type ApplyCancellationSideEffectsOptions = {
   skipAudit?: boolean;
-  recorder?: PlanRecorder;
+  recorder?: PlanRecorder | undefined;
 };
 
 export async function applyCancellationSideEffects(

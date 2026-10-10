@@ -12,7 +12,7 @@ import { getHosthubTokenStatus, resolveHosthubApiToken } from "@/modules/integra
 
 type DistinctListing = { channel: string; listingId: string; title: string | null };
 
-function distinctListingsFromPage(rows: Array<{ listingId: string; listingChannel?: string; listingName?: string }>): DistinctListing[] {
+function distinctListingsFromPage(rows: Array<{ listingId: string; listingChannel?: string | undefined; listingName?: string | undefined }>): DistinctListing[] {
   const seen = new Set<string>();
   const out: DistinctListing[] = [];
   for (const row of rows) {

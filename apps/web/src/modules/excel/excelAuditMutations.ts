@@ -113,7 +113,6 @@ export async function createExcelLedgerManualEntry(input: {
         bookingId: null,
         manualName,
         manualMonth,
-        overrides: undefined,
       },
     });
     await writeAuditSnapshot(tx, {

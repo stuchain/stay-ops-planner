@@ -5,7 +5,7 @@ export type ScrubbableSentryEvent = {
   extra?: Record<string, unknown>;
   contexts?: Record<string, unknown>;
   request?: { data?: unknown };
-  breadcrumbs?: Array<{ data?: Record<string, unknown> }>;
+  breadcrumbs?: Array<{ data?: Record<string, unknown> | undefined }>;
 };
 
 function scrubRecord(value: unknown): Record<string, unknown> | undefined {

@@ -6,7 +6,7 @@ export type ErrorStateProps = {
   title?: string;
   description?: string;
   /** Correlation id (e.g. Next.js digest or API traceId). */
-  traceId?: string | null;
+  traceId?: string | null | undefined;
   onRetry?: () => void;
   /** Primary navigation link target (default: calendar). */
   homeHref?: string;

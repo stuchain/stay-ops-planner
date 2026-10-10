@@ -7,10 +7,10 @@ import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
 
 type Props = {
   item: CalendarBookingItem;
-  isMobile?: boolean;
-  onQuickAssign?: () => void;
+  isMobile?: boolean | undefined;
+  onQuickAssign?: (() => void) | undefined;
   /** Distinguishes the same booking drawn in several grids (e.g. one per month on phones). */
-  dragScope?: string;
+  dragScope?: string | undefined;
 };
 
 export function BookingCard({ item, isMobile, onQuickAssign, dragScope }: Props) {

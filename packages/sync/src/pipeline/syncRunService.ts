@@ -55,7 +55,7 @@ export async function recordImportError(
       syncRunId,
       code,
       message,
-      payload: payload ?? undefined,
+      ...(payload !== undefined ? { payload } : {}),
     },
   });
 }
@@ -64,7 +64,7 @@ export async function recordImportError(
 export async function recordUnknownStatus(
   prisma: PrismaClient,
   syncRunId: string,
-  row: { reservationId: string; unknownStatusRaw?: string },
+  row: { reservationId: string; unknownStatusRaw?: string | undefined },
 ) {
   if (row.unknownStatusRaw === undefined) return;
   await recordImportError(

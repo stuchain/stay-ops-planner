@@ -27,17 +27,17 @@ export type CreateManualBlockInput = {
   roomId: string;
   startDate: Date;
   endDate: Date;
-  reason?: string | null;
-  actorUserId?: string;
-  auditMeta?: Record<string, unknown>;
+  reason?: string | null | undefined;
+  actorUserId?: string | undefined;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export type UpdateManualBlockInput = {
-  startDate?: Date;
-  endDate?: Date;
-  reason?: string | null;
-  actorUserId?: string;
-  auditMeta?: Record<string, unknown>;
+  startDate?: Date | undefined;
+  endDate?: Date | undefined;
+  reason?: string | null | undefined;
+  actorUserId?: string | undefined;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export async function createManualBlock(input: CreateManualBlockInput) {

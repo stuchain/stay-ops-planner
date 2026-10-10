@@ -67,16 +67,16 @@ const sentryUploadEnabled = Boolean(
 );
 
 export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
+  ...(process.env.SENTRY_ORG !== undefined ? { org: process.env.SENTRY_ORG } : {}),
+  ...(process.env.SENTRY_PROJECT !== undefined ? { project: process.env.SENTRY_PROJECT } : {}),
+  ...(process.env.SENTRY_AUTH_TOKEN !== undefined ? { authToken: process.env.SENTRY_AUTH_TOKEN } : {}),
   silent: !sentryUploadEnabled,
   telemetry: false,
   sourcemaps: {
     disable: !sentryUploadEnabled,
   },
   release: {
-    name: process.env.SENTRY_RELEASE,
+    ...(process.env.SENTRY_RELEASE !== undefined ? { name: process.env.SENTRY_RELEASE } : {}),
     create: sentryUploadEnabled,
     finalize: sentryUploadEnabled,
   },

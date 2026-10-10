@@ -22,7 +22,7 @@ export type RevalidateAssignmentOptions = {
   /** When true, skip audit rows (used with dry-run transaction rollback). */
   skipAudit?: boolean;
   /** When set, append planned side effects for dry-run summaries. */
-  recorder?: PlanRecorder;
+  recorder?: PlanRecorder | undefined;
 };
 
 export async function revalidateAssignmentIfNeeded(

@@ -142,7 +142,7 @@ export function buildSyncBookingUpdate(
 
 export type ApplyHosthubReservationRunOptions = {
   dryRun?: boolean;
-  recorder?: PlanRecorder;
+  recorder?: PlanRecorder | undefined;
 };
 
 async function upsertListingAndBooking(
@@ -151,11 +151,11 @@ async function upsertListingAndBooking(
   rawPayload: Prisma.InputJsonValue,
   extra:
     | {
-        hosthubNotesRaw?: Prisma.InputJsonValue | null;
-        hosthubGrTaxesRaw?: Prisma.InputJsonValue | null;
+        hosthubNotesRaw?: Prisma.InputJsonValue | null | undefined;
+        hosthubGrTaxesRaw?: Prisma.InputJsonValue | null | undefined;
       }
     | undefined,
-  syncCtx: { dryRun: boolean; recorder?: PlanRecorder },
+  syncCtx: { dryRun: boolean; recorder?: PlanRecorder | undefined },
 ) {
   const { dryRun, recorder } = syncCtx;
   const channel = mapHosthubListingChannel(dto.listingChannel);
@@ -442,8 +442,8 @@ export async function applyHosthubReservation(
   dto: HosthubReservationDto,
   rawPayload: Prisma.InputJsonValue,
   extra?: {
-    hosthubNotesRaw?: Prisma.InputJsonValue | null;
-    hosthubGrTaxesRaw?: Prisma.InputJsonValue | null;
+    hosthubNotesRaw?: Prisma.InputJsonValue | null | undefined;
+    hosthubGrTaxesRaw?: Prisma.InputJsonValue | null | undefined;
   },
   runOpts?: ApplyHosthubReservationRunOptions,
 ): Promise<void> {

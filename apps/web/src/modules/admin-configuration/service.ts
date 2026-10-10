@@ -35,43 +35,43 @@ export type AdminThresholdRecord = {
 export type UpsertAlertTemplateInput = {
   eventType: AlertConfigEventType;
   channel: AlertConfigChannel;
-  templateVersion?: number;
-  title?: string | null;
+  templateVersion?: number | undefined;
+  title?: string | null | undefined;
   body: string;
-  enabled?: boolean;
-  metaJson?: Record<string, unknown> | null;
-  actorUserId?: string;
-  auditMeta?: Record<string, unknown>;
+  enabled?: boolean | undefined;
+  metaJson?: Record<string, unknown> | null | undefined;
+  actorUserId?: string | undefined;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export type UpsertThresholdInput = {
   key: OperationalThresholdKey;
-  numericValue?: number | null;
-  stringValue?: string | null;
-  unit?: string | null;
-  notes?: string | null;
-  enabled?: boolean;
-  actorUserId?: string;
-  auditMeta?: Record<string, unknown>;
+  numericValue?: number | null | undefined;
+  stringValue?: string | null | undefined;
+  unit?: string | null | undefined;
+  notes?: string | null | undefined;
+  enabled?: boolean | undefined;
+  actorUserId?: string | undefined;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export type UpdateAlertTemplateByIdInput = {
-  title?: string | null;
-  body?: string;
-  enabled?: boolean;
-  metaJson?: Record<string, unknown> | null;
-  actorUserId?: string;
-  auditMeta?: Record<string, unknown>;
+  title?: string | null | undefined;
+  body?: string | undefined;
+  enabled?: boolean | undefined;
+  metaJson?: Record<string, unknown> | null | undefined;
+  actorUserId?: string | undefined;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export type UpdateThresholdByIdInput = {
-  numericValue?: number | null;
-  stringValue?: string | null;
-  unit?: string | null;
-  notes?: string | null;
-  enabled?: boolean;
-  actorUserId?: string;
-  auditMeta?: Record<string, unknown>;
+  numericValue?: number | null | undefined;
+  stringValue?: string | null | undefined;
+  unit?: string | null | undefined;
+  notes?: string | null | undefined;
+  enabled?: boolean | undefined;
+  actorUserId?: string | undefined;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export class AdminConfigNotFoundError extends Error {

@@ -8,11 +8,12 @@ import {
 
 const dsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
 const environment = sentryEnvironment();
+const release = sentryReleaseFallback();
 
 Sentry.init({
-  dsn: dsn || undefined,
+  ...(dsn ? { dsn } : {}),
   environment,
-  release: sentryReleaseFallback(),
+  ...(release !== undefined ? { release } : {}),
   tracesSampleRate: tracesSampleRateForEnvironment(environment),
   sendDefaultPii: false,
   beforeSend(event) {

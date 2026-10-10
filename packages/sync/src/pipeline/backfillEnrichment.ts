@@ -47,7 +47,7 @@ function extractLatestNoteText(raw: Prisma.JsonValue | null): string | null {
  */
 export async function runHosthubEnrichmentBackfill(
   prisma: PrismaClient,
-  opts?: { limit?: number },
+  opts?: { limit?: number | undefined },
 ): Promise<{ scanned: number; updated: number; skipped: number }> {
   type BackfillRow = {
     id: string;

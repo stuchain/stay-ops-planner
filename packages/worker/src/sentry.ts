@@ -11,7 +11,7 @@ export function initWorkerSentry(): void {
   Sentry.init({
     dsn,
     environment,
-    release,
+    ...(release !== undefined ? { release } : {}),
     tracesSampleRate: 0,
     sendDefaultPii: false,
     beforeSend(event) {

@@ -26,7 +26,7 @@ export function SyncWarningsInfo({
   onOpenBooking,
 }: {
   markers: CalendarMarker[];
-  onOpenBooking?: (bookingId: string) => void;
+  onOpenBooking?: ((bookingId: string) => void) | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);

@@ -18,20 +18,20 @@ function rowAsJson(row: unknown): Prisma.InputJsonValue {
 }
 
 export type RunHosthubReconcileOptions = {
-  apiToken?: string | null;
+  apiToken?: string | null | undefined;
   /** When true, no sync_run / import_error rows are written; returns aggregated {@link DryRunResult}. */
-  dryRun?: boolean;
+  dryRun?: boolean | undefined;
   /** When true, omit `updated_gte` so Hosthub returns full visible history from the first page (slower). */
-  fullSync?: boolean;
+  fullSync?: boolean | undefined;
   /** First `GET /calendar-events` page only: Hosthub `is_visible` (`all` | `true` | `false`). */
-  calendarEventsIsVisible?: string | null;
+  calendarEventsIsVisible?: string | null | undefined;
   /** When false, skip per-event notes + GR-tax API calls (faster; less enrichment). Default: env or true. */
-  fetchEventEnrichment?: boolean;
+  fetchEventEnrichment?: boolean | undefined;
   /**
    * When true (or env `HOSTHUB_RECONCILE_PER_RENTAL_CALENDAR`), after the global calendar list also
    * walks `GET /rentals/{id}/calendar-events` per rental from backfill (extra API load; catches provider gaps).
    */
-  perRentalCalendar?: boolean;
+  perRentalCalendar?: boolean | undefined;
 };
 
 /**

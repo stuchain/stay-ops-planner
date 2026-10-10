@@ -30,10 +30,10 @@ export function TimelineBookingBar({
   lane: number;
   nights: string;
   /** Stay continues past the last visible column — render a square trailing edge. */
-  trailClipped?: boolean;
-  onOpen?: () => void;
+  trailClipped?: boolean | undefined;
+  onOpen?: (() => void) | undefined;
   /** Distinguishes the same booking drawn in several grids (e.g. one per month on phones). */
-  dragScope?: string;
+  dragScope?: string | undefined;
 }) {
   const pending = isPendingBooking(item.status);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({

@@ -114,11 +114,11 @@ type UnifiedLaneProps = {
   hintSpan: { start: number; endExclusive: number } | null;
   dailyRatesForRoom: Record<string, { amountCents: number; currency: string }> | undefined;
   monthBoundaryColumns: Set<number>;
-  showSortHandle?: boolean;
-  sortHandleProps?: Record<string, unknown>;
-  rowRef?: (node: HTMLDivElement | null) => void;
-  rowStyle?: CSSProperties;
-  onBookingClick?: (bookingId: string) => void;
+  showSortHandle?: boolean | undefined;
+  sortHandleProps?: Record<string, unknown> | undefined;
+  rowRef?: ((node: HTMLDivElement | null) => void) | undefined;
+  rowStyle?: CSSProperties | undefined;
+  onBookingClick?: ((bookingId: string) => void) | undefined;
 };
 
 function UnifiedTimelineLane({
@@ -270,9 +270,9 @@ export type MultiMonthTimelineProps = {
   error: string | null;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  sortableRoomIds?: string[] | null;
-  onBookingClick?: (bookingId: string) => void;
-  onMarkerBookingClick?: (bookingId: string) => void;
+  sortableRoomIds?: string[] | null | undefined;
+  onBookingClick?: ((bookingId: string) => void) | undefined;
+  onMarkerBookingClick?: ((bookingId: string) => void) | undefined;
 };
 
 export function MultiMonthTimeline({

@@ -39,10 +39,10 @@ function cleaningTaskSnapshot(t: {
 }
 
 export type ListCleaningTasksQuery = {
-  date?: string;
-  assignee?: string;
-  status?: string;
-  roomId?: string;
+  date?: string | undefined;
+  assignee?: string | undefined;
+  status?: string | undefined;
+  roomId?: string | undefined;
 };
 
 export async function listCleaningTasks(q: ListCleaningTasksQuery) {
@@ -71,9 +71,9 @@ export async function updateCleaningTaskSchedule(params: {
   taskId: string;
   plannedStart: Date;
   plannedEnd: Date;
-  assigneeName?: string | null;
+  assigneeName?: string | null | undefined;
   actorUserId: string;
-  auditMeta?: Record<string, unknown>;
+  auditMeta?: Record<string, unknown> | undefined;
 }): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const task = await tx.cleaningTask.findUnique({ where: { id: params.taskId } });
@@ -127,9 +127,9 @@ export type ServiceCleaningTaskApiResult = {
 };
 
 export type CreateServiceCleaningTaskForApiTxOptions = {
-  recorder?: PlanRecorder;
-  itemIndex?: number;
-  skipAudit?: boolean;
+  recorder?: PlanRecorder | undefined;
+  itemIndex?: number | undefined;
+  skipAudit?: boolean | undefined;
 };
 
 export async function createServiceCleaningTaskForApiTx(
@@ -137,10 +137,10 @@ export async function createServiceCleaningTaskForApiTx(
   params: {
     bookingId: string;
     roomId: string;
-    sourceEventId?: string;
-    plannedStart?: Date;
+    sourceEventId?: string | undefined;
+    plannedStart?: Date | undefined;
     actorUserId: string;
-    auditMeta?: Record<string, unknown>;
+    auditMeta?: Record<string, unknown> | undefined;
   },
   opts?: CreateServiceCleaningTaskForApiTxOptions,
 ): Promise<ServiceCleaningTaskApiResult> {
@@ -200,10 +200,10 @@ export async function createServiceCleaningTaskForApiTx(
 export async function createServiceCleaningTaskForApi(params: {
   bookingId: string;
   roomId: string;
-  sourceEventId?: string;
-  plannedStart?: Date;
+  sourceEventId?: string | undefined;
+  plannedStart?: Date | undefined;
   actorUserId: string;
-  auditMeta?: Record<string, unknown>;
+  auditMeta?: Record<string, unknown> | undefined;
 }): Promise<ServiceCleaningTaskApiResult> {
   return prisma.$transaction(async (tx) => createServiceCleaningTaskForApiTx(tx, params));
 }
@@ -212,13 +212,13 @@ export type BulkCreateServiceCleaningTasksInput = {
   items: Array<{
     bookingId: string;
     roomId: string;
-    sourceEventId?: string;
+    sourceEventId?: string | undefined;
     /** ISO string; optional (defaults from booking checkout like single create). */
-    plannedStart?: string;
+    plannedStart?: string | undefined;
   }>;
   actorUserId: string;
-  auditMeta?: Record<string, unknown>;
-  dryRun?: boolean;
+  auditMeta?: Record<string, unknown> | undefined;
+  dryRun?: boolean | undefined;
 };
 
 export type BulkCreateServiceCleaningTasksResult =

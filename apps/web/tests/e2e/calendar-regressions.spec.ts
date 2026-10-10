@@ -149,7 +149,8 @@ test.describe("calendar regressions @calendar", () => {
   test.beforeAll(async ({ browser }) => {
     test.setTimeout(180_000);
     if (test.info().project.name === "mobile-chromium" || !e2eCredentials()) return;
-    const page = await browser.newPage({ baseURL: test.info().project.use.baseURL });
+    const baseURL = test.info().project.use.baseURL;
+    const page = await browser.newPage(baseURL !== undefined ? { baseURL } : {});
     try {
       await loginAsStaff(page);
       await gotoCalendarAndWaitReady(page);

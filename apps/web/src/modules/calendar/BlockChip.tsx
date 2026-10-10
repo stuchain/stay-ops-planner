@@ -1,6 +1,6 @@
 import type { CalendarBlockItem } from "./calendarTypes";
 
-type Props = { item: CalendarBlockItem; onEdit?: (item: CalendarBlockItem) => void };
+type Props = { item: CalendarBlockItem; onEdit?: ((item: CalendarBlockItem) => void) | undefined };
 
 export function BlockChip({ item, onEdit }: Props) {
   return (

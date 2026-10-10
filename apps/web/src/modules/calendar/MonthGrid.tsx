@@ -36,15 +36,15 @@ export type MonthGridProps = {
   error: string | null;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  onEditBlock?: (item: CalendarBlockItem) => void;
-  isMobile?: boolean;
-  onQuickAssign?: (item: CalendarBookingItem) => void;
-  laneScope?: string;
-  showNavigation?: boolean;
+  onEditBlock?: ((item: CalendarBlockItem) => void) | undefined;
+  isMobile?: boolean | undefined;
+  onQuickAssign?: ((item: CalendarBookingItem) => void) | undefined;
+  laneScope?: string | undefined;
+  showNavigation?: boolean | undefined;
   /** When set, room rows are reorderable (desktop). */
-  sortableRoomIds?: string[] | null;
-  onBookingClick?: (bookingId: string) => void;
-  onMarkerBookingClick?: (bookingId: string) => void;
+  sortableRoomIds?: string[] | null | undefined;
+  onBookingClick?: ((bookingId: string) => void) | undefined;
+  onMarkerBookingClick?: ((bookingId: string) => void) | undefined;
 };
 
 function dayOfMonthIso(iso: string): number {
@@ -182,12 +182,12 @@ type TimelineLaneProps = {
   dayKeys: number[];
   hintSpan: { start: number; endExclusive: number } | null;
   dailyRatesForRoom: Record<string, { amountCents: number; currency: string }> | undefined;
-  showSortHandle?: boolean;
-  sortHandleProps?: Record<string, unknown>;
-  rowRef?: (node: HTMLDivElement | null) => void;
-  rowStyle?: CSSProperties;
-  onBookingClick?: (bookingId: string) => void;
-  dragScope?: string;
+  showSortHandle?: boolean | undefined;
+  sortHandleProps?: Record<string, unknown> | undefined;
+  rowRef?: ((node: HTMLDivElement | null) => void) | undefined;
+  rowStyle?: CSSProperties | undefined;
+  onBookingClick?: ((bookingId: string) => void) | undefined;
+  dragScope?: string | undefined;
 };
 
 function TimelineLane({

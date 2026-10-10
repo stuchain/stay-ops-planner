@@ -213,7 +213,7 @@ const CANCELLED_STATUSES = new Set([
  */
 export function mapStatusRaw(raw: string): {
   status: HosthubReservationDto["status"];
-  unknownStatusRaw?: string;
+  unknownStatusRaw?: string | undefined;
 } {
   const s = raw.trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (CONFIRMED_STATUSES.has(s)) return { status: "confirmed" };

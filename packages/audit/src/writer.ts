@@ -24,13 +24,13 @@ function redactValue(value: unknown): unknown {
 }
 
 export type AuditSnapshotWrite = {
-  actorUserId?: string | null;
+  actorUserId?: string | null | undefined;
   entityType: string;
   entityId: string;
   action: string;
   before: unknown;
   after: unknown;
-  meta?: JsonObject;
+  meta?: JsonObject | undefined;
 };
 
 export async function writeAuditSnapshot(

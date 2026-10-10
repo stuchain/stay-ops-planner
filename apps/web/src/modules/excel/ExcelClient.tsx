@@ -215,7 +215,7 @@ function EditableCell(props: {
   rowIdx: number;
   row: ExcelApiRow;
   field: keyof LedgerRow;
-  numeric?: boolean;
+  numeric?: boolean | undefined;
   disabled?: boolean;
   saving: boolean;
   onSave: (rowIdx: number, field: keyof LedgerRow, value: unknown) => Promise<void>;

@@ -22,7 +22,7 @@ export async function getHosthubTokenStatus(): Promise<HosthubTokenStatus> {
   };
 }
 
-export async function setHosthubToken(input: { token: string; name?: string | null }): Promise<HosthubTokenStatus> {
+export async function setHosthubToken(input: { token: string; name?: string | null | undefined }): Promise<HosthubTokenStatus> {
   const token = input.token;
   const clean = token.trim();
   if (!clean) {

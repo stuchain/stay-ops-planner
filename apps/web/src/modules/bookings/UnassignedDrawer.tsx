@@ -77,7 +77,7 @@ type Props = {
   month: string;
   rooms: CalendarRoom[];
   /** When set, default room select uses availability + capacity (same as calendar strip). */
-  suggestContext?: SuggestContext;
+  suggestContext?: SuggestContext | undefined;
   onClose: () => void;
   /** After a successful assign, refresh calendar + drawer. */
   onAssigned: () => void;

@@ -55,7 +55,7 @@ export type HosthubRequestLog = (info: {
   path: string;
   status: number;
   durationMs: number;
-  requestId?: string;
+  requestId?: string | undefined;
 }) => void;
 
 export type HosthubDataListPage = {
@@ -110,7 +110,7 @@ export class HosthubClient {
   private readonly fetchFn: typeof fetch;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
-  private readonly onRequest?: HosthubRequestLog;
+  private readonly onRequest?: HosthubRequestLog | undefined;
   private readonly baseOrigin: string;
   private readonly basePathPrefix: string;
 
@@ -177,9 +177,9 @@ export class HosthubClient {
    */
   async listCalendarEventsPage(args: {
     nextPageUrl: string | null;
-    updatedGte?: number | null;
+    updatedGte?: number | null | undefined;
     /** First page only: Hosthub query `is_visible` (e.g. `all` to include hidden/deleted events). */
-    isVisible?: string | null;
+    isVisible?: string | null | undefined;
   }): Promise<HosthubClientResult<HosthubReservationPage>> {
     let fetchUrl: string;
     let pathForLog: string;
@@ -214,9 +214,9 @@ export class HosthubClient {
   async listRentalCalendarEventsPage(args: {
     rentalId: string;
     nextPageUrl: string | null;
-    updatedGte?: number | null;
+    updatedGte?: number | null | undefined;
     /** First page only: Hosthub `is_visible` (`all` | `true` | `false`). */
-    isVisible?: string | null;
+    isVisible?: string | null | undefined;
   }): Promise<HosthubClientResult<HosthubReservationPage>> {
     const rid = encodeURIComponent(args.rentalId.trim());
     let fetchUrl: string;

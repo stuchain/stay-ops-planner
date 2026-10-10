@@ -53,9 +53,9 @@ export type AssignInput = {
   roomId: string;
   actorUserId: string;
   /** When set, must match `Booking.version` (optimistic concurrency). */
-  expectedVersion?: number;
+  expectedVersion?: number | undefined;
   /** Merged into audit `metaJson` (e.g. `requestId` from headers). */
-  auditMeta?: Record<string, unknown>;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export type ReassignInput = {
@@ -63,14 +63,14 @@ export type ReassignInput = {
   roomId: string;
   expectedVersion: number;
   actorUserId: string;
-  auditMeta?: Record<string, unknown>;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 export type UnassignInput = {
   assignmentId: string;
   expectedVersion: number;
   actorUserId: string;
-  auditMeta?: Record<string, unknown>;
+  auditMeta?: Record<string, unknown> | undefined;
 };
 
 async function resolveActorUserId(
@@ -151,10 +151,10 @@ function mapAssignmentWriteConflict(err: unknown): never {
 }
 
 export type AssignBookingToRoomTxOptions = {
-  recorder?: PlanRecorder;
-  itemIndex?: number;
+  recorder?: PlanRecorder | undefined;
+  itemIndex?: number | undefined;
   /** When true, skip audit snapshot (used with dry-run rollback). */
-  skipAudit?: boolean;
+  skipAudit?: boolean | undefined;
 };
 
 /**
@@ -321,8 +321,8 @@ export async function assignBookingToRoomTx(
 export type BulkAssignBookingsInput = {
   items: Array<{ bookingId: string; roomId: string }>;
   actorUserId: string;
-  auditMeta?: Record<string, unknown>;
-  dryRun?: boolean;
+  auditMeta?: Record<string, unknown> | undefined;
+  dryRun?: boolean | undefined;
 };
 
 export type BulkAssignBookingsResult =
@@ -563,8 +563,8 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
 export type UnassignedListParams = {
   from: Date;
   to: Date;
-  channel?: Channel;
-  status?: BookingStatus;
+  channel?: Channel | undefined;
+  status?: BookingStatus | undefined;
 };
 
 export async function listUnassignedBookings(params: UnassignedListParams) {

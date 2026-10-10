@@ -22,7 +22,7 @@ export function formatAllocationError(code: string | undefined, _message?: strin
 }
 
 export class AllocationMutationError extends Error {
-  readonly code?: string;
+  readonly code?: string | undefined;
   readonly details?: unknown;
 
   constructor(code?: string, details?: unknown) {

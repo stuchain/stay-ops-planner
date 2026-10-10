@@ -37,14 +37,14 @@ export type AuditEventListItem = {
 };
 
 export type AuditEventFilters = {
-  entityType?: string;
-  bookingId?: string;
-  roomId?: string;
-  actorUserId?: string;
+  entityType?: string | undefined;
+  bookingId?: string | undefined;
+  roomId?: string | undefined;
+  actorUserId?: string | undefined;
   from: Date;
   to: Date;
-  cursor?: string;
-  limit?: number;
+  cursor?: string | undefined;
+  limit?: number | undefined;
   /** Defaults to 50 (UI list). Export uses a higher cap. */
   limitCap?: number;
 };

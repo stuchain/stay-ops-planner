@@ -21,14 +21,14 @@ export type OnRetryArgs = {
   attempt: number;
   delayMs: number;
   err: unknown;
-  traceId?: string;
+  traceId?: string | undefined;
 };
 
 export type OnExhaustedArgs = {
   attempts: number;
   elapsedMs: number;
   cause: unknown;
-  traceId?: string;
+  traceId?: string | undefined;
 };
 
 export type RetryOptions = {
@@ -39,7 +39,7 @@ export type RetryOptions = {
   isTransient?: (err: unknown) => boolean;
   onRetry?: (args: OnRetryArgs) => void;
   onExhausted?: (args: OnExhaustedArgs) => void;
-  traceId?: string;
+  traceId?: string | undefined;
   signal?: AbortSignal;
 };
 

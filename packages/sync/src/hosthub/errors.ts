@@ -9,14 +9,14 @@ export type HosthubClientErrorCode =
 export type HosthubClientError = {
   readonly code: HosthubClientErrorCode;
   readonly message: string;
-  readonly statusCode?: number;
+  readonly statusCode?: number | undefined;
   readonly cause?: unknown;
 };
 
 export function hosthubError(
   code: HosthubClientErrorCode,
   message: string,
-  extra?: { statusCode?: number; cause?: unknown },
+  extra?: { statusCode?: number | undefined; cause?: unknown },
 ): HosthubClientError {
   return {
     code,
