@@ -387,3 +387,36 @@ svg.lucide { width: 1.25em; height: 1.25em; stroke-width: 2; flex: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- settings ---------- */
+.settings { max-width: 760px; display: flex; flex-direction: column; gap: 24px; }
+.settings .seg { align-self: flex-start; max-width: 100%; flex-wrap: wrap; }
+.sample { background: var(--surface-muted); border-radius: var(--r-sm); padding: 14px 16px; }
+.set-big { font-size: var(--fs-lg); }
+.pw-form { display: flex; flex-direction: column; gap: 16px; }
+.pw-form .hint { font-size: var(--fs-sm); }
+.pw-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.field-err { color: var(--danger); font-weight: 600; }
+.field.invalid .input { border-color: var(--danger); border-width: 2px; }
+.set-row { display: flex; align-items: center; gap: 16px; min-height: var(--target); }
+.set-row .grow { flex: 1; min-width: 0; }
+.sw-word { min-width: 2.5ch; font-weight: 600; }
+.dev { display: flex; flex-direction: column; gap: 24px; }
+.dev-banner { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-sm); background: var(--warning-soft); color: var(--warning-text); }
+.dev-banner svg.lucide { margin-top: 2px; }
+.table-wrap { overflow-x: auto; }
+.dev-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.dev-table th { text-align: left; font-weight: 600; color: var(--text-muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--border-strong); }
+.dev-table td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.dev-table tr:last-child td { border-bottom: 0; }
+.mono { font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+.sub-h { font-size: var(--fs-base); font-weight: 700; }
+.rules { margin: 0; padding-left: 1.5em; display: flex; flex-direction: column; gap: 6px; }
+.audit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.audit li { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
+.audit li:last-child { border-bottom: 0; }
+.audit li .muted { white-space: nowrap; }
+@media (max-width: 760px) {
+  .audit li { flex-direction: column; gap: 2px; }
+  .settings .seg button { padding: 0 14px; }
+}
