@@ -84,19 +84,9 @@ jobs:
           --health-retries 8
           --health-start-period 10s
 
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 8
 
     env:
       DATABASE_URL: postgresql://stayops:stayops@localhost:5432/stayops
-      REDIS_URL: redis://localhost:6379
       SESSION_SECRET: ci-e2e-session-secret-at-least-32-chars-long
       APP_TIMEZONE: Etc/UTC
       BOOTSTRAP_ADMIN_EMAIL: e2e-admin@stayops.local
@@ -111,7 +101,7 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
 
       - name: Build workspace packages
-        run: pnpm --filter @stay-ops/shared build && pnpm --filter @stay-ops/db build && pnpm --filter @stay-ops/audit build && pnpm --filter @stay-ops/sync build
+        run: pnpm turbo run build --filter=@stay-ops/web^...
 
       - name: Migrate database
         run: pnpm --filter @stay-ops/db exec prisma migrate deploy
@@ -121,12 +111,6 @@ jobs:
 
       - name: Install Playwright Chromium
         run: pnpm --filter @stay-ops/web exec playwright install chromium --with-deps
-
-      - name: Storybook build (Epic 8 primitives)
-        run: pnpm --filter @stay-ops/web run build-storybook
-        env:
-          CI: true
-          STORYBOOK_DISABLE_TELEMETRY: "1"
 
       - name: Run Playwright
         run: |

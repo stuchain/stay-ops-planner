@@ -4,14 +4,13 @@ const devPort = process.env.PLAYWRIGHT_DEV_PORT ?? "3000";
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${devPort}`;
 
-/** Ensures `next dev` uses the same DB/Redis as migrate/seed; Next does not override vars already set in the process env. */
+/** Ensures `next dev` uses the same DB as migrate/seed; Next does not override vars already set in the process env. */
 const webServerEnv: Record<string, string> = {
   ...Object.fromEntries(
     Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined),
   ),
   DATABASE_URL:
     process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops?schema=e2e",
-  REDIS_URL: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   SESSION_SECRET:
     process.env.SESSION_SECRET ?? "local-dev-session-secret-32-chars-minimum!!",
   APP_TIMEZONE: process.env.APP_TIMEZONE ?? "Etc/UTC",

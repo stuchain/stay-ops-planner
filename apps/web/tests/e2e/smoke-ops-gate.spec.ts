@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
-import { applyCancellationSideEffects, applyHosthubReservation } from "@stay-ops/sync";
+import { applyCancellationSideEffects } from "@stay-ops/sync";
+import { applyHosthubBooking } from "../../src/server/sync/applyBooking";
 import { e2eCredentials, loginAsStaff, reseedE2EFixtures } from "./helpers";
 
 test.describe("ops gate smoke @smoke", () => {
@@ -16,18 +17,15 @@ test.describe("ops gate smoke @smoke", () => {
       const prisma = new PrismaClient();
       try {
         const rid = `e2e-smoke-ingest-${Date.now()}`;
-        await applyHosthubReservation(
-          prisma,
-          {
-            reservationId: rid,
-            listingId: "e2e-smoke-listing",
-            status: "confirmed",
-            checkIn: "2026-08-01",
-            checkOut: "2026-08-05",
-            listingChannel: "airbnb",
-          },
-          {},
-        );
+        const dto = {
+          reservationId: rid,
+          listingId: "e2e-smoke-listing",
+          status: "confirmed" as const,
+          checkIn: "2026-08-01",
+          checkOut: "2026-08-05",
+          listingChannel: "airbnb",
+        };
+        await prisma.$transaction((tx) => applyHosthubBooking(tx, { dto, raw: dto }));
         const row = await prisma.booking.findFirst({
           where: { channel: Channel.airbnb, externalBookingId: rid },
         });
