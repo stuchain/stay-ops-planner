@@ -5,6 +5,29 @@ import type { NextRequest } from "next/server";
 import { NextRequest as NextRequestCtor } from "next/server";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Channel, PrismaClient } from "@stay-ops/db";
+import type { HosthubSource } from "@/server/sync/hosthubSource";
+
+/** Hosthub as seen by the cron route: one empty page, held open while `hold` is set. */
+const hosthub = vi.hoisted(() => ({
+  calls: 0,
+  hold: null as Promise<void> | null,
+}));
+
+vi.mock("@/server/sync/hosthubSource", () => ({
+  hosthubSource: (): HosthubSource => ({
+    listCalendarEventsPage: async () => {
+      hosthub.calls += 1;
+      if (hosthub.hold) await hosthub.hold;
+      return { ok: true, value: { data: [], rawData: [], nextPageUrl: null, skipped: 0 } };
+    },
+    listRentalCalendarEventsPage: async () => ({
+      ok: true,
+      value: { data: [], rawData: [], nextPageUrl: null, skipped: 0 },
+    }),
+    getCalendarEventNotes: async () => ({ ok: true, value: null }),
+    getCalendarEventGrTaxes: async () => ({ ok: true, value: null }),
+  }),
+}));
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
 
@@ -16,6 +39,7 @@ async function truncate() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
       "sync_lock",
+      "sync_state",
       "webhook_inbound_events",
       "import_errors",
       "sync_runs",
@@ -54,6 +78,8 @@ describe("Hosthub sync lock", () => {
 
   beforeEach(async () => {
     await truncate();
+    hosthub.calls = 0;
+    hosthub.hold = null;
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["Date"] });
     vi.setSystemTime(new Date("2024-06-15T12:00:00.000Z"));
   });
@@ -64,14 +90,11 @@ describe("Hosthub sync lock", () => {
   });
 
   it("two overlapping syncs: one runs, the other gets 409", async () => {
-    const syncMod = await import("@stay-ops/sync");
     let finish: () => void = () => undefined;
-    const spy = vi.spyOn(syncMod, "runHosthubReconcile").mockImplementation(
-      () => new Promise<void>((resolve) => (finish = resolve)) as never,
-    );
+    hosthub.hold = new Promise<void>((resolve) => (finish = resolve));
 
     const first = GET_CRON(cronRequest());
-    await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(hosthub.calls).toBe(1));
     const second = await GET_CRON(cronRequest());
     expect(second.status).toBe(409);
 
@@ -79,7 +102,7 @@ describe("Hosthub sync lock", () => {
     expect((await first).status).toBe(200);
 
     // Released: the next sync runs.
-    spy.mockResolvedValue(undefined as never);
+    hosthub.hold = null;
     expect((await GET_CRON(cronRequest())).status).toBe(200);
   });
 
@@ -88,10 +111,8 @@ describe("Hosthub sync lock", () => {
       INSERT INTO sync_lock (name, locked_until, holder)
       VALUES ('hosthub_reconcile', now() - interval '1 minute', 'crashed-holder')
     `;
-    const syncMod = await import("@stay-ops/sync");
-    vi.spyOn(syncMod, "runHosthubReconcile").mockResolvedValue(undefined as never);
-
     expect((await GET_CRON(cronRequest())).status).toBe(200);
+    expect(hosthub.calls).toBe(1);
   });
 
   it("a lock still held by a live sync blocks a new one", async () => {
@@ -99,11 +120,8 @@ describe("Hosthub sync lock", () => {
       INSERT INTO sync_lock (name, locked_until, holder)
       VALUES ('hosthub_reconcile', now() + interval '4 minutes', 'live-holder')
     `;
-    const syncMod = await import("@stay-ops/sync");
-    const spy = vi.spyOn(syncMod, "runHosthubReconcile").mockResolvedValue(undefined as never);
-
     expect((await GET_CRON(cronRequest())).status).toBe(409);
-    expect(spy).not.toHaveBeenCalled();
+    expect(hosthub.calls).toBe(0);
   });
 });
 
@@ -176,14 +194,11 @@ describe("Hosthub webhook without Redis", () => {
   });
 
   it("does not mark the event as seen when applying fails, so Hosthub retries", async () => {
-    const syncMod = await import("@stay-ops/sync");
-    const spy = vi.spyOn(syncMod, "applyHosthubReservation").mockRejectedValueOnce(new Error("db down"));
-
-    const failed = await post({ id: "evt-noredis-fail", reservation });
+    // Check-out on the check-in day cannot be stored, so applying it throws.
+    const failed = await post({ id: "evt-noredis-fail", reservation: { ...reservation, checkOut: reservation.checkIn } });
     expect(failed.status).toBe(500);
     expect(await prisma.webhookInboundEvent.count()).toBe(0);
 
-    spy.mockRestore();
     const retried = await post({ id: "evt-noredis-fail", reservation });
     expect(retried.status).toBe(200);
     expect(await prisma.booking.count({ where: { externalBookingId: "webhook-noredis-b1" } })).toBe(1);

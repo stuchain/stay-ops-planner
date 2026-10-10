@@ -50,7 +50,7 @@ from production baseline.
 - Deployment trigger: auto-deploy on push/merge to `main`
 - Production DB: single Neon Postgres target
 - Migration policy: run in deploy pipeline and block release on failure
-- Sync trigger model: on app open (debounced) + every 15 min while open + manual; no cron
+- Sync trigger model: on app open (skipped within 5 min of a good sync) + every 15 min while open + manual; no cron
 - Overlap policy: return `409` with `sync already running`
 - Ship gate approval: you + father
 
@@ -167,16 +167,18 @@ These require your accounts, secrets, and browser—there is nothing to “push�
    - `GET /api/health/live` -> `200`
    - `GET /api/health/ready` -> `200`
 6. Verify sync behavior:
-   - login-triggered sync is debounced
+   - an open-app sync right after a good one is skipped
    - manual trigger works for authorized role
    - overlap returns `409` + `sync already running`
 ## When Hosthub sync runs
 
 There is no scheduled sync. The app syncs while someone has it open:
 
-- **On open:** every page load starts a sync (`SyncHeartbeat` in the app shell), debounced per user.
+- **On open:** every page load starts a sync (`SyncHeartbeat` in the old shell, `useSyncWhileOpen` in the new one). It is skipped when the last good sync finished less than 5 minutes ago, and it does not fetch notes or GR taxes.
 - **While open:** it repeats every 15 minutes, and the calendar reloads when new data arrives.
-- **Manually:** admins can run a full sync from Settings.
+- **Manually:** admins can run a full sync from Settings. Manual and full syncs fetch notes and GR taxes for new and changed bookings.
+
+Each sync holds the `sync_lock` row, fetches events changed since `sync_state.cursor` (all events for a full sync), applies them 50 per transaction and writes one `sync_runs` row. A row that fails goes to `import_errors` and is fetched again next time. If Hosthub moves the dates of a booking that has an apartment, it stays there when the new dates still fit, and otherwise goes back to "Χρειάζονται διαμέρισμα". A new Hosthub rental creates an apartment that is switched off until it is set up.
 
 Bookings made in Hosthub while nobody has the app open appear on the next open, a few seconds after the page loads. `GET /api/cron/sync-hosthub` still exists (guarded by `CRON_SECRET`) if a schedule is ever wanted again; nothing calls it today.
 

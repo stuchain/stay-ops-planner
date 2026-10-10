@@ -1,19 +1,14 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { log, withRetry } from "@stay-ops/shared";
-import { isTransientSyncError, runHosthubReconcile } from "@stay-ops/sync";
+import { log } from "@stay-ops/shared";
 import { attachTraceToResponse, apiError } from "@/lib/apiError";
 import { verifyCronBearerToken } from "@/lib/cronBearerAuth";
 import { newTraceId, readTraceId } from "@/lib/traceId";
-import { prisma } from "@/lib/prisma";
 import { resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
 import { syncJsonError } from "@/modules/sync/errors";
 import { isWithinHosthubCronDaytimeWindow } from "@/modules/sync/cronDaytime";
-import {
-  findInFlightHosthubPoll,
-  releaseHosthubReconcileLock,
-  tryAcquireHosthubReconcileLock,
-} from "@/modules/sync/hosthubPollLock";
+import { hosthubSource } from "@/server/sync/hosthubSource";
+import { syncHosthub } from "@/server/useCases/syncHosthub";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -46,52 +41,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const running = await findInFlightHosthubPoll(prisma);
-  if (running) {
-    return attachTraceToResponse(
-      request,
-      apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409, {
-        runId: running.id,
-        startedAt: running.startedAt.toISOString(),
-      }),
-      traceId,
-    );
-  }
-
-  const lockHolder = await tryAcquireHosthubReconcileLock(prisma);
-  if (!lockHolder) {
-    return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409), traceId);
-  }
-
   try {
-    await withRetry(() => runHosthubReconcile(prisma, { apiToken: token, fullSync: false }), {
-      maxAttempts: 2,
-      timeoutBudgetMs: 60_000,
-      isTransient: isTransientSyncError,
-      traceId,
-      onRetry: ({ attempt, delayMs, err, traceId: tid }) => {
-        log("warn", "retry_attempt", {
-          route: "/api/cron/sync-hosthub",
-          attempt,
-          delayMs,
-          traceId: tid,
-          message: err instanceof Error ? err.message : String(err),
-        });
-      },
-      onExhausted: ({ attempts, elapsedMs, cause, traceId: tid }) => {
-        log("error", "retry_exhausted", {
-          route: "/api/cron/sync-hosthub",
-          attempts,
-          elapsedMs,
-          traceId: tid,
-          message: cause instanceof Error ? cause.message : String(cause),
-        });
-      },
-    });
+    const result = await syncHosthub({ source: hosthubSource(token), trigger: "scheduled" });
+    if (result.status === "skipped") {
+      return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409), traceId);
+    }
     log("info", "cron_hosthub_reconcile_completed", { traceId });
     return attachTraceToResponse(
       request,
-      NextResponse.json({ data: { status: "completed", fullSync: false } }, { status: 200 }),
+      NextResponse.json({ data: { status: "completed", fullSync: false, stats: result.stats } }, { status: 200 }),
       traceId,
     );
   } catch (err) {
@@ -108,7 +66,5 @@ export async function GET(request: NextRequest) {
       ),
       traceId,
     );
-  } finally {
-    await releaseHosthubReconcileLock(prisma, lockHolder);
   }
 }

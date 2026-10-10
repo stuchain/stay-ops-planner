@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { log, withRetry, type DryRunResult } from "@stay-ops/shared";
 import { attachTraceToResponse, apiError } from "@/lib/apiError";
-import { consumeHeartbeatReconcileDebounce, SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
+import { SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { newTraceId, readTraceId } from "@/lib/traceId";
 import { prisma } from "@/lib/prisma";
 import { isTransientSyncError, runHosthubReconcile } from "@stay-ops/sync";
@@ -10,23 +10,13 @@ import { AuthError } from "@/modules/auth/errors";
 import { requireAnyRole, requireSession } from "@/modules/auth/guard";
 import { resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
 import { syncJsonError } from "@/modules/sync/errors";
-import {
-  findInFlightHosthubPoll,
-  releaseHosthubReconcileLock,
-  tryAcquireHosthubReconcileLock,
-} from "@/modules/sync/hosthubPollLock";
+import { hosthubSource } from "@/server/sync/hosthubSource";
+import { releaseHosthubReconcileLock, tryAcquireHosthubReconcileLock } from "@/server/sync/lock";
+import { syncHosthub } from "@/server/useCases/syncHosthub";
 
 export const maxDuration = 300;
 
 const HEARTBEAT_TRIGGER = "heartbeat";
-
-function resolveHeartbeatDebounceWindowMs(): number {
-  const raw = process.env.SYNC_HEARTBEAT_DEBOUNCE_MS?.trim();
-  if (!raw) return 900_000;
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < 60_000 || n > 86_400_000) return 900_000;
-  return n;
-}
 
 function readSyncTrigger(request: NextRequest): string | null {
   const v = request.headers.get("x-stayops-sync-trigger")?.trim().toLowerCase();
@@ -104,78 +94,21 @@ async function postHosthubReconcile(request: NextRequest) {
     );
   }
 
-  const syncTrigger = readSyncTrigger(request);
-  if (syncTrigger === HEARTBEAT_TRIGGER && !dryRun) {
-    const debounceMs = resolveHeartbeatDebounceWindowMs();
-    const gate = await consumeHeartbeatReconcileDebounce(ctx.userId, debounceMs);
-    if (gate === "debounced") {
-      log("info", "hosthub_reconcile_heartbeat_debounced", {
-        route: "/api/sync/hosthub/reconcile",
-        userId: ctx.userId,
-        debounceMs,
-      });
-      return attachTraceToResponse(
-        request,
-        NextResponse.json({ data: { status: "skipped", reason: "debounced" } }, { status: 200 }),
-      );
-    }
-  }
-
-  const running = await findInFlightHosthubPoll(prisma);
-  if (running) {
-    return attachTraceToResponse(
-      request,
-      apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409, {
-        runId: running.id,
-        startedAt: running.startedAt.toISOString(),
-      }),
-    );
-  }
-
-  const lockHolder = await tryAcquireHosthubReconcileLock(prisma);
-  if (!lockHolder) {
-    return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409));
-  }
-
   const traceId = readTraceId(request) || undefined;
-  const reconcileTimeoutMs = fullSync ? 120_000 : 60_000;
 
-  try {
-    if (dryRun) {
+  if (dryRun) {
+    // The settings preview still uses the old reconcile in dry-run mode until that screen is retired.
+    const lockHolder = await tryAcquireHosthubReconcileLock(prisma);
+    if (!lockHolder) {
+      return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409));
+    }
+    try {
       const summary = (await withRetry(
         () => runHosthubReconcile(prisma, { apiToken: token, dryRun: true, fullSync }),
-        {
-          maxAttempts: 2,
-          timeoutBudgetMs: reconcileTimeoutMs,
-          isTransient: isTransientSyncError,
-          traceId,
-          onRetry: ({ attempt, delayMs, err, traceId: tid }) => {
-            log("warn", "retry_attempt", {
-              route: "/api/sync/hosthub/reconcile",
-              dryRun: true,
-              fullSync,
-              attempt,
-              delayMs,
-              traceId: tid,
-              message: err instanceof Error ? err.message : String(err),
-            });
-          },
-          onExhausted: ({ attempts, elapsedMs, cause, traceId: tid }) => {
-            log("error", "retry_exhausted", {
-              route: "/api/sync/hosthub/reconcile",
-              dryRun: true,
-              fullSync,
-              attempts,
-              elapsedMs,
-              traceId: tid,
-              message: cause instanceof Error ? cause.message : String(cause),
-            });
-          },
-        },
+        { maxAttempts: 2, timeoutBudgetMs: fullSync ? 120_000 : 60_000, isTransient: isTransientSyncError, traceId },
       )) as DryRunResult;
       log("info", "dry_run", {
         route: "/api/sync/hosthub/reconcile",
-        dryRun: true,
         fullSync,
         traceId,
         processed: summary.totals.processed,
@@ -186,46 +119,27 @@ async function postHosthubReconcile(request: NextRequest) {
         NextResponse.json({ data: { dryRun: true, fullSync, summary } }, { status: 200 }),
         traceId,
       );
+    } finally {
+      await releaseHosthubReconcileLock(prisma, lockHolder);
     }
+  }
 
-    // The background heartbeat skips the extra notes / GR-tax calls per booking to stay quick;
-    // the manual full sync and the scheduled sync keep them.
-    const fetchEventEnrichment = syncTrigger === HEARTBEAT_TRIGGER ? false : undefined;
-    await withRetry(() => runHosthubReconcile(prisma, { apiToken: token, fullSync, fetchEventEnrichment }), {
-      maxAttempts: 2,
-      timeoutBudgetMs: reconcileTimeoutMs,
-      isTransient: isTransientSyncError,
-      traceId,
-      onRetry: ({ attempt, delayMs, err, traceId: tid }) => {
-        log("warn", "retry_attempt", {
-          route: "/api/sync/hosthub/reconcile",
-          fullSync,
-          attempt,
-          delayMs,
-          traceId: tid,
-          message: err instanceof Error ? err.message : String(err),
-        });
-      },
-      onExhausted: ({ attempts, elapsedMs, cause, traceId: tid }) => {
-        log("error", "retry_exhausted", {
-          route: "/api/sync/hosthub/reconcile",
-          fullSync,
-          attempts,
-          elapsedMs,
-          traceId: tid,
-          message: cause instanceof Error ? cause.message : String(cause),
-        });
-      },
-    });
-    log("info", "hosthub_reconcile_completed", { route: "/api/sync/hosthub/reconcile", fullSync, traceId });
+  const trigger = readSyncTrigger(request) === HEARTBEAT_TRIGGER ? "open" : "manual";
+  const result = await syncHosthub({ source: hosthubSource(token), trigger, full: fullSync });
+  if (result.status === "skipped" && result.reason === "locked") {
+    return attachTraceToResponse(request, apiError(request, "SYNC_ALREADY_RUNNING", "sync already running", 409));
+  }
+  if (result.status === "skipped") {
     return attachTraceToResponse(
       request,
-      NextResponse.json({ data: { status: "completed", fullSync } }, { status: 200 }),
-      traceId,
+      NextResponse.json({ data: { status: "skipped", reason: result.reason } }, { status: 200 }),
     );
-  } finally {
-    await releaseHosthubReconcileLock(prisma, lockHolder);
   }
+  return attachTraceToResponse(
+    request,
+    NextResponse.json({ data: { status: "completed", fullSync, stats: result.stats } }, { status: 200 }),
+    traceId,
+  );
 }
 
 export async function POST(request: NextRequest) {

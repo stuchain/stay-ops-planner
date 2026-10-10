@@ -5,15 +5,14 @@ import { newTraceId, readTraceId } from "@/lib/traceId";
 import { prisma } from "@/lib/prisma";
 import { log } from "@stay-ops/shared";
 import {
-  applyHosthubReservation,
   computeWebhookDedupeKey,
-  enqueueHosthubInbound,
   extractHosthubReservationDto,
   HOSTHUB_WEBHOOK_SIGNATURE_HEADER,
   parseHosthubWebhookJson,
   sha256HexUtf8,
   verifyHosthubWebhookSignature,
 } from "@stay-ops/sync";
+import { applyHosthubBooking } from "@/server/sync/applyBooking";
 import { syncJsonError } from "./errors";
 
 function isDevelopmentRuntime(): boolean {
@@ -88,47 +87,13 @@ export async function handleHosthubWebhookPost(request: Request): Promise<Respon
   const dedupeKey = computeWebhookDedupeKey(parsedJson.value, rawBody);
   const payloadHash = sha256HexUtf8(rawBody);
 
-  const redisUrl = process.env.REDIS_URL?.trim();
-  if (!redisUrl) {
-    return applyWebhookInRequest(request, parsedJson.value, dedupeKey, payloadHash);
-  }
-
-  try {
-    await prisma.webhookInboundEvent.create({
-      data: {
-        provider: "hosthub",
-        dedupeKey,
-        payloadHash,
-      },
-    });
-  } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return attachTraceToResponse(request, NextResponse.json({ data: { accepted: true, dedupeKey } }, { status: 200 }));
-    }
-    throw e;
-  }
-
-  try {
-    await enqueueHosthubInbound(redisUrl, { dedupeKey, rawBody });
-  } catch {
-    await prisma.webhookInboundEvent.delete({ where: { dedupeKey } }).catch(() => undefined);
-    const tid = readTraceId(request) || newTraceId();
-    return attachTraceToResponse(
-      request,
-      NextResponse.json(
-        syncJsonError("SERVICE_UNAVAILABLE", "Failed to enqueue sync job; try again later", undefined, tid),
-        { status: 503 },
-      ),
-      tid,
-    );
-  }
-
-  return attachTraceToResponse(request, NextResponse.json({ data: { accepted: true, dedupeKey } }, { status: 200 }));
+  return applyWebhookInRequest(request, parsedJson.value, dedupeKey, payloadHash);
 }
 
 /**
- * No queue (production on Vercel): apply the reservation inside this request, and only then mark
- * the event as seen. If applying fails, answer 500 without marking it, so Hosthub sends it again.
+ * Apply the reservation inside this request, and only then mark the delivery as seen (keyed by a
+ * hash of the body, so a newer delivery for the same event is applied). If applying fails, answer
+ * 500 without marking it, so Hosthub sends it again.
  */
 async function applyWebhookInRequest(
   request: Request,
@@ -145,7 +110,7 @@ async function applyWebhookInRequest(
   const dto = extractHosthubReservationDto(payload);
   if (dto) {
     try {
-      await applyHosthubReservation(prisma, dto, payload as Prisma.InputJsonValue);
+      await prisma.$transaction((tx) => applyHosthubBooking(tx, { dto, raw: payload }));
     } catch (e) {
       const tid = readTraceId(request) || newTraceId();
       log("error", "hosthub_webhook_apply_failed", {

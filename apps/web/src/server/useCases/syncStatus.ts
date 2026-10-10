@@ -9,13 +9,12 @@ export type SyncStatus = {
 
 /** The Hosthub "last updated" line in the new shell. */
 export async function getSyncStatus(): Promise<SyncStatus> {
-  const [lastOk, running] = await Promise.all([
-    prisma.syncRun.findFirst({
-      where: { status: "completed", completedAt: { not: null } },
-      orderBy: { completedAt: "desc" },
-      select: { completedAt: true },
-    }),
-    prisma.syncRun.count({ where: { status: "running", startedAt: { gt: new Date(Date.now() - 10 * 60_000) } } }),
+  const [state, lock] = await Promise.all([
+    prisma.syncState.findUnique({ where: { id: 1 }, select: { lastSuccessAt: true } }),
+    prisma.syncLock.findUnique({ where: { name: "hosthub_reconcile" }, select: { lockedUntil: true } }),
   ]);
-  return { lastSuccessAt: lastOk?.completedAt?.toISOString() ?? null, running: running > 0 };
+  return {
+    lastSuccessAt: state?.lastSuccessAt?.toISOString() ?? null,
+    running: lock !== null && lock.lockedUntil.getTime() > Date.now(),
+  };
 }

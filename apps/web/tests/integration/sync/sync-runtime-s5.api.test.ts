@@ -3,7 +3,25 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { NextRequest as NextRequestCtor } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@stay-ops/db";
+import type { HosthubSource } from "@/server/sync/hosthubSource";
 import { CookieJar } from "../cookieJar";
+
+const hosthub = vi.hoisted(() => ({ calls: 0 }));
+
+vi.mock("@/server/sync/hosthubSource", () => ({
+  hosthubSource: (): HosthubSource => ({
+    listCalendarEventsPage: async () => {
+      hosthub.calls += 1;
+      return { ok: true, value: { data: [], rawData: [], nextPageUrl: null, skipped: 0 } };
+    },
+    listRentalCalendarEventsPage: async () => ({
+      ok: true,
+      value: { data: [], rawData: [], nextPageUrl: null, skipped: 0 },
+    }),
+    getCalendarEventNotes: async () => ({ ok: true, value: null }),
+    getCalendarEventGrTaxes: async () => ({ ok: true, value: null }),
+  }),
+}));
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
 
@@ -21,6 +39,8 @@ async function truncate(prisma: PrismaClient) {
       "webhook_inbound_events",
       "import_errors",
       "sync_runs",
+      "sync_state",
+      "sync_lock",
       "audit_events",
       "assignments",
       "cleaning_tasks",
@@ -32,7 +52,7 @@ async function truncate(prisma: PrismaClient) {
   `);
 }
 
-describe("S5 sync runtime (cron + heartbeat debounce)", () => {
+describe("S5 sync runtime (cron + open-app sync)", () => {
   const prisma = new PrismaClient();
   let GET_CRON: (request: NextRequest) => Promise<Response>;
   let POST_LOGIN: (request: Request) => Promise<Response>;
@@ -59,6 +79,7 @@ describe("S5 sync runtime (cron + heartbeat debounce)", () => {
 
   beforeEach(async () => {
     await truncate(prisma);
+    hosthub.calls = 0;
     await prisma.user.deleteMany({
       where: { email: { in: [adminEmail, operatorEmail] } },
     });
@@ -130,13 +151,10 @@ describe("S5 sync runtime (cron + heartbeat debounce)", () => {
     );
     expect(saveTokenRes.status).toBe(200);
 
-    const syncMod = await import("@stay-ops/sync");
-    const spy = vi.spyOn(syncMod, "runHosthubReconcile").mockResolvedValue(undefined as never);
-
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2024-06-15T12:00:00.000Z"));
 
-    try {
+    {
       const res = await GET_CRON(
         new NextRequestCtor("http://localhost/api/cron/sync-hosthub", {
           headers: { authorization: "Bearer 0123456789abcdef0123456789abcdef" },
@@ -145,14 +163,11 @@ describe("S5 sync runtime (cron + heartbeat debounce)", () => {
       expect(res.status).toBe(200);
       const json = (await res.json()) as { data: { status: string } };
       expect(json.data.status).toBe("completed");
-      expect(spy).toHaveBeenCalledTimes(1);
-    } finally {
-      spy.mockRestore();
+      expect(hosthub.calls).toBe(1);
     }
   });
 
-  it("debounces second heartbeat reconcile within the debounce window", async () => {
-    process.env.SYNC_HEARTBEAT_DEBOUNCE_MS = "60000";
+  it("skips an open-app sync right after a good one", async () => {
     const adminJar = await loginJar(adminEmail);
     const saveTokenRes = await PUT_HOSTHUB_TOKEN(
       new NextRequestCtor("http://localhost/api/admin/integrations/hosthub/token", {
@@ -166,10 +181,7 @@ describe("S5 sync runtime (cron + heartbeat debounce)", () => {
     );
     expect(saveTokenRes.status).toBe(200);
 
-    const syncMod = await import("@stay-ops/sync");
-    const spy = vi.spyOn(syncMod, "runHosthubReconcile").mockResolvedValue(undefined as never);
-
-    try {
+    {
       const operatorJar = await loginJar(operatorEmail);
       const headers = {
         cookie: operatorJar.getCookieHeader(),
@@ -187,10 +199,8 @@ describe("S5 sync runtime (cron + heartbeat debounce)", () => {
       expect(second.status).toBe(200);
       const body = (await second.json()) as { data: { status: string; reason: string } };
       expect(body.data.status).toBe("skipped");
-      expect(body.data.reason).toBe("debounced");
-      expect(spy).toHaveBeenCalledTimes(1);
-    } finally {
-      spy.mockRestore();
+      expect(body.data.reason).toBe("recent");
+      expect(hosthub.calls).toBe(1);
     }
   });
 });

@@ -1,27 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@stay-ops/db";
 
-const RUNNING_ROW_GRACE_MS = 2 * 60_000;
-
-export type InFlightHosthubPoll = { id: string; startedAt: Date };
-
-/**
- * Best-effort fast path: a hosthub_poll row still "running" with a recent startedAt
- * usually means reconcile is active (or crashed without completing — same conservative overlap).
- */
-export async function findInFlightHosthubPoll(prisma: PrismaClient): Promise<InFlightHosthubPoll | null> {
-  const running = await prisma.syncRun.findFirst({
-    where: {
-      source: "hosthub_poll",
-      completedAt: null,
-      startedAt: { gte: new Date(Date.now() - RUNNING_ROW_GRACE_MS) },
-    },
-    orderBy: { startedAt: "desc" },
-    select: { id: true, startedAt: true },
-  });
-  return running;
-}
-
 const HOSTHUB_SYNC_LOCK_NAME = "hosthub_reconcile";
 
 /**

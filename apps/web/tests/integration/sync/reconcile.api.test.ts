@@ -20,6 +20,8 @@ async function truncate(prisma: PrismaClient) {
       "integration_secrets",
       "webhook_inbound_events",
       "import_errors",
+      "sync_lock",
+      "sync_state",
       "sync_runs",
       "audit_events",
       "assignments",
@@ -231,7 +233,7 @@ describe("api /api/sync/hosthub/reconcile", () => {
     expect(json.data.summary.totals).toBeDefined();
   });
 
-  it("returns 409 when a hosthub poll run is already in progress", async () => {
+  it("returns 409 while another sync holds the lock", async () => {
     const adminJar = await loginJar(adminEmail);
     const saveTokenRes = await PUT_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
@@ -245,13 +247,10 @@ describe("api /api/sync/hosthub/reconcile", () => {
     );
     expect(saveTokenRes.status).toBe(200);
 
-    await prisma.syncRun.create({
-      data: {
-        source: "hosthub_poll",
-        status: "running",
-        startedAt: new Date(),
-      },
-    });
+    await prisma.$executeRaw`
+      INSERT INTO sync_lock (name, locked_until, holder)
+      VALUES ('hosthub_reconcile', now() + interval '4 minutes', 'live-holder')
+    `;
 
     const operatorJar = await loginJar(operatorEmail);
     const res = await POST_RECONCILE(
