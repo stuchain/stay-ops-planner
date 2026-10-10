@@ -467,9 +467,11 @@ function bookingMoneyFromModel(booking: BookingWithDetailRelations): BookingDeta
     pickNumber(raw, ["collected_by_channel", "collectedByChannel"]) ??
     pickNumber(taxesObj, ["collected_by_channel", "collectedByChannel"]);
 
+  // A total the user corrected in the app wins over the Hosthub payload.
+  const totalEdited = asObject(booking.localOverrides).totalAmountCents === true;
   return {
-    total: totalValue ?? totalLegacy,
-    totalValue: totalValue ?? null,
+    total: totalEdited ? totalLegacy : (totalValue ?? totalLegacy),
+    totalValue: totalEdited ? totalLegacy : (totalValue ?? null),
     currency,
     cleaningFee,
     taxes: taxesFromPayload ?? taxesLegacy,

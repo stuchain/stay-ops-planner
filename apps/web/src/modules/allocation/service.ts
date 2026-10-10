@@ -232,6 +232,14 @@ export async function assignBookingToRoomTx(
     },
   });
 
+  // The booking has an apartment again, so the "needs a new apartment" flag is done.
+  if (booking.status === BookingStatus.needs_reassignment) {
+    await tx.booking.update({
+      where: { id: input.bookingId },
+      data: { status: BookingStatus.confirmed, version: { increment: 1 } },
+    });
+  }
+
   opts?.recorder?.push({
     entityType: "assignment",
     entityId: created.id,

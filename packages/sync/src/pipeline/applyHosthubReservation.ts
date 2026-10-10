@@ -72,6 +72,64 @@ function bookingAuditShape(b: {
   };
 }
 
+/** Booking columns sync writes from Hosthub, unless the user edited them in the app. */
+type SyncedBookingFields = {
+  sourceListingId: string;
+  status: BookingStatus;
+  checkinDate: Date;
+  checkoutDate: Date;
+  nights: number;
+  guestName: string | null;
+  guestEmail: string | null;
+  guestPhone: string | null;
+  guestAdults: number | null;
+  guestChildren: number | null;
+  guestInfants: number | null;
+  guestTotal: number | null;
+  totalAmountCents: number | null;
+  currency: string | null;
+  cleaningFeeCents: number | null;
+  taxCents: number | null;
+  payoutAmountCents: number | null;
+  guestPaidCents: number | null;
+  action: string | null;
+  notes: string | null;
+};
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  return a === b;
+}
+
+/**
+ * Update data for an existing booking: skips fields the user overrode in the app, keeps the
+ * "needs a new apartment" flag until the booking is reassigned, and bumps `version` only when
+ * a column actually changes.
+ */
+export function buildSyncBookingUpdate(
+  existing: { status: BookingStatus; localOverrides: unknown } & Record<string, unknown>,
+  incoming: SyncedBookingFields,
+): Prisma.BookingUncheckedUpdateInput {
+  const overrides = asObject(existing.localOverrides) ?? {};
+  const data: Record<string, unknown> = {};
+  let changed = false;
+  for (const [key, value] of Object.entries(incoming) as Array<[keyof SyncedBookingFields, unknown]>) {
+    if (overrides[key] === true) continue;
+    let next = value;
+    if (
+      key === "status" &&
+      existing.status === BookingStatus.needs_reassignment &&
+      value === BookingStatus.confirmed
+    ) {
+      next = BookingStatus.needs_reassignment;
+    }
+    data[key] = next;
+    if (!sameValue(existing[key], next)) changed = true;
+  }
+  if (changed) data.version = { increment: 1 };
+  return data as Prisma.BookingUncheckedUpdateInput;
+}
+
 export type ApplyHosthubReservationRunOptions = {
   dryRun?: boolean;
   recorder?: PlanRecorder;
@@ -173,10 +231,8 @@ async function upsertListingAndBooking(
       displayName: listing.title ?? listing.externalListingId,
       isActive: true,
     },
-    update: {
-      displayName: listing.title ?? listing.externalListingId,
-      isActive: true,
-    },
+    // Apartments belong to the app: sync only links them, so a rename or switch-off stays.
+    update: {},
   });
 
   recorder?.push({
@@ -197,6 +253,41 @@ async function upsertListingAndBooking(
       displayName: roomRow.displayName,
       isActive: roomRow.isActive,
     },
+  });
+
+  const bookingUpdate = existingBooking
+    ? buildSyncBookingUpdate(existingBooking, {
+        sourceListingId: listing.id,
+        status,
+        checkinDate,
+        checkoutDate,
+        nights,
+        guestName: dto.guestName ?? null,
+        guestEmail: dto.guestEmail ?? null,
+        guestPhone: dto.guestPhone ?? null,
+        guestAdults: dto.guestAdults ?? null,
+        guestChildren: dto.guestChildren ?? null,
+        guestInfants: dto.guestInfants ?? null,
+        guestTotal: dto.guestTotal ?? null,
+        totalAmountCents: dto.totalAmountCents ?? null,
+        currency: dto.currency ?? null,
+        cleaningFeeCents: dto.cleaningFeeCents ?? null,
+        taxCents: dto.taxCents ?? null,
+        payoutAmountCents: dto.payoutAmountCents ?? null,
+        guestPaidCents: dto.guestPaidCents ?? null,
+        action: dto.action ?? null,
+        notes: dto.notes ?? null,
+      })
+    : {};
+  Object.assign(bookingUpdate, {
+    ...(calendarEventRaw !== null ? { hosthubCalendarEventRaw: calendarEventRaw } : {}),
+    ...(extra?.hosthubNotesRaw !== undefined && extra.hosthubNotesRaw !== null
+      ? { hosthubNotesRaw: extra.hosthubNotesRaw }
+      : {}),
+    ...(extra?.hosthubGrTaxesRaw !== undefined && extra.hosthubGrTaxesRaw !== null
+      ? { hosthubGrTaxesRaw: extra.hosthubGrTaxesRaw }
+      : {}),
+    rawPayload,
   });
 
   const booking = await tx.booking.upsert({
@@ -238,36 +329,7 @@ async function upsertListingAndBooking(
         : {}),
       rawPayload,
     },
-    update: {
-      sourceListingId: listing.id,
-      status,
-      checkinDate,
-      checkoutDate,
-      nights,
-      guestName: dto.guestName ?? null,
-      guestEmail: dto.guestEmail ?? null,
-      guestPhone: dto.guestPhone ?? null,
-      guestAdults: dto.guestAdults ?? null,
-      guestChildren: dto.guestChildren ?? null,
-      guestInfants: dto.guestInfants ?? null,
-      guestTotal: dto.guestTotal ?? null,
-      totalAmountCents: dto.totalAmountCents ?? null,
-      currency: dto.currency ?? null,
-      cleaningFeeCents: dto.cleaningFeeCents ?? null,
-      taxCents: dto.taxCents ?? null,
-      payoutAmountCents: dto.payoutAmountCents ?? null,
-      guestPaidCents: dto.guestPaidCents ?? null,
-      action: dto.action ?? null,
-      notes: dto.notes ?? null,
-      ...(calendarEventRaw !== null ? { hosthubCalendarEventRaw: calendarEventRaw } : {}),
-      ...(extra?.hosthubNotesRaw !== undefined && extra.hosthubNotesRaw !== null
-        ? { hosthubNotesRaw: extra.hosthubNotesRaw }
-        : {}),
-      ...(extra?.hosthubGrTaxesRaw !== undefined && extra.hosthubGrTaxesRaw !== null
-        ? { hosthubGrTaxesRaw: extra.hosthubGrTaxesRaw }
-        : {}),
-      rawPayload,
-    },
+    update: bookingUpdate,
   });
 
   recorder?.push({

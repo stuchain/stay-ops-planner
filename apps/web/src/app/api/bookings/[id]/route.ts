@@ -12,7 +12,7 @@ import { AuthError } from "@/modules/auth/errors";
 import { requireOperatorOrAdmin } from "@/modules/auth/guard";
 import { InvalidBookingStatusTransitionError, assertBookingStatusTransition } from "@/modules/booking/statusTransition";
 import { bookingToAuditSnapshot } from "@/modules/bookings/bookingAuditSnapshot";
-import { bookingDetailFromModel, mergeEditablePayload } from "@/modules/bookings/details";
+import { bookingDetailFromModel } from "@/modules/bookings/details";
 
 const PatchBodySchema = z
   .object({
@@ -80,7 +80,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const { id } = await ctx.params;
     const existing = await prisma.booking.findUnique({
       where: { id },
-      select: { id: true, rawPayload: true, status: true, version: true },
+      select: { id: true, status: true, version: true, localOverrides: true },
     });
     if (!existing) {
       return apiError(request, "NOT_FOUND", "Booking not found", 404);
@@ -110,20 +110,31 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
     if (parsed.data.editable !== undefined) {
       const e = parsed.data.editable;
-      if (e.guestName !== undefined) updateData.guestName = e.guestName;
-      if (e.email !== undefined) updateData.guestEmail = e.email;
-      if (e.phone !== undefined) updateData.guestPhone = e.phone;
-      if (e.adults !== undefined) updateData.guestAdults = e.adults;
-      if (e.children !== undefined) updateData.guestChildren = e.children;
-      if (e.infants !== undefined) updateData.guestInfants = e.infants;
-      if (e.totalGuests !== undefined) updateData.guestTotal = e.totalGuests;
-      if (e.totalValue !== undefined) updateData.totalAmountCents = Math.round(e.totalValue * 100);
-      if (e.currency !== undefined) updateData.currency = e.currency;
-      if (e.notes !== undefined) updateData.notes = e.notes;
-      if (e.action !== undefined) updateData.action = e.action;
-      updateData.rawPayload = JSON.parse(
-        JSON.stringify(mergeEditablePayload(existing.rawPayload, e as Record<string, unknown>)),
-      ) as Prisma.InputJsonValue;
+      const edited: Partial<Record<keyof Prisma.BookingUncheckedUpdateInput, unknown>> = {
+        guestName: e.guestName,
+        guestEmail: e.email,
+        guestPhone: e.phone,
+        guestAdults: e.adults,
+        guestChildren: e.children,
+        guestInfants: e.infants,
+        guestTotal: e.totalGuests,
+        totalAmountCents: e.totalValue === undefined ? undefined : Math.round(e.totalValue * 100),
+        currency: e.currency,
+        notes: e.notes,
+        action: e.action,
+      };
+      // Remember which columns the user changed, so the next Hosthub sync leaves them alone.
+      const overrides: Record<string, boolean> = {
+        ...(existing.localOverrides && typeof existing.localOverrides === "object" && !Array.isArray(existing.localOverrides)
+          ? (existing.localOverrides as Record<string, boolean>)
+          : {}),
+      };
+      for (const [column, value] of Object.entries(edited)) {
+        if (value === undefined) continue;
+        (updateData as Record<string, unknown>)[column] = value;
+        overrides[column] = true;
+      }
+      if (Object.keys(overrides).length > 0) updateData.localOverrides = overrides;
     }
     if (Object.keys(updateData).length === 0) {
       return apiError(request, "VALIDATION_ERROR", "No changes provided", 400);

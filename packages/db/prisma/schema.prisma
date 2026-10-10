@@ -150,6 +150,8 @@ model Booking {
   hosthubNotesRaw   Json?    @map("hosthub_notes_raw")
   hosthubGrTaxesRaw Json?    @map("hosthub_gr_taxes_raw")
   rawPayload        Json?    @map("raw_payload")
+  /// Columns the user edited in the app (`{"guestName": true}`); sync never overwrites them.
+  localOverrides    Json?    @map("local_overrides")
   /// Optimistic concurrency for API PATCH / assignment flows that pass `expectedVersion`.
   version           Int      @default(0)
   createdAt         DateTime @default(now()) @map("created_at")
