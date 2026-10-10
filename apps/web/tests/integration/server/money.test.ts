@@ -3,7 +3,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
-import { DomainError } from "@stay-ops/domain";
+import { cents, DomainError } from "@stay-ops/domain";
 
 const prisma = new PrismaClient();
 const NOW = new Date("2030-06-10T09:00:00Z");
@@ -226,6 +226,64 @@ describe("money ledger", () => {
     expect(
       await errorCode(updateLedgerRow({ target: { entryId: "nope" }, expectedVersion: 0, patch: {}, actorUserId })),
     ).toBe("NOT_FOUND");
+  });
+
+  it("treats a save sent again after a lost answer as done", async () => {
+    const { addManualLedgerRow, editManualLedgerRow, deleteManualLedgerRow, updateLedgerRow } = await edits();
+    const add = {
+      year: YEAR,
+      month: 5,
+      label: "Cash",
+      patch: { soloCents: cents(10_000) },
+      requestId: "req-12345678",
+      actorUserId,
+    };
+    const first = await addManualLedgerRow(add);
+    expect(await addManualLedgerRow(add)).toEqual(first);
+    const [a, b] = await Promise.all([
+      addManualLedgerRow({ ...add, requestId: "req-race-0001" }),
+      addManualLedgerRow({ ...add, requestId: "req-race-0001" }),
+    ]);
+    expect(a).toEqual(b);
+    expect((await ledger()).rows).toHaveLength(2);
+
+    const patch = { soloCents: cents(12_000) };
+    const corrected = await updateLedgerRow({
+      target: { entryId: first.entryId },
+      expectedVersion: 1,
+      patch,
+      actorUserId,
+    });
+    expect(
+      await updateLedgerRow({ target: { entryId: first.entryId }, expectedVersion: 1, patch, actorUserId }),
+    ).toEqual(corrected);
+    expect(
+      await errorCode(
+        updateLedgerRow({
+          target: { entryId: first.entryId },
+          expectedVersion: 1,
+          patch: { soloCents: cents(1) },
+          actorUserId,
+        }),
+      ),
+    ).toBe("BOOKING_CHANGED");
+
+    const renamed = await editManualLedgerRow({
+      entryId: first.entryId,
+      expectedVersion: 2,
+      label: "Cash box",
+      actorUserId,
+    });
+    expect(
+      await editManualLedgerRow({ entryId: first.entryId, expectedVersion: 2, label: "Cash box", actorUserId }),
+    ).toEqual(renamed);
+    expect(
+      await errorCode(editManualLedgerRow({ entryId: first.entryId, expectedVersion: 2, month: 6, actorUserId })),
+    ).toBe("BOOKING_CHANGED");
+
+    await deleteManualLedgerRow({ entryId: first.entryId, expectedVersion: renamed.version, actorUserId });
+    await deleteManualLedgerRow({ entryId: first.entryId, expectedVersion: renamed.version, actorUserId });
+    expect((await ledger()).rows).toHaveLength(1);
   });
 
   it("reads tax rules from settings", async () => {

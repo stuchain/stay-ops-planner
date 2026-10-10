@@ -225,6 +225,8 @@ model LedgerEntry {
   hosthubSnapshot Json?    @map("hosthub_snapshot")
   /// The old `excel_ledger_entries` row this came from (one-off migration).
   legacyEntryId   String?  @unique @map("legacy_entry_id")
+  /// Manual rows only: the id of the save that added the row, so a repeated save finds it.
+  requestId       String?  @unique @map("request_id")
   version         Int      @default(0)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

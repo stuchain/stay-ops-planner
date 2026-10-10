@@ -47,6 +47,11 @@ function isUniqueViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 }
 
+function sameOverrides(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((k) => k in b && a[k] === b[k]);
+}
+
 async function actorId(tx: Prisma.TransactionClient, userId: string): Promise<string | null> {
   return (await tx.user.findUnique({ where: { id: userId }, select: { id: true } }))?.id ?? null;
 }
@@ -67,10 +72,14 @@ async function updateInTransaction(
       ? await tx.ledgerEntry.findUnique({ where: { id: target.entryId } })
       : await tx.ledgerEntry.findUnique({ where: { bookingId: target.bookingId } });
   if ("entryId" in target && !entry) throw new DomainError("NOT_FOUND");
-  if ((entry?.version ?? 0) !== input.expectedVersion) throw new DomainError("BOOKING_CHANGED");
 
   const before = readLedgerOverrides(entry?.overrides);
   const after = mergeLedgerPatch(before, input.patch);
+  if ((entry?.version ?? 0) !== input.expectedVersion) {
+    // A save that went through but whose answer was lost, sent again: the row already reads as asked.
+    if (entry && sameOverrides(before, after)) return { entryId: entry.id, version: entry.version };
+    throw new DomainError("BOOKING_CHANGED");
+  }
 
   // Remember Hosthub's amounts when an amount is corrected, to flag a later change there (E3-6).
   let hosthubSnapshot: Prisma.InputJsonValue | undefined;
@@ -129,11 +138,34 @@ export type AddManualRowInput = {
   month: number;
   label: string;
   patch?: LedgerPatch | undefined;
+  /** Made by the page for each save; the same save sent again returns the row it already added. */
+  requestId?: string | undefined;
   actorUserId: string;
 };
 
+async function rowForRequest(requestId: string | undefined): Promise<UpdateLedgerRowResult | null> {
+  if (requestId === undefined) return null;
+  const row = await prisma.ledgerEntry.findUnique({ where: { requestId }, select: { id: true, version: true } });
+  return row ? { entryId: row.id, version: row.version } : null;
+}
+
 /** A row with no booking behind it (a phone booking paid in cash, an adjustment). */
 export async function addManualLedgerRow(input: AddManualRowInput): Promise<UpdateLedgerRowResult> {
+  const existing = await rowForRequest(input.requestId);
+  if (existing) return existing;
+  try {
+    return await addManualInTransaction(input);
+  } catch (err) {
+    // Both copies of the save arrived together: the other one added the row.
+    if (isUniqueViolation(err)) {
+      const raced = await rowForRequest(input.requestId);
+      if (raced) return raced;
+    }
+    throw err;
+  }
+}
+
+function addManualInTransaction(input: AddManualRowInput): Promise<UpdateLedgerRowResult> {
   return prisma.$transaction(async (tx) => {
     const overrides = mergeLedgerPatch({}, input.patch ?? {});
     const created = await tx.ledgerEntry.create({
@@ -142,6 +174,7 @@ export async function addManualLedgerRow(input: AddManualRowInput): Promise<Upda
         month: input.month,
         label: input.label.trim(),
         overrides: overrides as Prisma.InputJsonValue,
+        requestId: input.requestId ?? null,
         version: 1,
       },
     });
@@ -165,18 +198,27 @@ export type EditManualRowInput = {
   actorUserId: string;
 };
 
+/** Locks a manual row. `stale` means it changed since the person opened it; the caller decides what that means. */
 async function lockedManual(tx: Prisma.TransactionClient, entryId: string, expectedVersion: number) {
   await tx.$executeRaw`SELECT id FROM ledger_entries WHERE id = ${entryId} FOR UPDATE`;
   const entry = await tx.ledgerEntry.findUnique({ where: { id: entryId } });
-  if (!entry || entry.bookingId !== null) throw new DomainError("NOT_FOUND");
-  if (entry.version !== expectedVersion) throw new DomainError("BOOKING_CHANGED");
-  return entry;
+  if (!entry || entry.bookingId !== null) return null;
+  return { entry, stale: entry.version !== expectedVersion };
 }
 
 /** Renames a manual row or moves it to another month (E3-10). */
 export async function editManualLedgerRow(input: EditManualRowInput): Promise<UpdateLedgerRowResult> {
   return prisma.$transaction(async (tx) => {
-    const entry = await lockedManual(tx, input.entryId, input.expectedVersion);
+    const locked = await lockedManual(tx, input.entryId, input.expectedVersion);
+    if (!locked) throw new DomainError("NOT_FOUND");
+    const { entry, stale } = locked;
+    if (stale) {
+      const label = input.label?.trim();
+      const done =
+        (label === undefined || label === entry.label) && (input.month === undefined || input.month === entry.month);
+      if (done) return { entryId: entry.id, version: entry.version };
+      throw new DomainError("BOOKING_CHANGED");
+    }
     const saved = await tx.ledgerEntry.update({
       where: { id: entry.id },
       data: {
@@ -203,7 +245,11 @@ export async function deleteManualLedgerRow(input: {
   actorUserId: string;
 }): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    const entry = await lockedManual(tx, input.entryId, input.expectedVersion);
+    const locked = await lockedManual(tx, input.entryId, input.expectedVersion);
+    // Already gone: a delete sent again after its answer was lost.
+    if (!locked) return;
+    const { entry, stale } = locked;
+    if (stale) throw new DomainError("BOOKING_CHANGED");
     await tx.ledgerEntry.delete({ where: { id: entry.id } });
     await writeAuditSnapshot(tx, {
       actorUserId: await actorId(tx, input.actorUserId),

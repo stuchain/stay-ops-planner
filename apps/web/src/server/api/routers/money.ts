@@ -32,7 +32,15 @@ export const moneyRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => updateLedgerRow({ ...input, actorUserId: ctx.user.userId })),
 
   addManualRow: operatorProcedure
-    .input(z.object({ year, month, label, patch: LedgerPatchSchema.optional() }))
+    .input(
+      z.object({
+        year,
+        month,
+        label,
+        patch: LedgerPatchSchema.optional(),
+        requestId: z.string().min(8).max(64).optional(),
+      }),
+    )
     .mutation(({ ctx, input }) => addManualLedgerRow({ ...input, actorUserId: ctx.user.userId })),
 
   editManualRow: operatorProcedure

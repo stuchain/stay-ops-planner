@@ -252,6 +252,12 @@ function Field({
   );
 }
 
+function newRequestId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 function ManualRowPanel({
   open,
   onOpenChange,
@@ -390,6 +396,8 @@ export function LedgerTable({ ledger }: { ledger: LedgerYearData }) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // One id per save: pressing save again with the same row (its answer lost) reuses it, so no second row appears.
+  const lastAdd = useRef<{ key: string; requestId: string } | null>(null);
   const apartmentLabel = (index: number | null) => ledger.apartments.find((a) => a.index === index)?.label ?? "";
 
   const display = (kind: CellKind, value: CellValue): string => {
@@ -592,21 +600,29 @@ export function LedgerTable({ ledger }: { ledger: LedgerYearData }) {
         onOpenChange={setAdding}
         ledger={ledger}
         saving={mutations.add.isPending}
-        onAdd={(input) =>
+        onAdd={(input) => {
+          const row = {
+            year: ledger.year,
+            month: input.month,
+            label: input.label,
+            patch: {
+              soloCents: input.amount,
+              payoutCents: input.payout ?? input.amount,
+              ...(input.rentalIndex !== null ? { rentalIndex: input.rentalIndex } : {}),
+            },
+          };
+          const key = JSON.stringify(row);
+          if (lastAdd.current?.key !== key) lastAdd.current = { key, requestId: newRequestId() };
           mutations.add.mutate(
+            { ...row, requestId: lastAdd.current.requestId },
             {
-              year: ledger.year,
-              month: input.month,
-              label: input.label,
-              patch: {
-                soloCents: input.amount,
-                payoutCents: input.payout ?? input.amount,
-                ...(input.rentalIndex !== null ? { rentalIndex: input.rentalIndex } : {}),
+              onSuccess: () => {
+                lastAdd.current = null;
+                setAdding(false);
               },
             },
-            { onSuccess: () => setAdding(false) },
-          )
-        }
+          );
+        }}
       />
     </Card>
   );
