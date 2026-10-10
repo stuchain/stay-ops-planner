@@ -113,7 +113,9 @@ describe("calendar range and move command", () => {
     expect(moved.booking.assignment?.roomId).toBe(cosmos.id);
     const out = await move({ bookingId: b.id, roomId: null, expectedVersion: moved.booking.version });
     expect(out.booking.assignment).toBeNull();
-    expect(await prisma.cleaningTask.count({ where: { bookingId: b.id, taskType: TURNOVER_TASK_TYPE } })).toBe(0);
+    // The open cleaning is cancelled, not left to be done in an apartment nobody is in (E4-4).
+    const tasks = await prisma.cleaningTask.findMany({ where: { bookingId: b.id, taskType: TURNOVER_TASK_TYPE } });
+    expect(tasks.map((t) => t.status)).toEqual(["cancelled"]);
   });
 
   it("names the guest when the room is taken, and reports closed or inactive rooms", async () => {

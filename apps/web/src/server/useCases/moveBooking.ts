@@ -1,5 +1,11 @@
 import { writeAuditSnapshot } from "@stay-ops/audit";
-import { BookingStatus, ensureTurnoverCleaningTask, findStayConflict, Prisma, TURNOVER_TASK_TYPE } from "@stay-ops/db";
+import {
+  BookingStatus,
+  cancelOpenTurnoverTasks,
+  ensureTurnoverCleaningTask,
+  findStayConflict,
+  Prisma,
+} from "@stay-ops/db";
 import { DomainError, partySize, type IsoDate } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
 import { dbDateToIso, todayIso } from "@/server/time";
@@ -73,7 +79,8 @@ async function moveInTransaction(
 
   if (input.roomId === null) {
     // Take it out of its apartment; it goes back to "needs an apartment".
-    await tx.cleaningTask.deleteMany({ where: { bookingId: booking.id, taskType: TURNOVER_TASK_TYPE } });
+    // A finished cleaning stays; only the open ones are cancelled (E4-4).
+    await cancelOpenTurnoverTasks(tx, booking.id);
     await tx.assignment.delete({ where: { id: current!.id } });
   } else {
     const room = await tx.room.findUnique({

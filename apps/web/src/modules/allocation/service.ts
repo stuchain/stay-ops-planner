@@ -1,6 +1,7 @@
 import {
   BookingStatus,
   Channel,
+  cancelOpenTurnoverTasks,
   ensureTurnoverCleaningTask,
   findStayConflict,
   Prisma,
@@ -530,9 +531,8 @@ export async function unassignBooking(input: UnassignInput): Promise<{ auditRef:
         });
       }
 
-      await tx.cleaningTask.deleteMany({
-        where: { bookingId: existing.bookingId, taskType: TURNOVER_TASK_TYPE },
-      });
+      // Finished cleanings stay; only the open ones are cancelled (E4-4).
+      await cancelOpenTurnoverTasks(tx, existing.bookingId);
 
       await tx.assignment.delete({ where: { id: input.assignmentId } });
 
