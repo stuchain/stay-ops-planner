@@ -51,6 +51,14 @@ const toast = (page: Page, text: string) => page.locator("[data-sonner-toast]").
 const moveButton = (page: Page, roomName: string) =>
   panel(page).getByRole("button", { name: new RegExp(`^Μετακίνηση στο ${roomName}\\.`) });
 
+/** Clicks a bar until the panel is open: a click that lands before React has hydrated does nothing. */
+async function openPanel(page: Page, target: Locator): Promise<void> {
+  await expect(async () => {
+    await target.click();
+    await expect(panel(page)).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+}
+
 async function expectInRoom(page: Page, roomName: string, guest: string): Promise<void> {
   await expect(bar(room(page, roomName), guest)).toBeVisible();
   await expect(bar(tray(page), guest)).toHaveCount(0);
@@ -98,7 +106,7 @@ async function drag(page: Page, source: Locator, row: Locator): Promise<void> {
 
 for (const viewport of VIEWPORTS) {
   test.describe(`new calendar journeys ${viewport.width}x${viewport.height} @calendar`, () => {
-    test.use({ viewport, locale: "el-GR", reducedMotion: "reduce" });
+    test.use({ viewport, locale: "el-GR", contextOptions: { reducedMotion: "reduce" } });
 
     let data: CalendarFixtures;
 
@@ -116,7 +124,7 @@ for (const viewport of VIEWPORTS) {
 
     test("places a tray booking with the panel buttons", async ({ page }) => {
       await expect(tray(page).getByRole("heading", { name: /Χρειάζονται διαμέρισμα/ })).toContainText("3");
-      await bar(tray(page), GUEST.trayClick).click();
+      await openPanel(page, bar(tray(page), GUEST.trayClick));
 
       await expect(panel(page)).toBeVisible();
       await expect(panel(page).getByRole("heading", { name: GUEST.trayClick })).toBeVisible();
@@ -157,7 +165,7 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByText(new RegExp(`${monthName} ${first.getUTCFullYear()}`)).first()).toBeVisible();
       await expectInRoom(page, ROOM.gamma, GUEST.boundary);
 
-      await bar(room(page, ROOM.gamma), GUEST.boundary).click();
+      await openPanel(page, bar(room(page, ROOM.gamma), GUEST.boundary));
       await expect(panel(page).getByRole("heading", { name: GUEST.boundary })).toBeVisible();
       await expect(moveButton(page, ROOM.gamma)).toBeDisabled();
       await moveButton(page, ROOM.alpha).click();
@@ -171,7 +179,7 @@ for (const viewport of VIEWPORTS) {
       await expectInRoom(page, ROOM.alpha, GUEST.boundary);
 
       // Undo in a fresh move, so the toast belongs to this page load.
-      await bar(room(page, ROOM.alpha), GUEST.boundary).click();
+      await openPanel(page, bar(room(page, ROOM.alpha), GUEST.boundary));
       await moveButton(page, ROOM.beta).click();
       const movedAgain = toast(page, `Μετακινήθηκε στο ${ROOM.beta}`);
       await expect(movedAgain).toBeVisible();
@@ -187,7 +195,7 @@ for (const viewport of VIEWPORTS) {
     });
 
     test("undo puts the first move back where it was", async ({ page }) => {
-      await bar(room(page, ROOM.gamma), GUEST.boundary).click();
+      await openPanel(page, bar(room(page, ROOM.gamma), GUEST.boundary));
       await moveButton(page, ROOM.alpha).click();
       const moved = toast(page, `Μετακινήθηκε στο ${ROOM.alpha}`);
       await expect(moved).toBeVisible();
@@ -202,7 +210,7 @@ for (const viewport of VIEWPORTS) {
     });
 
     test("shows who is in a busy apartment and does not move a booking there", async ({ page }) => {
-      await bar(room(page, ROOM.beta), GUEST.moverInBeta).click();
+      await openPanel(page, bar(room(page, ROOM.beta), GUEST.moverInBeta));
       await expect(panel(page)).toBeVisible();
 
       const busy = moveButton(page, ROOM.alpha);
@@ -226,7 +234,7 @@ for (const viewport of VIEWPORTS) {
     });
 
     test("tells the person in Greek when the server says the apartment is taken", async ({ page }) => {
-      await bar(room(page, ROOM.beta), GUEST.moverInBeta).click();
+      await openPanel(page, bar(room(page, ROOM.beta), GUEST.moverInBeta));
       const toGamma = moveButton(page, ROOM.gamma);
       await expect(toGamma).toBeEnabled();
 
@@ -243,7 +251,7 @@ for (const viewport of VIEWPORTS) {
     });
 
     test("does not place a pending booking", async ({ page }) => {
-      await bar(tray(page), GUEST.pending).click();
+      await openPanel(page, bar(tray(page), GUEST.pending));
 
       await expect(panel(page).getByRole("heading", { name: GUEST.pending })).toBeVisible();
       await expect(
@@ -264,7 +272,7 @@ for (const viewport of VIEWPORTS) {
 
     test("keeps every change after a reload", async ({ page }) => {
       // Click flow.
-      await bar(tray(page), GUEST.trayClick).click();
+      await openPanel(page, bar(tray(page), GUEST.trayClick));
       await moveButton(page, ROOM.alpha).click();
       await expect(toast(page, `Μετακινήθηκε στο ${ROOM.alpha}`)).toBeVisible();
       await page.keyboard.press("Escape");
@@ -276,7 +284,7 @@ for (const viewport of VIEWPORTS) {
 
       // Month boundary move.
       await scrollToBar(page, GUEST.boundary);
-      await bar(room(page, ROOM.gamma), GUEST.boundary).click();
+      await openPanel(page, bar(room(page, ROOM.gamma), GUEST.boundary));
       await moveButton(page, ROOM.beta).click();
       await expect(toast(page, `Μετακινήθηκε στο ${ROOM.beta}`).first()).toBeVisible();
       await expectInRoom(page, ROOM.beta, GUEST.boundary);
@@ -284,7 +292,7 @@ for (const viewport of VIEWPORTS) {
       // Take one back out to the tray (back to today, where the first booking is drawn).
       await page.getByRole("button", { name: "Σήμερα" }).click();
       await expect(bar(room(page, ROOM.alpha), GUEST.trayClick)).toBeVisible();
-      await bar(room(page, ROOM.alpha), GUEST.trayClick).click();
+      await openPanel(page, bar(room(page, ROOM.alpha), GUEST.trayClick));
       await panel(page).getByRole("button", { name: "Βγάλε την από το διαμέρισμα" }).click();
       await expectInTray(page, GUEST.trayClick);
 
@@ -307,7 +315,7 @@ for (const viewport of VIEWPORTS) {
       await expect(bar(room(page, ROOM.alpha), GUEST.placedInAlpha)).toBeVisible();
       expect(serious(await scan()), "calendar").toEqual([]);
 
-      await bar(room(page, ROOM.beta), GUEST.moverInBeta).click();
+      await openPanel(page, bar(room(page, ROOM.beta), GUEST.moverInBeta));
       await expect(moveButton(page, ROOM.gamma)).toBeEnabled();
       expect(serious(await scan()), "calendar with the booking panel open").toEqual([]);
     });
