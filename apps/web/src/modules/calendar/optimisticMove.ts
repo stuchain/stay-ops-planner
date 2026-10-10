@@ -160,9 +160,4 @@ export function parseLaneDropTarget(overId: string): "unassigned" | string | nul
   return null;
 }
 
-export function formatAllocationError(code: string | undefined, message: string): string {
-  if (code === "CONFLICT_ASSIGNMENT") return "That room is already booked for those nights.";
-  if (code === "CONFLICT_BLOCK") return "That room is blocked for maintenance.";
-  if (code === "ROOM_INACTIVE") return "That room is not active.";
-  return message;
-}
+export { formatAllocationError } from "./allocationErrors";

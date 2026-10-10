@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         actorUserId: session.userId,
         auditMeta: auditMetaFromRequest(request),
       });
-      return NextResponse.json({ data: { ok: true, auditRef: result.auditRef } }, { status: 200 });
+      return NextResponse.json({ data: { ok: true, assignment: null, auditRef: result.auditRef } }, { status: 200 });
     } catch (err) {
       if (err instanceof AllocationError) {
         return attachTraceToResponse(

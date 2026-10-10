@@ -123,9 +123,10 @@ describe("api assignments + unassigned queue", () => {
     );
     expect(assignRes.status).toBe(201);
     const assignJson = (await assignRes.json()) as {
-      data: { assignment: { id: string; version: number } };
+      data: { assignment: { id: string; roomId: string; version: number } };
     };
     const assignmentId = assignJson.data.assignment.id;
+    expect(assignJson.data.assignment.roomId).toBe(room1.id);
     expect(assignJson.data.assignment.version).toBe(0);
 
     const listAfter = await GET_UNASSIGNED(
@@ -152,6 +153,12 @@ describe("api assignments + unassigned queue", () => {
       { params: Promise.resolve({ id: assignmentId }) },
     );
     expect(reassignRes.status).toBe(200);
+    const reassignJson = (await reassignRes.json()) as {
+      data: { assignment: { id: string; roomId: string; version: number } };
+    };
+    expect(reassignJson.data.assignment.id).toBe(assignmentId);
+    expect(reassignJson.data.assignment.roomId).toBe(room2.id);
+    expect(reassignJson.data.assignment.version).toBe(1);
 
     const unassignRes = await POST_UNASSIGN(
       new NextRequest(`http://localhost/api/assignments/${assignmentId}/unassign`, {
@@ -165,6 +172,43 @@ describe("api assignments + unassigned queue", () => {
       { params: Promise.resolve({ id: assignmentId }) },
     );
     expect(unassignRes.status).toBe(200);
+    const unassignJson = (await unassignRes.json()) as { data: { assignment: unknown } };
+    expect(unassignJson.data.assignment).toBeNull();
+  });
+
+  it("BOOKING_ALREADY_ASSIGNED details carry the current assignment", async () => {
+    const jar = await loginJar();
+    const room = await prisma.room.create({ data: { code: "D1" } });
+    const booking = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: "dup-1",
+        status: BookingStatus.confirmed,
+        checkinDate: new Date("2026-11-01T00:00:00.000Z"),
+        checkoutDate: new Date("2026-11-05T00:00:00.000Z"),
+        nights: 4,
+      },
+    });
+    const post = () =>
+      POST_ASSIGN(
+        new NextRequest("http://localhost/api/assignments", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+          body: JSON.stringify({ bookingId: booking.id, roomId: room.id }),
+        }),
+      );
+    const first = (await (await post()).json()) as { data: { assignment: { id: string } } };
+    const res = await post();
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as {
+      error: { code: string; details: { assignment: { id: string; roomId: string; version: number } } };
+    };
+    expect(body.error.code).toBe("BOOKING_ALREADY_ASSIGNED");
+    expect(body.error.details.assignment).toEqual({
+      id: first.data.assignment.id,
+      roomId: room.id,
+      version: 0,
+    });
   });
 
   it("returns 409 CONFLICT_ASSIGNMENT when room is taken", async () => {

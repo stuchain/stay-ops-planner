@@ -110,17 +110,19 @@ describe("applyOptimisticBookingMove", () => {
 });
 
 describe("formatAllocationError", () => {
-  it("maps Appendix A codes", () => {
+  it("maps codes to Greek sentences", () => {
     expect(formatAllocationError("CONFLICT_ASSIGNMENT", "x")).toBe(
-      "That room is already booked for those nights.",
+      "Το διαμέρισμα είναι ήδη κλεισμένο εκείνες τις μέρες.",
     );
-    expect(formatAllocationError("CONFLICT_BLOCK", "x")).toBe("That room is blocked for maintenance.");
-    expect(formatAllocationError("ROOM_INACTIVE", "x")).toBe("That room is not active.");
+    expect(formatAllocationError("CONFLICT_BLOCK", "x")).toBe(
+      "Το διαμέρισμα είναι κλειστό εκείνες τις μέρες.",
+    );
+    expect(formatAllocationError("ROOM_INACTIVE", "x")).toBe("Αυτό το διαμέρισμα είναι απενεργοποιημένο.");
   });
 
-  it("returns server message when code unknown", () => {
-    expect(formatAllocationError(undefined, "Something else")).toBe("Something else");
-    expect(formatAllocationError("OTHER", "Raw")).toBe("Raw");
+  it("never shows the raw server message", () => {
+    expect(formatAllocationError(undefined, "Something else")).toBe("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
+    expect(formatAllocationError("OTHER", "Raw")).toBe("Κάτι πήγε στραβά. Δοκιμάστε ξανά.");
   });
 });
 

@@ -313,9 +313,11 @@ export function CalendarClient() {
       let ok = false;
       try {
         const result = await performBookingAssignmentMutation(raw, toRoomId);
-        setDataByMonth((prev) =>
-          applyConfirmedAssignmentToMonths(prev, bookingId, result.assignment),
-        );
+        if (toRoomId === null || result.assignment) {
+          setDataByMonth((prev) =>
+            applyConfirmedAssignmentToMonths(prev, bookingId, result.assignment),
+          );
+        }
         ok = true;
       } catch (e) {
         setDataByMonth((prev) => restoreBookingInMonths(prev, bookingId, snapshot, toRoomId));

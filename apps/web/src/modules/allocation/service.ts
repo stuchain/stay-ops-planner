@@ -205,6 +205,11 @@ export async function assignBookingToRoomTx(
       message: "Booking already has an assignment; use reassign",
       details: {
         assignmentId: booking.assignment.id,
+        assignment: {
+          id: booking.assignment.id,
+          roomId: booking.assignment.roomId,
+          version: booking.assignment.version,
+        },
         ...(opts?.itemIndex !== undefined ? { failedIndex: opts.itemIndex } : {}),
       },
     });
