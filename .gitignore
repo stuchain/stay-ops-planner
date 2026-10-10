@@ -17,3 +17,5 @@ apps/web/storybook-static
 .turbo
 .DS_Store
 docs/phases/
+# Agent worktrees
+.claude/worktrees/
