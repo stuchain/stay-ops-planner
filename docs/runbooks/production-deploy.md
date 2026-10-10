@@ -50,7 +50,7 @@ from production baseline.
 - Deployment trigger: auto-deploy on push/merge to `main`
 - Production DB: single Neon Postgres target
 - Migration policy: run in deploy pipeline and block release on failure
-- Sync trigger model: login debounce + manual + hourly daytime cron
+- Sync trigger model: on app open (debounced) + every 15 min while open + manual; no cron
 - Overlap policy: return `409` with `sync already running`
 - Ship gate approval: you + father
 
@@ -92,7 +92,7 @@ Required:
 - `BOOTSTRAP_FATHER_PASSWORD`
 - (Optional) `BOOTSTRAP_FATHER_ROLE` — `viewer`, `operator` (default), or `admin`
 - Hosthub integration secrets (`HOSTHUB_*`, `WEBHOOK_SECRET`)
-- `CRON_SECRET` (16+ characters) for `GET /api/cron/sync-hosthub` — set in Vercel **Production** (and Preview if cron should run there). Vercel sends `Authorization: Bearer <CRON_SECRET>` when invoking the job defined in [`apps/web/vercel.json`](../../apps/web/vercel.json) (`crons`). After deploy, confirm **Cron Jobs** lists `/api/cron/sync-hosthub` on an hourly schedule. Daytime-only execution uses `APP_TIMEZONE` and optional `SYNC_CRON_LOCAL_START_HOUR` / `SYNC_CRON_LOCAL_END_HOUR` (defaults 08–20 local).
+- `CRON_SECRET` (16+ characters), optional: only needed if something calls `GET /api/cron/sync-hosthub`. Nothing does today (see "When Hosthub sync runs").
 
 Optional but selected baseline:
 - `SENTRY_DSN`
@@ -170,32 +170,15 @@ These require your accounts, secrets, and browser—there is nothing to “push�
    - login-triggered sync is debounced
    - manual trigger works for authorized role
    - overlap returns `409` + `sync already running`
-7. Verify cron behavior:
-   - hourly schedule is active in daytime window only
-   - cron endpoint auth/secret guard is enforced
+## When Hosthub sync runs
 
-## Daytime hourly cron policy
+There is no scheduled sync. The app syncs while someone has it open:
 
-- Cron cadence: hourly.
-- Schedule window: local daytime only (derived from `APP_TIMEZONE` and operator policy).
-- Endpoint must remain protected via secret/header contract.
-- Cron, login, and manual trigger flows all use the same DB lock rule.
-- Required evidence: at least one daytime cron-triggered run captured in logs/audit.
+- **On open:** every page load starts a sync (`SyncHeartbeat` in the app shell), debounced per user.
+- **While open:** it repeats every 15 minutes, and the calendar reloads when new data arrives.
+- **Manually:** admins can run a full sync from Settings.
 
-## Scheduled Hosthub sync via GitHub Actions
-
-Vercel cron is not used (Hobby plan). Instead, **[Scheduled Hosthub sync](../../.github/workflows/scheduled-sync.yml)** calls `GET /api/cron/sync-hosthub` every hour at minute 0 between 06:00 and 19:00 UTC (about 08:00-22:00 Athens time). The route itself still skips runs outside the local daytime window (`SYNC_CRON_LOCAL_START_HOUR` / `SYNC_CRON_LOCAL_END_HOUR`, default 08-20 in `APP_TIMEZONE`) and answers `200` with `skipped`.
-
-**Repository secrets** (GitHub: **Settings → Secrets and variables → Actions → New repository secret**):
-
-- **`PRODUCTION_URL`** — base URL of the production deployment, e.g. `https://your-app.vercel.app` (no trailing path). The workflow appends `/api/cron/sync-hosthub`.
-- **`CRON_SECRET`** — the same value as the `CRON_SECRET` environment variable in Vercel Production. It is sent as `Authorization: Bearer <CRON_SECRET>`; a mismatch returns `401`.
-
-If either secret is missing the job fails immediately with an `::error::` message.
-
-**Outcomes:** any `2xx` is success; `409` (a sync is already running) is treated as success with a notice; every other status (including `401`, `503`, `500`) or a timeout (310 s, above the route's `maxDuration` of 300 s) fails the run. The status and the first 500 characters of the response body are printed in the job log. Runs use concurrency group `scheduled-sync`, so they never overlap.
-
-**Run manually:** Actions → **Scheduled Hosthub sync** → **Run workflow** (`workflow_dispatch`). GitHub may delay scheduled runs by several minutes and disables schedules after 60 days without repository activity.
+Bookings made in Hosthub while nobody has the app open appear on the next open, a few seconds after the page loads. `GET /api/cron/sync-hosthub` still exists (guarded by `CRON_SECRET`) if a schedule is ever wanted again; nothing calls it today.
 
 ## Pre-ship verification evidence (S8-aligned)
 
