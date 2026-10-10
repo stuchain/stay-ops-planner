@@ -113,7 +113,21 @@
       "moved": "Moved to {room}",
       "removed": "The booking was taken out of {room}"
     },
-    "perNight": "{price}/night"
+    "perNight": "{price}/night",
+    "arrangeButton": "Arrange the month",
+    "proposed": "Proposed: {guest}",
+    "arrange": {
+      "title": "Arrange: {month}",
+      "loading": "Preparing the proposal",
+      "intro": "This is how the month's bookings without an apartment would be placed. Everything already in an apartment stays where it is. Proposals show with a dashed outline on the calendar.",
+      "placedHeading": "{count, plural, one {# booking will get an apartment} other {# bookings will get an apartment}}",
+      "unplacedHeading": "{count, plural, one {# booking fits nowhere} other {# bookings fit nowhere}}",
+      "unplacedNote": "No apartment is free for all their nights. They stay in the “Need an apartment” list.",
+      "nothing": "Every booking this month already has an apartment.",
+      "apply": "{count, plural, one {Apply (# booking)} other {Apply (# bookings)}}",
+      "cancel": "Cancel",
+      "applied": "{count, plural, one {# booking placed} other {# bookings placed}}"
+    }
   },
   "booking": {
     "title": "Booking",

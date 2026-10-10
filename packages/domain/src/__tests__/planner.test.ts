@@ -46,6 +46,21 @@ describe("planAssignments", () => {
     expect(result.unplaced).toEqual(["b"]);
   });
 
+  it("returns the ranked pick with reasons for each placement", () => {
+    const result = planAssignments([b("big", "2026-10-01", "2026-10-04", 4)], rooms, []);
+    const pick = result.picks.get("big");
+    expect(pick?.roomId).toBe("cosmos");
+    expect(pick?.reasons).toContain("LARGE_PARTY_ROOM");
+    expect(result.picks.size).toBe(1);
+  });
+
+  it("follows the given recommender config", () => {
+    // Room order first: the 4-person party goes to the first room despite the large-party rule.
+    const config = { rules: [{ rule: "roomOrder" as const, weight: 1 }] };
+    const result = planAssignments([b("big", "2026-10-01", "2026-10-04", 4)], rooms, [], config);
+    expect(result.assignments.get("big")).toBe("onar");
+  });
+
   it("places nothing when there are no rooms", () => {
     expect(planAssignments([b("x", "2026-10-01", "2026-10-02")], [], []).unplaced).toEqual(["x"]);
   });

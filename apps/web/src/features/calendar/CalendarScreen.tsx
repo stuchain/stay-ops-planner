@@ -9,7 +9,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wand2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -23,6 +23,7 @@ import { ErrorState } from "@/ui/ErrorState";
 import { IconButton } from "@/ui/IconButton";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
+import { ArrangeMonthPanel } from "./ArrangeMonthPanel";
 import { BookingPanel } from "./BookingPanel";
 import { useUnsavedGuard } from "./useUnsavedGuard";
 import { CalendarGrid, LABEL_WIDTH, type DropState } from "./CalendarGrid";
@@ -86,6 +87,9 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams?.get("booking") || null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<MoveRequest | null>(null);
+  // "Τακτοποίησε τον μήνα": the month being arranged and the preview's placements, shown on the grid.
+  const [arrangeMonth, setArrangeMonth] = useState<IsoDate | null>(null);
+  const [proposed, setProposed] = useState<Map<string, string>>(() => new Map());
   const { setDirty, run, dialog } = useUnsavedGuard();
   // Opening another booking or closing the panel asks first when the edit form has unsaved changes.
   const select = useCallback(
@@ -94,6 +98,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
       run(() => {
         setSelectedId(id);
         if (id === null) setConfirm(null);
+        else setArrangeMonth(null);
       });
     },
     [run, selectedId],
@@ -205,6 +210,17 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     void move({ booking, roomId });
   }
 
+  const openArrange = () =>
+    run(() => {
+      setSelectedId(null);
+      setConfirm(null);
+      setArrangeMonth(monthStart(anchor.current));
+    });
+  const closeArrange = useCallback(() => {
+    setArrangeMonth(null);
+    setProposed(new Map());
+  }, []);
+
   const handleMove = (request: MoveRequest) => {
     setConfirm(null);
     void move(request);
@@ -214,7 +230,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     <div
       className={cn(
         "flex flex-col gap-4 p-8 max-[759px]:p-4",
-        selected && "pr-[calc(var(--spacing-panel)+2rem)] max-[759px]:pr-4",
+        (selected || arrangeMonth) && "pr-[calc(var(--spacing-panel)+2rem)] max-[759px]:pr-4",
       )}
     >
       <PageHeader
@@ -240,6 +256,9 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 </button>
               ))}
             </div>
+            <Button icon={Wand2} onClick={openArrange} className="ml-2">
+              {t("calendar.arrangeButton")}
+            </Button>
           </div>
         }
       />
@@ -289,6 +308,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 overbooked={data.overbooked}
                 selectedId={selectedId}
                 dropStates={dropStates}
+                proposed={proposed}
                 onOpen={select}
               />
             )}
@@ -321,6 +341,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
         onClose={() => select(null)}
         onDirtyChange={setDirty}
       />
+      <ArrangeMonthPanel month={arrangeMonth} rooms={data.rooms} onPreview={setProposed} onClose={closeArrange} />
       {dialog}
     </div>
   );

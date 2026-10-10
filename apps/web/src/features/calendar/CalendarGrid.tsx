@@ -27,6 +27,8 @@ export type CalendarGridProps = {
   overbooked: Set<IsoDate>;
   selectedId: string | null;
   dropStates: Map<string, DropState>;
+  /** "Τακτοποίησε τον μήνα" preview: booking id to the apartment it would go to. */
+  proposed?: Map<string, string>;
   onOpen: (bookingId: string) => void;
 };
 
@@ -100,11 +102,13 @@ function RoomTrack({
   props,
   rowBookings,
   rowBlocks,
+  rowProposed,
 }: {
   room: CalendarRoom;
   props: CalendarGridProps;
   rowBookings: CalendarBooking[];
   rowBlocks: CalendarBlock[];
+  rowProposed: CalendarBooking[];
 }) {
   const t = useTranslations();
   const { span, dayWidth, firstDay, lastDay, today, selectedId, onOpen } = props;
@@ -169,6 +173,31 @@ function RoomTrack({
                 }}
               />
             ))}
+          {rowProposed
+            .filter((b) => visible(b.checkin, b.checkout))
+            .map((b) => {
+              const label = t("calendar.proposed", { guest: b.guestName ?? t("common.noName") });
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  data-testid="proposed-bar"
+                  onClick={() => onOpen(b.id)}
+                  aria-label={label}
+                  title={label}
+                  className="border-accent bg-accent-soft text-accent text-sm absolute top-4 flex h-14 items-center overflow-hidden rounded-[10px] border-2 border-dashed px-3 font-semibold"
+                  style={{
+                    left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2,
+                    width: Math.max(
+                      dayWidth - 4,
+                      (dayIndex(span, b.checkout) - dayIndex(span, b.checkin)) * dayWidth - 4,
+                    ),
+                  }}
+                >
+                  <span className="truncate">{b.guestName ?? t("common.noName")}</span>
+                </button>
+              );
+            })}
         </div>
       </ApartmentRow>
     </div>
@@ -178,7 +207,10 @@ function RoomTrack({
 /** The day header and one row per apartment; only the visible days are drawn. */
 export function CalendarGrid(props: CalendarGridProps) {
   const byRoom = new Map<string, CalendarBooking[]>();
+  const proposedByRoom = new Map<string, CalendarBooking[]>();
   for (const b of props.bookings) {
+    const proposedRoom = b.assignment ? undefined : props.proposed?.get(b.id);
+    if (proposedRoom) proposedByRoom.set(proposedRoom, [...(proposedByRoom.get(proposedRoom) ?? []), b]);
     if (!b.assignment) continue;
     byRoom.set(b.assignment.roomId, [...(byRoom.get(b.assignment.roomId) ?? []), b]);
   }
@@ -192,6 +224,7 @@ export function CalendarGrid(props: CalendarGridProps) {
           props={props}
           rowBookings={byRoom.get(room.id) ?? []}
           rowBlocks={props.blocks.filter((b) => b.roomId === room.id)}
+          rowProposed={proposedByRoom.get(room.id) ?? []}
         />
       ))}
     </div>

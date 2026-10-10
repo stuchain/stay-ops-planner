@@ -1,8 +1,9 @@
 import { isIsoDate, daysBetween, type IsoDate } from "@stay-ops/domain";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { applyArrangement, proposeArrangement } from "@/server/useCases/arrangeMonth";
 import { getCalendarRange } from "@/server/useCases/calendarRange";
-import { createTRPCRouter, userProcedure } from "../trpc";
+import { createTRPCRouter, operatorProcedure, userProcedure } from "../trpc";
 
 const isoDateInput = z
   .string()
@@ -26,4 +27,26 @@ export const calendarRouter = createTRPCRouter({
         Boolean((await prisma.user.findUnique({ where: { id: ctx.user.userId }, select: { devMode: true } }))?.devMode);
       return getCalendarRange(input.from, input.to, new Date(), { withPrices });
     }),
+
+  /** "Τακτοποίησε τον μήνα": where the planner would put every booking of the month that needs an apartment. */
+  arrangePreview: operatorProcedure
+    .input(z.object({ month: z.string().regex(/^\d{4}-\d{2}$/) }))
+    .query(({ input }) => proposeArrangement(input.month)),
+
+  /** Apply the preview as shown, all or nothing. */
+  arrangeApply: operatorProcedure
+    .input(
+      z.object({
+        placements: z
+          .array(
+            z.object({
+              bookingId: z.string().min(1),
+              roomId: z.string().min(1),
+              expectedVersion: z.number().int().nonnegative(),
+            }),
+          )
+          .max(200),
+      }),
+    )
+    .mutation(({ ctx, input }) => applyArrangement({ ...input, actorUserId: ctx.user.userId })),
 });
