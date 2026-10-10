@@ -68,7 +68,9 @@
     "CHANGED_MEANWHILE": "Something changed in the meantime. Look again and retry.",
     "WRONG_PASSWORD": "The current password is not correct.",
     "PASSWORD_TOO_SHORT": "The new password is too short. It needs at least 8 characters.",
-    "SYNC_RUNNING": "An update from Hosthub is already running. Please wait a moment."
+    "SYNC_RUNNING": "An update from Hosthub is already running. Please wait a moment.",
+    "HOSTHUB_TOKEN_REJECTED": "Hosthub did not accept this key. Check that you copied all of it. The old key is kept.",
+    "HOSTHUB_UNREACHABLE": "Could not reach Hosthub to test the key. Try again in a moment. The old key is kept."
   },
   "nav": {
     "label": "Main navigation",
@@ -292,7 +294,9 @@
     "nav": {
       "label": "Dev mode",
       "apartments": "Apartments",
-      "taxes": "Tax brackets"
+      "taxes": "Tax brackets",
+      "hosthub": "Hosthub",
+      "cleaning": "Cleaning"
     },
     "noAccess": {
       "title": "You don't have access",
@@ -328,6 +332,90 @@
       "drag": "Drag to reorder {name}",
       "moveUp": "Move {name} up",
       "moveDown": "Move {name} down"
+    },
+    "hosthub": {
+      "title": "Hosthub",
+      "subtitle": "Connection key, sync history, import errors and the webhook.",
+      "never": "Never",
+      "token": {
+        "title": "Connection key",
+        "configured": "A key is stored (changed {when}).",
+        "missing": "No key is stored.",
+        "named": "Name: {name}",
+        "newToken": "New key",
+        "name": "Name (optional)",
+        "save": "Test and save",
+        "testing": "Testing the key with Hosthub…",
+        "saved": "The key was tested and saved.",
+        "hint": "The key is tested with Hosthub first. If it is not accepted it is not saved and the old one stays as it was. The key is never shown again."
+      },
+      "actions": {
+        "title": "Update from Hosthub",
+        "lastSuccess": "Last successful update",
+        "cursor": "Starts from",
+        "cursorEmpty": "The beginning (all bookings)",
+        "lastError": "Last error",
+        "running": "An update is running right now.",
+        "incremental": "Update now",
+        "full": "Full update",
+        "reset": "Reset starting point",
+        "hint": "A normal update fetches only what changed. A full one fetches every booking again and takes much longer.",
+        "done": "The update finished: {created, plural, one {# new booking} other {# new bookings}}, {updated, plural, one {# changed} other {# changed}}, {errors, plural, one {# error} other {# errors}}.",
+        "failed": {
+          "auth": "Hosthub did not accept the connection key.",
+          "other": "The update did not work. See the history below."
+        },
+        "resetDone": "The starting point was reset. The next update starts from the beginning."
+      },
+      "confirm": {
+        "cancel": "Cancel",
+        "full": {
+          "title": "Run a full update?",
+          "text": "It fetches every booking from Hosthub again. It can take several minutes.",
+          "yes": "Yes, full update"
+        },
+        "reset": {
+          "title": "Reset the starting point?",
+          "text": "The next update will fetch every booking from the beginning, not just new changes.",
+          "yes": "Yes, reset"
+        }
+      },
+      "webhook": {
+        "title": "Webhook",
+        "copy": "Copy",
+        "copied": "The address was copied.",
+        "never": "Hosthub has not sent anything here yet.",
+        "last": "Last message: {when}. In the last 24 hours: {count, plural, one {# message} other {# messages}}.",
+        "noSecret": "No webhook secret is set on the server, so Hosthub messages are refused."
+      },
+      "runs": {
+        "title": "Update history",
+        "empty": "No update has run yet.",
+        "when": "When",
+        "duration": "Duration",
+        "result": "Result",
+        "counts": "Bookings",
+        "notFinished": "Did not finish",
+        "seconds": "{value} s",
+        "status": {
+          "completed": "Succeeded",
+          "failed": "Failed",
+          "running": "Running"
+        },
+        "countsLine": "{fetched} from Hosthub · {created} new · {updated} changed · {errors} errors",
+        "more": "Show older"
+      },
+      "errors": {
+        "title": "Import errors",
+        "empty": "There are no import errors.",
+        "payload": "Original data from Hosthub",
+        "noPayload": "No data was stored.",
+        "more": "Show older"
+      }
+    },
+    "cleaning": {
+      "title": "Cleaning",
+      "subtitle": "Temporarily here, hidden from everyone else, until it is decided what happens to it (Phase 4)."
     }
   },
   "settingsScreen": {

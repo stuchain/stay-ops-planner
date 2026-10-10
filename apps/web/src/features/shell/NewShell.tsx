@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, CalendarDays, Landmark, Settings, Sun, Wallet } from "lucide-react";
+import { Building2, CalendarDays, Landmark, PlugZap, Settings, Sparkles, Sun, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ApiProvider } from "@/api/client";
@@ -26,6 +26,8 @@ const NAV = [
 const DEV_NAV = [
   { href: "/app/dev/apartments", key: "apartments", icon: Building2 },
   { href: "/app/dev/taxes", key: "taxes", icon: Landmark },
+  { href: "/app/dev/hosthub", key: "hosthub", icon: PlugZap },
+  { href: "/app/dev/cleaning", key: "cleaning", icon: Sparkles },
 ] as const;
 
 export type NewShellProps = {

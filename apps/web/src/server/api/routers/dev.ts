@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  getHosthubOverview,
+  listImportErrors,
+  listSyncRuns,
+  resetHosthubCursor,
+  runHosthubSync,
+  saveHosthubToken,
+} from "@/server/useCases/devHosthub";
 import { listApartments, reorderApartments, updateApartment } from "@/server/useCases/apartments";
 import { adminProcedure, createTRPCRouter } from "../trpc";
 
@@ -29,5 +37,27 @@ export const devRouter = createTRPCRouter({
     reorder: adminProcedure
       .input(z.object({ ids: z.array(z.string().min(1)).min(1) }))
       .mutation(({ ctx, input }) => reorderApartments({ ids: input.ids, actorUserId: ctx.user.userId })),
+  }),
+
+  hosthub: createTRPCRouter({
+    overview: adminProcedure.query(() => getHosthubOverview()),
+
+    saveToken: adminProcedure
+      .input(z.object({ token: z.string().trim().min(1).max(500), name: z.string().trim().max(120).nullish() }))
+      .mutation(({ ctx, input }) => saveHosthubToken({ ...input, actorUserId: ctx.user.userId })),
+
+    runs: adminProcedure
+      .input(z.object({ cursor: z.string().min(1).optional(), limit: z.number().int().min(1).max(100).optional() }))
+      .query(({ input }) => listSyncRuns(input)),
+
+    errors: adminProcedure
+      .input(z.object({ cursor: z.string().min(1).optional(), limit: z.number().int().min(1).max(100).optional() }))
+      .query(({ input }) => listImportErrors(input)),
+
+    sync: adminProcedure
+      .input(z.object({ full: z.boolean() }))
+      .mutation(({ ctx, input }) => runHosthubSync({ full: input.full, actorUserId: ctx.user.userId })),
+
+    resetCursor: adminProcedure.mutation(({ ctx }) => resetHosthubCursor({ actorUserId: ctx.user.userId })),
   }),
 });

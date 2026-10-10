@@ -12,7 +12,7 @@ export type RunSyncNowResult =
  * The "Ενημέρωση τώρα" button: one manual sync, answered in a few plain outcomes.
  * Throws HOSTHUB_DISCONNECTED when no Hosthub key is stored and SYNC_RUNNING when one is already under way.
  */
-export async function runSyncNow(source?: HosthubSource): Promise<RunSyncNowResult> {
+export async function runSyncNow(source?: HosthubSource, opts: { full?: boolean } = {}): Promise<RunSyncNowResult> {
   let src = source;
   if (!src) {
     const token = await resolveHosthubApiToken();
@@ -20,7 +20,7 @@ export async function runSyncNow(source?: HosthubSource): Promise<RunSyncNowResu
     src = hosthubSource(token);
   }
   try {
-    const result = await syncHosthub({ source: src, trigger: "manual" });
+    const result = await syncHosthub({ source: src, trigger: "manual", full: opts.full === true });
     if (result.status === "skipped") throw new DomainError("SYNC_RUNNING");
     const { created, updated, unchanged, errors } = result.stats;
     return { outcome: "done", changed: created + updated, created, updated, unchanged, errors };

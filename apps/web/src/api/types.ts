@@ -18,3 +18,6 @@ export type LedgerRowData = LedgerYearData["rows"][number];
 export type LedgerApartmentData = LedgerYearData["apartments"][number];
 export type TaxRulesEditData = RouterOutputs["money"]["taxRules"];
 export type ApartmentRow = RouterOutputs["dev"]["apartments"]["list"][number];
+
+export type SyncRunRow = RouterOutputs["dev"]["hosthub"]["runs"]["items"][number];
+export type ImportErrorRow = RouterOutputs["dev"]["hosthub"]["errors"]["items"][number];
