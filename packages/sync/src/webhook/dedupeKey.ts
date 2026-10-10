@@ -31,7 +31,6 @@ export function parseWebhookBodyStub(parsed: unknown): { ok: true; data: Hosthub
  * `id`, newer `updated`), and each one must be applied. Only an identical re-delivery is skipped.
  */
 // `parsed` is kept for callers; the key no longer depends on the event id.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function computeWebhookDedupeKey(_parsed: unknown, rawBody: string): string {
   return sha256HexUtf8(rawBody);
 }
