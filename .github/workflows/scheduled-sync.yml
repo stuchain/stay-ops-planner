@@ -1,0 +1,63 @@
+name: Scheduled Hosthub sync
+
+# Replaces Vercel cron (not available on the Hobby plan for hourly schedules).
+# Cron is in UTC: 06-19 UTC is roughly 08:00-22:00 Athens time. The route itself
+# also skips runs outside the local daytime window (SYNC_CRON_LOCAL_*_HOUR).
+on:
+  schedule:
+    - cron: "0 6-19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Call /api/cron/sync-hosthub
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo "::error::Missing repository secret PRODUCTION_URL (e.g. https://your-app.vercel.app)"
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Missing repository secret CRON_SECRET (must match CRON_SECRET in Vercel Production)"
+            exit 1
+          fi
+
+          url="${PRODUCTION_URL%/}/api/cron/sync-hosthub"
+          # Route maxDuration is 300s; allow a little extra for network overhead.
+          status=$(curl -sS -o response.txt -w '%{http_code}' \
+            --max-time 310 --connect-timeout 20 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "$url") || {
+              echo "::error::Request to /api/cron/sync-hosthub failed (network error or timeout)"
+              exit 1
+            }
+
+          echo "HTTP status: ${status}"
+          echo "Body (first 500 chars):"
+          head -c 500 response.txt
+          echo
+
+          case "$status" in
+            2??)
+              echo "Sync request succeeded."
+              ;;
+            409)
+              echo "::notice::A sync is already running (HTTP 409); treating as success."
+              ;;
+            *)
+              echo "::error::Sync endpoint returned HTTP ${status}"
+              exit 1
+              ;;
+          esac
