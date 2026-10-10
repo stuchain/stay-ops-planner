@@ -1,6 +1,6 @@
 # @stay-ops/sync
 
-Hosthub integration: HTTP client, normalization, and job processors.
+Hosthub integration: HTTP client, normalization, and webhook helpers.
 
 **Official API reference:** [https://www.hosthub.com/docs/api/](https://www.hosthub.com/docs/api/)
 

@@ -103,21 +103,6 @@ describe("api /api/sync/hosthub/reconcile", () => {
     expect(res.headers.get("x-request-id")).toBeTruthy();
   });
 
-  it("returns 403 for viewer on dry-run preview (?dryRun=true)", async () => {
-    const passwordHash = await bcrypt.hash(password, 12);
-    await prisma.user.create({
-      data: { email: "sync-viewer@example.com", passwordHash, isActive: true, role: "viewer" },
-    });
-    const jar = await loginJar("sync-viewer@example.com");
-    const res = await POST_RECONCILE(
-      new NextRequest("http://localhost/api/sync/hosthub/reconcile?dryRun=true", {
-        method: "POST",
-        headers: { cookie: jar.getCookieHeader() },
-      }),
-    );
-    expect(res.status).toBe(403);
-  });
-
   it.each(["sync-viewer@example.com", operatorEmail])("returns 403 for %s on fullSync", async (email) => {
     if (email !== operatorEmail) {
       const passwordHash = await bcrypt.hash(password, 12);
@@ -165,72 +150,21 @@ describe("api /api/sync/hosthub/reconcile", () => {
     20_000,
   );
 
-  it("dry run returns 200 with summary and does not create sync_run rows", async () => {
-    const adminJar = await loginJar(adminEmail);
-    const saveTokenRes = await PUT_HOSTHUB_TOKEN(
-      new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
-        method: "PUT",
-        headers: {
-          "content-type": "application/json",
-          cookie: adminJar.getCookieHeader(),
-        },
-        body: JSON.stringify({ token: "dummy-token-for-dry-run" }),
-      }),
-    );
-    expect(saveTokenRes.status).toBe(200);
-
-    const syncBefore = await prisma.syncRun.count();
-
+  it.each([
+    ["query", "http://localhost/api/sync/hosthub/reconcile?dryRun=true", undefined],
+    ["body", "http://localhost/api/sync/hosthub/reconcile", JSON.stringify({ dryRun: true })],
+  ])("rejects dryRun in the %s with 400 VALIDATION_ERROR", async (_where, url, body) => {
     const operatorJar = await loginJar(operatorEmail);
     const res = await POST_RECONCILE(
-      new NextRequest("http://localhost/api/sync/hosthub/reconcile?dryRun=true", {
+      new NextRequest(url, {
         method: "POST",
-        headers: { cookie: operatorJar.getCookieHeader() },
+        headers: { "content-type": "application/json", cookie: operatorJar.getCookieHeader() },
+        ...(body ? { body } : {}),
       }),
     );
-    expect(res.status).toBe(200);
-    const json = (await res.json()) as {
-      data: { dryRun: boolean; summary: { totals: { processed: number }; warnings: unknown[] } };
-    };
-    expect(json.data.dryRun).toBe(true);
-    expect(json.data.summary.totals).toBeDefined();
-    expect(Array.isArray(json.data.summary.warnings)).toBe(true);
-
-    expect(await prisma.syncRun.count()).toBe(syncBefore);
-  });
-
-  it("dry run accepts JSON body fullSync and returns 200", async () => {
-    const adminJar = await loginJar(adminEmail);
-    const saveTokenRes = await PUT_HOSTHUB_TOKEN(
-      new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
-        method: "PUT",
-        headers: {
-          "content-type": "application/json",
-          cookie: adminJar.getCookieHeader(),
-        },
-        body: JSON.stringify({ token: "dummy-token-for-dry-run-fullsync" }),
-      }),
-    );
-    expect(saveTokenRes.status).toBe(200);
-
-    const operatorJar = await loginJar(operatorEmail);
-    const res = await POST_RECONCILE(
-      new NextRequest("http://localhost/api/sync/hosthub/reconcile", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          cookie: operatorJar.getCookieHeader(),
-        },
-        body: JSON.stringify({ dryRun: true, fullSync: true }),
-      }),
-    );
-    expect(res.status).toBe(200);
-    const json = (await res.json()) as {
-      data: { dryRun: boolean; fullSync: boolean; summary: { totals: { processed: number } } };
-    };
-    expect(json.data.dryRun).toBe(true);
-    expect(json.data.fullSync).toBe(true);
-    expect(json.data.summary.totals).toBeDefined();
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: { code: string } };
+    expect(json.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns 409 while another sync holds the lock", async () => {

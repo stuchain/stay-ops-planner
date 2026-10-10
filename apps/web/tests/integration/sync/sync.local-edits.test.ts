@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
-import { applyHosthubReservation } from "@stay-ops/sync";
+import { applyHosthubBooking } from "../../../src/server/sync/applyBooking";
 import { CookieJar } from "../cookieJar";
 
 const email = "sync-local-edits@example.com";
@@ -15,6 +15,12 @@ process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
 process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops_test";
 
 const prisma = new PrismaClient();
+
+type Reservation = Parameters<typeof applyHosthubBooking>[1]["dto"];
+
+function applyHosthubReservation(db: PrismaClient, dto: Reservation, raw: unknown) {
+  return db.$transaction((tx) => applyHosthubBooking(tx, { dto, raw }));
+}
 
 const reservation = {
   reservationId: "local-edit-b1",

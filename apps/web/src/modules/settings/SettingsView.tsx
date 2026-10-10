@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { DryRunResult } from "@stay-ops/shared";
 import { useI18n } from "@/i18n/I18nProvider";
-import { DryRunPreviewModal, useDryRun } from "@/modules/dry-run";
 import { HosthubListingsSection } from "@/modules/settings/HosthubListingsSection";
 import { ToastBanner } from "@/modules/ui";
 
@@ -21,19 +19,6 @@ type SyncRunRow = {
 };
 
 type SyncRunsResponse = { data?: { runs?: SyncRunRow[] } };
-
-type SyncHosthubQueueHealth = {
-  queueName: string;
-  counts: Record<string, number>;
-  failed: Array<{
-    id: string | undefined;
-    name: string | undefined;
-    failedReason: string | null;
-    attemptsMade: number | undefined;
-    timestamp: number | undefined;
-    finishedOn: number | null;
-  }>;
-};
 
 type HosthubDiagData = {
   sourceListings: {
@@ -71,13 +56,6 @@ function fmtDateTime(iso: string | null) {
 
 export function SettingsView() {
   const { t, setLocale } = useI18n();
-  const reconcileDryRun = useDryRun<Record<string, never>>({
-    url: "/api/sync/hosthub/reconcile",
-    dryRunQueryParam: true,
-  });
-  const [dryModalOpen, setDryModalOpen] = useState(false);
-  const [drySummary, setDrySummary] = useState<DryRunResult | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,32 +76,9 @@ export function SettingsView() {
   const [diagError, setDiagError] = useState<string | null>(null);
   const [probeBusy, setProbeBusy] = useState(false);
   const [uiLocaleDraft, setUiLocaleDraft] = useState<"en" | "el">("en");
-  const [queueHealth, setQueueHealth] = useState<SyncHosthubQueueHealth | null>(null);
-  const [queueHealthLoading, setQueueHealthLoading] = useState(false);
-  const [queueHealthError, setQueueHealthError] = useState<string | null>(null);
 
   const latestHosthubPoll = useMemo(() => runs.find((r) => r.source === "hosthub_poll") ?? null, [runs]);
   const isAdmin = userRole === "admin";
-
-  const loadQueueHealth = useCallback(async () => {
-    setQueueHealthError(null);
-    setQueueHealthLoading(true);
-    try {
-      const res = await fetch("/api/admin/queue/sync-hosthub", { credentials: "include" });
-      const j = (await res.json().catch(() => ({}))) as ApiError & { data?: SyncHosthubQueueHealth };
-      if (!res.ok) {
-        throw new Error(j.error?.message ?? `Queue health HTTP ${res.status}`);
-      }
-      if (j.data) {
-        setQueueHealth(j.data);
-      }
-    } catch (e) {
-      setQueueHealthError(e instanceof Error ? e.message : "Queue health failed");
-      setQueueHealth(null);
-    } finally {
-      setQueueHealthLoading(false);
-    }
-  }, []);
 
   const loadDiag = useCallback(async (opts?: { probe?: boolean }) => {
     const probe = Boolean(opts?.probe);
@@ -271,37 +226,6 @@ export function SettingsView() {
       setSaving(false);
     }
   }
-
-  const previewSync = useCallback(async () => {
-    setSaving(true);
-    setError(null);
-    setFlash(null);
-    try {
-      const summary = await reconcileDryRun.preview();
-      setDrySummary(summary);
-      setDryModalOpen(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Preview failed");
-    } finally {
-      setSaving(false);
-    }
-  }, [reconcileDryRun]);
-
-  const confirmSyncAfterPreview = useCallback(async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      await reconcileDryRun.execute();
-      setDryModalOpen(false);
-      setDrySummary(null);
-      setFlash("Sync completed.");
-      await loadAll();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Sync failed");
-    } finally {
-      setSaving(false);
-    }
-  }, [reconcileDryRun, loadAll]);
 
   async function syncNow(opts?: { fromSave?: boolean }) {
     setSaving(true);
@@ -546,9 +470,6 @@ export function SettingsView() {
               >
                 Full sync
               </button>
-              <button type="button" className="ops-btn" disabled={saving} onClick={() => void previewSync()}>
-                Preview sync (dry-run)
-              </button>
               {isAdmin ? (
                 <button
                   type="button"
@@ -562,52 +483,6 @@ export function SettingsView() {
               ) : null}
             </div>
           </section>
-
-          {isAdmin ? (
-            <section className="ops-markers">
-              <h2>Background queue (sync-hosthub)</h2>
-              <p className="ops-muted">
-                BullMQ depth and recent failed jobs (no raw webhook bodies). Use with Sentry for retries and dead-letter
-                triage.
-              </p>
-              {queueHealthError ? <p className="ops-error">{queueHealthError}</p> : null}
-              <div className="ops-drawer-row-actions">
-                <button
-                  type="button"
-                  className="ops-btn"
-                  disabled={queueHealthLoading}
-                  onClick={() => void loadQueueHealth()}
-                >
-                  {queueHealthLoading ? "Loading…" : "Refresh queue metrics"}
-                </button>
-              </div>
-              {queueHealth ? (
-                <div className="ops-suggestion-card">
-                  <div className="ops-suggestion-score">
-                    {queueHealth.queueName}: waiting {queueHealth.counts.waiting ?? 0}, active{" "}
-                    {queueHealth.counts.active ?? 0}, delayed {queueHealth.counts.delayed ?? 0}, failed{" "}
-                    {queueHealth.counts.failed ?? 0}
-                  </div>
-                  {queueHealth.failed.length > 0 ? (
-                    <ul className="ops-suggestion-reasons">
-                      {queueHealth.failed.map((f) => (
-                        <li key={f.id ?? `${f.name}-${f.timestamp}`} className="ops-suggestion-reason">
-                          <strong>{f.name ?? "?"}</strong> id {f.id ?? "—"} — attempts {f.attemptsMade ?? "—"}
-                          {f.failedReason ? (
-                            <>
-                              : <span className="ops-muted">{f.failedReason.slice(0, 200)}</span>
-                            </>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="ops-muted">No failed jobs in the recent window.</p>
-                  )}
-                </div>
-              ) : null}
-            </section>
-          ) : null}
 
           <section className="ops-markers">
             <h2>Hosthub diagnostics</h2>
@@ -704,19 +579,6 @@ export function SettingsView() {
           </section>
         </>
       )}
-      <DryRunPreviewModal
-        open={dryModalOpen}
-        title="Hosthub sync — preview"
-        summary={drySummary}
-        busy={reconcileDryRun.state === "executing" || saving}
-        executeLabel="Run sync now"
-        onCancel={() => {
-          if (reconcileDryRun.state === "executing" || saving) return;
-          setDryModalOpen(false);
-          setDrySummary(null);
-        }}
-        onConfirm={() => void confirmSyncAfterPreview()}
-      />
     </main>
   );
 }

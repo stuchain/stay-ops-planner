@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
 import { respondAuthError } from "@/lib/apiError";
-import { SYNC_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runHosthubEnrichmentBackfill } from "@stay-ops/sync";
@@ -48,11 +47,4 @@ async function postEnrichmentBackfill(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  return withRateLimit(
-    "POST:/api/sync/hosthub/enrichment-backfill",
-    SYNC_USER_RATE_RULES,
-    request,
-    (req) => postEnrichmentBackfill(req as NextRequest),
-  );
-}
+export const POST = postEnrichmentBackfill;
