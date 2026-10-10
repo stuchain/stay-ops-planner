@@ -1,0 +1,76 @@
+name: Daily database backup
+
+# Daily logical backup of the production Neon database (pg_dump, custom format),
+# kept as a 30-day workflow artifact. See docs/runbooks/db-backup-restore.md for
+# how to restore it into a new Neon branch.
+#
+# pg_dump runs from the official postgres:16 docker image: Docker is preinstalled
+# on ubuntu-latest, the major version is pinned to Neon's Postgres 16 (the runner's
+# own client version changes with the image), and no apt repository or signing key
+# has to be set up at run time.
+on:
+  schedule:
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PG_IMAGE: postgres:16
+    steps:
+      - name: Dump database
+        id: dump
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::Missing repository secret DATABASE_URL (Neon direct, non-pooled connection string)"
+            exit 1
+          fi
+
+          stamp="$(date -u +%Y-%m-%d)"
+          file="stay-ops-${stamp}.dump"
+          mkdir -p backup
+
+          # -e DATABASE_URL (no value) passes the secret through the environment,
+          # so it never appears on a command line or in the log.
+          docker run --rm -e DATABASE_URL "$PG_IMAGE" \
+            sh -c 'pg_dump -Fc --no-owner --no-privileges "$DATABASE_URL"' \
+            > "backup/${file}"
+
+          if [ ! -s "backup/${file}" ]; then
+            echo "::error::Dump file is empty"
+            exit 1
+          fi
+
+          # A dump that cannot be listed cannot be restored.
+          docker run --rm -i "$PG_IMAGE" pg_restore --list < "backup/${file}" > backup/toc.txt
+          entries="$(grep -vc '^;' backup/toc.txt || true)"
+          rm backup/toc.txt
+          if [ "${entries:-0}" -lt 1 ]; then
+            echo "::error::pg_restore --list found no entries in the dump"
+            exit 1
+          fi
+
+          echo "file=${file}" >> "$GITHUB_OUTPUT"
+          echo "stamp=${stamp}" >> "$GITHUB_OUTPUT"
+          echo "Backup ${file}: $(stat -c %s "backup/${file}") bytes, ${entries} TOC entries"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stay-ops-db-${{ steps.dump.outputs.stamp }}
+          path: backup/${{ steps.dump.outputs.file }}
+          retention-days: 30
+          if-no-files-found: error
