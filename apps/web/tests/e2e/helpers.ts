@@ -40,7 +40,9 @@ export async function loginAsStaff(page: Page): Promise<void> {
   await page.getByLabel("Email").fill(c.email);
   await page.getByLabel("Password").fill(c.password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/app\/calendar/);
+  // Login lands on /app, which redirects to the calendar for the old UI. Waiting only for the URL (not the
+  // full page load) keeps the first, compile-heavy dev-server run inside the test timeout.
+  await page.waitForURL(/\/app\/calendar/, { waitUntil: "commit", timeout: 60_000 });
 }
 
 /** Opens calendar route and waits for stable controls to render across desktop/mobile layouts. */

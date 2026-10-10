@@ -44,6 +44,8 @@ test.describe("a11y core routes", { tag: "@a11y" }, () => {
   });
 
   test("calendar, bookings, settings (authenticated)", async ({ page }) => {
+    // Visits several routes; the first run pays for the dev server compiling each of them.
+    test.setTimeout(90_000);
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
     await gotoCalendarAndWaitReady(page);
