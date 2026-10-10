@@ -11,11 +11,10 @@
 
 ## Triage
 1. Check latest webhook/poll logs for provider errors.
-2. Confirm `HOSTHUB_API_TOKEN`, webhook secret, and Redis connectivity.
-3. Confirm queue worker process is healthy.
+2. Confirm `HOSTHUB_API_TOKEN`, webhook secret.
 
 ## Mitigation
-1. Restart sync worker process.
+1. Re-run sync from Settings (or call the reconcile endpoint).
 2. Trigger one manual reconcile run.
 3. Pause noisy retries if provider is rate-limiting.
 
@@ -62,7 +61,7 @@ Interpretation:
 ## Communication template
 - Incident: Sync pipeline degraded.
 - Impact: Booking updates delayed.
-- Mitigation in progress: worker restart and manual reconcile.
+- Mitigation in progress: manual reconcile.
 - Next update: <time + 30m>.
 
 ## On-call

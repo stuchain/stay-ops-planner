@@ -1,6 +1,6 @@
 # Self-host with Docker Compose
 
-Single-machine deployment: **Postgres**, **Redis**, **Next.js web**, and **BullMQ sync worker**. Suitable for a VPS or homelab. For managed hosting (Vercel + Neon + Upstash + separate worker process), see [production-deploy.md](./production-deploy.md).
+Single-machine deployment: **Postgres** and **Next.js web**. Suitable for a VPS or homelab. For managed hosting (Vercel + Neon), see [production-deploy.md](./production-deploy.md).
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ From the repo root:
 docker compose up --build -d
 ```
 
-Wait until `postgres` and `redis` are healthy, then `web` and `worker` start.
+Wait until `postgres` is healthy, then `web` starts.
 
 ## 3. Apply migrations
 
@@ -86,8 +86,6 @@ Ensure `SESSION_COOKIE_SECURE` behavior matches your TLS setup (see [.env.exampl
 - `curl -sS http://127.0.0.1:3000/api/health/ready`
 - Open `http://127.0.0.1:3000/login` (or your HTTPS URL) and sign in.
 
-Confirm **`worker`** logs without continuous crash loops (`docker compose logs -f worker`). The worker requires `REDIS_URL` and uses the same `DATABASE_URL` / Hosthub-related env as the web app for sync jobs.
-
 ## 7. Hosthub webhooks (optional)
 
 Point Hosthub at `https://<your-domain>/api/sync/hosthub/webhook` and set `WEBHOOK_SECRET` to match what Hosthub signs with. See [vendor/hosthub-api.md](../vendor/hosthub-api.md).
@@ -95,14 +93,13 @@ Point Hosthub at `https://<your-domain>/api/sync/hosthub/webhook` and set `WEBHO
 ## 8. Backups and upgrades
 
 - Postgres data lives in the `postgres_data` volume. Use your platform snapshots or the repo’s `pnpm backup:pg` / restore runbooks when running against a reachable `DATABASE_URL`.
-- **Upgrades:** pull the image or rebuild (`docker compose build --pull`), run `migrate:deploy` again, restart `web` and `worker`.
+- **Upgrades:** pull the image or rebuild (`docker compose build --pull`), run `migrate:deploy` again, restart `web`.
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---------|--------|
 | Web exits on boot | `docker compose logs web` — often missing `SESSION_SECRET` or invalid `DATABASE_URL`. |
-| Worker exits immediately | `docker compose logs worker` — requires `REDIS_URL`; must share DB/network with Postgres. |
 | 401 on all API routes | Session cookie `Secure` vs HTTP; use HTTPS or adjust `SESSION_COOKIE_SECURE` for local HTTP only. |
 
-For local development without full Docker app build, prefer [local-dev.md](./local-dev.md) (`docker compose up -d postgres redis` + `pnpm dev` on the host).
+For local development without full Docker app build, prefer [local-dev.md](./local-dev.md) (`docker compose up -d postgres` + `pnpm dev` on the host).

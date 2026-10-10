@@ -125,14 +125,13 @@ describe("Hosthub sync lock", () => {
   });
 });
 
-describe("Hosthub webhook without Redis", () => {
+describe("Hosthub webhook", () => {
   let handleHosthubWebhookPost: (request: Request) => Promise<Response>;
 
   beforeAll(async () => {
     await prisma.$connect();
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("WEBHOOK_SECRET", "");
-    vi.stubEnv("REDIS_URL", "");
     vi.stubEnv("HOSTHUB_API_TOKEN", "");
     handleHosthubWebhookPost = (await import("../../../src/modules/sync/hosthubWebhook"))
       .handleHosthubWebhookPost;

@@ -43,7 +43,6 @@ describe("EnvSchema", () => {
     const result = EnvSchema.safeParse(base);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.REDIS_URL).toBeUndefined();
       expect(result.data.SESSION_COOKIE_SECURE).toBe("auto");
     }
   });

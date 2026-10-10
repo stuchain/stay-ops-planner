@@ -49,7 +49,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "ioredis": "^5.4.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -48,7 +48,6 @@ const nextConfig: NextConfig = {
   /** Monorepo `outputFileTracingRoot` widens NFT; exclude paths never imported by the server bundle. */
   outputFileTracingExcludes: {
     "/*": [
-      "../../packages/worker/**/*",
       "../../docs/**/*",
       "../../.github/**/*",
       "./tests/**/*",

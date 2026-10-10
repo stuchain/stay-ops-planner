@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { BookingStatus } from "@stay-ops/db";
 import { HosthubClient, mapHosthubListingChannel } from "@stay-ops/sync";
 import { apiError, respondAuthError } from "@/lib/apiError";
-import { DEFAULT_USER_RATE_RULES, withRateLimit } from "@/lib/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { AuthError } from "@/modules/auth/errors";
 import { requireAdminSession, requireOperatorOrAdmin } from "@/modules/auth/guard";
@@ -269,12 +268,10 @@ async function getHosthubDiag(request: NextRequest): Promise<Response> {
           syncRunId: e.syncRunId,
         })),
         hosthubReconcileEnv: {
-          HOSTHUB_RECONCILE_FULL_SYNC: process.env.HOSTHUB_RECONCILE_FULL_SYNC ?? null,
           HOSTHUB_CALENDAR_EVENTS_IS_VISIBLE: process.env.HOSTHUB_CALENDAR_EVENTS_IS_VISIBLE ?? null,
-          HOSTHUB_SYNC_FETCH_EVENT_ENRICHMENT: process.env.HOSTHUB_SYNC_FETCH_EVENT_ENRICHMENT ?? null,
           HOSTHUB_RECONCILE_PER_RENTAL_CALENDAR: process.env.HOSTHUB_RECONCILE_PER_RENTAL_CALENDAR ?? null,
           note:
-            "fullSync omits updated_gte; is_visible=all lists hidden Hosthub events; enrichment=0 skips notes/tax fetches per event; per_rental_calendar=1 also walks each rental's calendar-events after the global list.",
+            "is_visible=all lists hidden Hosthub events; per_rental_calendar=1 also walks each rental's calendar-events after the global list.",
         },
         tokenStatus,
         ...(probe ? { probe } : {}),
@@ -293,8 +290,4 @@ async function getHosthubDiag(request: NextRequest): Promise<Response> {
   }
 }
 
-export async function GET(request: NextRequest) {
-  return withRateLimit("GET:/api/admin/sync/hosthub/diag", DEFAULT_USER_RATE_RULES, request, (req) =>
-    getHosthubDiag(req as NextRequest),
-  );
-}
+export const GET = getHosthubDiag;

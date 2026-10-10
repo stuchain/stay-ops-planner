@@ -23,7 +23,6 @@ export const EnvSchema = z.object({
   /** Cookie `Secure` flag: auto = production only; true/false override. */
   SESSION_COOKIE_SECURE: z.enum(["auto", "true", "false"]).default("auto"),
   APP_TIMEZONE: z.string().min(1, "APP_TIMEZONE is required"),
-  REDIS_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   HOSTHUB_API_BASE: z.preprocess(
     (v) =>
       v === "" || v === undefined ? "https://app.hosthub.com/api/2019-03-01" : v,
@@ -35,9 +34,7 @@ export const EnvSchema = z.object({
   /** First calendar-events page: Hosthub `is_visible` (e.g. `all`). */
   HOSTHUB_CALENDAR_EVENTS_IS_VISIBLE: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** When `1` or `true`, reconcile omits incremental updated_gte (full visible history pull). */
-  HOSTHUB_RECONCILE_FULL_SYNC: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** When `0` or `false`, skip calendar-event notes + GR-tax fetches per booking during reconcile. */
-  HOSTHUB_SYNC_FETCH_EVENT_ENRICHMENT: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** When `1` or `true`, reconcile also walks `GET /rentals/{id}/calendar-events` per rental (high API load). */
   HOSTHUB_RECONCILE_PER_RENTAL_CALENDAR: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** Override webhook HMAC header name if Hosthub docs specify a different name than `x-hosthub-signature`. */
@@ -62,7 +59,6 @@ export const EnvSchema = z.object({
   SYNC_CRON_LOCAL_START_HOUR: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(23).optional()),
   SYNC_CRON_LOCAL_END_HOUR: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(23).optional()),
   /** Per-user minimum spacing for `X-StayOps-Sync-Trigger: heartbeat` reconcile POSTs (ms). */
-  SYNC_HEARTBEAT_DEBOUNCE_MS: z.preprocess(emptyToUndefined, z.coerce.number().int().min(60_000).max(86_400_000).optional()),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

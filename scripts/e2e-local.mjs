@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * One-shot local E2E: Docker Postgres/Redis → migrate → seed → seed:e2e → Playwright.
+ * One-shot local E2E: Docker Postgres → migrate → seed → seed:e2e → Playwright.
  *
  * Default credentials match `.github/workflows/e2e.yml` (disposable local/CI only).
  * Override with env: DATABASE_URL, BOOTSTRAP_ADMIN_*, E2E_ADMIN_*, SESSION_SECRET, etc.
@@ -19,7 +19,6 @@ const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD ?? "E2E_Test_Pass
 const env = {
   ...process.env,
   DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://stayops:stayops@127.0.0.1:5432/stayops?schema=e2e",
-  REDIS_URL: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   SESSION_SECRET:
     process.env.SESSION_SECRET ?? "local-e2e-session-secret-at-least-32-chars-long",
   APP_TIMEZONE: process.env.APP_TIMEZONE ?? "Etc/UTC",
@@ -73,8 +72,8 @@ async function waitForPostgres() {
 }
 
 async function main() {
-  console.log("Starting postgres + redis (docker compose)…");
-  run("docker", ["compose", "up", "-d", "postgres", "redis"]);
+  console.log("Starting postgres (docker compose)…");
+  run("docker", ["compose", "up", "-d", "postgres"]);
 
   await waitForPostgres();
   console.log("Postgres is ready.");

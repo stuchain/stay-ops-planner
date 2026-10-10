@@ -14,7 +14,7 @@ Set in deployment or `.env` (see repo root `.env.example`):
 
 | Variable | Purpose |
 |----------|---------|
-| `SENTRY_DSN` | Server-side ingest (API routes, RSC, worker). |
+| `SENTRY_DSN` | Server-side ingest (API routes, RSC). |
 | `NEXT_PUBLIC_SENTRY_DSN` | Browser ingest. |
 | `SENTRY_ENVIRONMENT` | Overrides `NODE_ENV` for the environment tag (e.g. `staging`). |
 | `SENTRY_RELEASE` | **Semver release id**, e.g. `stay-ops-web@0.1.0` (must match CI build). |
@@ -34,10 +34,6 @@ Workflow: `.github/workflows/sentry-release.yml`
 2. Commit and push.
 3. Create and push a git tag, e.g. `v0.1.0`.
 4. Confirm the workflow run completed and the release appears in Sentry with uploaded artifacts.
-
-## Worker (`@stay-ops/worker`)
-
-The BullMQ worker initializes `@sentry/node` when `SENTRY_DSN` is set. Failed jobs call `Sentry.captureException` with queue and job metadata. Use the same `SENTRY_RELEASE` and `SENTRY_ENVIRONMENT` as the web app when possible.
 
 ## Redaction and user identity
 

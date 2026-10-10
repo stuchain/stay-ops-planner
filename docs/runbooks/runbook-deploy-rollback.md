@@ -18,12 +18,11 @@
 ## Mitigation
 1. Roll back to previous stable Vercel deployment.
 2. If migration introduced incompatibility, follow `docs/runbooks/migrations.md`.
-3. Validate Redis + DB connectivity after rollback.
+3. Validate DB connectivity after rollback.
 
 ## Rollback verification
 - `GET /api/health` returns 200.
 - Auth login, calendar, and assignment endpoints succeed (smoke with **`operator`** or **`admin`** session; admin-only routes such as `/api/admin/*` require **`admin`** — see [rbac-policy-matrix.md](../architecture/rbac-policy-matrix.md)).
-- Queue worker processing resumes.
 
 ## Communication template
 - Incident: Deployment rollback triggered.

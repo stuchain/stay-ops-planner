@@ -29,11 +29,9 @@ Runbook evidence link — pick one URL you can reopen:
 
 Baseline acknowledgment:
 
-I confirm Redis/BullMQ and packages/worker are NOT part of the household
-production ship path for Stay Ops Planner. Sync runs only from protected
-web/API endpoints with DB single-flight locking. Local or Docker stacks may
-still use the worker package for development; that is intentional and separate
-from production baseline.
+I confirm there is no Redis or background worker in the household
+production path for Stay Ops Planner. Sync runs only from protected
+web/API endpoints with DB single-flight locking.
 ```
 
 ## Locked deployment decisions
@@ -45,7 +43,7 @@ from production baseline.
   (**Dashboard** install/build overrides `vercel.json` if filled in.)
   **`buildCommand` runs migrations before the Next build:** `pnpm --filter @stay-ops/db exec prisma migrate deploy`, then **`prisma migrate status`**, then **`pnpm build:web`**. If either migrate step exits non‑zero, Vercel **does not ship** that deployment (EPICS Ship‑Epic **S3**).
   **`DATABASE_URL` must be available during the build** for every Vercel environment that runs this command (typically **Production** and **Preview**) — enable the same secret for **Build** (and Preview if applicable), not **Runtime-only**, otherwise migrate fails at build time. Use a **different** `DATABASE_URL` per environment when Preview should not touch production Neon (see [Preview deployments](#preview-deployments-and-the-production-database)).
-  The web build builds `@stay-ops/web` and its workspace dependencies only (skips `packages/worker`) and uses pnpm **append-only** output so logs advance while `next build` compiles.
+  The web build builds `@stay-ops/web` and its workspace dependencies only and uses pnpm **append-only** output so logs advance while `next build` compiles.
   [`apps/web/vercel.json`](../../apps/web/vercel.json) sets **`SKIP_STAYOPS_ENV_VALIDATE=1` for the build step only** so `next build` does not run strict `parseEnv` (which would **`exit(1)`** when session and other secrets exist only at **runtime**, not Build, in Vercel). Production serverless runtime still receives full env from the dashboard; **`DATABASE_URL` is an exception**: it must be present at **Build** too so `migrate deploy` can run (duplicate scope in Vercel UI).
 - Deployment trigger: auto-deploy on push/merge to `main`
 - Production DB: single Neon Postgres target
@@ -222,7 +220,7 @@ The app also applies Next.js-focused mitigations in [`../../apps/web/next.config
 - **`eslint.ignoreDuringBuilds`** — CI already runs **`pnpm lint`** ([`../../.github/workflows/ci.yml`](../../.github/workflows/ci.yml)); avoid duplicating ESLint inside **`next build`**.
 - **`typescript.ignoreBuildErrors`** — CI runs **`pnpm -r run typecheck`** — same trade-off: fewer duplicate checks during **`next build`**. Merge only when typecheck stays green.
 - **`productionBrowserSourceMaps: false`** and **`experimental.serverSourceMaps: false`** — less map work during the build.
-- **`outputFileTracingExcludes`** for paths not used by the server bundle (worker package, docs, `.github`, `apps/web/tests`, `scripts`).
+- **`outputFileTracingExcludes`** for paths not used by the server bundle (docs, `.github`, `apps/web/tests`, `scripts`).
 - **Narrow `outputFileTracingIncludes` for Prisma** — avoids a recursive `.pnpm` prisma glob that explodes NFT over the whole store.
 
 If builds remain unstable after the above, enable Vercel **Enhanced Builds** (larger machines) from the dashboard, or tighten tracing further knowing it can drop required Prisma engine files — validate **`GET /api/health/ready`** after any tracing change.

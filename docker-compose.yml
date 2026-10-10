@@ -16,16 +16,6 @@ services:
       retries: 5
       start_period: 10s
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   web:
     build:
       context: .
@@ -33,34 +23,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://stayops:stayops@postgres:5432/stayops
-      REDIS_URL: redis://redis:6379
       SESSION_SECRET: replace-with-local-only-secret-at-least-32-characters-long
       APP_TIMEZONE: Etc/UTC
       NODE_ENV: production
     ports:
       - "3000:3000"
-
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["pnpm", "--filter", "@stay-ops/worker", "start"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://stayops:stayops@postgres:5432/stayops
-      REDIS_URL: redis://redis:6379
-      SESSION_SECRET: replace-with-local-only-secret-at-least-32-characters-long
-      APP_TIMEZONE: Etc/UTC
-      NODE_ENV: production
-    restart: unless-stopped
 
 volumes:
   postgres_data:

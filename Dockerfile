@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Production-style image: workspace install + Next build + sync worker (single image, two commands via Compose).
+# Production-style image: workspace install + Next build.
 
 FROM node:20-alpine
 
@@ -16,7 +16,6 @@ COPY packages/shared/package.json packages/shared/
 COPY packages/db/package.json packages/db/
 COPY packages/audit/package.json packages/audit/
 COPY packages/sync/package.json packages/sync/
-COPY packages/worker/package.json packages/worker/
 
 RUN pnpm install --frozen-lockfile
 
@@ -25,15 +24,13 @@ COPY packages/shared packages/shared
 COPY packages/db packages/db
 COPY packages/audit packages/audit
 COPY packages/sync packages/sync
-COPY packages/worker packages/worker
 COPY apps/web apps/web
 
 RUN pnpm --filter @stay-ops/shared build && \
   pnpm --filter @stay-ops/db build && \
   pnpm --filter @stay-ops/audit build && \
   pnpm --filter @stay-ops/sync build && \
-  pnpm --filter @stay-ops/web build && \
-  pnpm --filter @stay-ops/worker build
+  pnpm --filter @stay-ops/web build
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

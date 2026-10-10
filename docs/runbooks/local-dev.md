@@ -8,9 +8,9 @@
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` before running the app or worker. Required keys are validated at startup (see `packages/shared/src/env.ts`): `DATABASE_URL`, `SESSION_SECRET` (32+ characters), and `APP_TIMEZONE`. Missing or invalid values fail the process with a JSON error listing fields.
+Copy `.env.example` to `.env.local` before running the app. Required keys are validated at startup (see `packages/shared/src/env.ts`): `DATABASE_URL`, `SESSION_SECRET` (32+ characters), and `APP_TIMEZONE`. Missing or invalid values fail the process with a JSON error listing fields.
 
-## One-command stack (Postgres + Redis + web)
+## One-command stack (Postgres + web)
 
 From the repository root:
 
@@ -21,19 +21,18 @@ docker compose up --build
 This starts:
 
 - **Postgres** on host port `5432` (user/password/db: `stayops` / `stayops` / `stayops`)
-- **Redis** on host port `6379`
-- **web** on host port `3000`, after Postgres and Redis report healthy
+- **web** on host port `3000`, after Postgres reports healthy
 
-The `web` container receives `DATABASE_URL` and `REDIS_URL` pointing at the compose service hostnames (`postgres`, `redis`). For processes running on your **host** (e.g. `pnpm dev`), use `localhost` and the same ports — see `.env.example`.
+The `web` container receives `DATABASE_URL` pointing at the compose service hostname (`postgres`). For processes running on your **host** (e.g. `pnpm dev`), use `localhost` and the same ports — see `.env.example`.
 
 ## Host-only app (containers for data services only)
 
 Useful for faster iteration on the Next app:
 
 ```bash
-docker compose up -d postgres redis
+docker compose up -d postgres
 cp .env.example .env.local
-# Edit DATABASE_URL / REDIS_URL if your ports differ
+# Edit DATABASE_URL if your ports differ
 pnpm dev
 ```
 
@@ -54,14 +53,14 @@ Removes the named volume and recreates an empty Postgres data directory:
 
 ```bash
 docker compose down -v
-docker compose up -d postgres redis
+docker compose up -d postgres
 ```
 
 **Warning:** This deletes all data in the `postgres_data` volume. Do not use against shared or production databases.
 
 ## Playwright E2E (apps/web)
 
-Requires Postgres/Redis and a staff user in the DB whose password matches what Playwright sends (`E2E_ADMIN_*`). If you run `pnpm --filter @stay-ops/web test:e2e` **without** seeding or **without** those env vars, login returns **401** and tests fail.
+Requires Postgres and a staff user in the DB whose password matches what Playwright sends (`E2E_ADMIN_*`). If you run `pnpm --filter @stay-ops/web test:e2e` **without** seeding or **without** those env vars, login returns **401** and tests fail.
 
 ### One command (recommended)
 
@@ -71,14 +70,14 @@ From repo root, with Docker running:
 pnpm e2e:local
 ```
 
-This runs `docker compose up -d postgres redis`, waits for Postgres, `prisma migrate deploy`, `seed`, `seed:e2e`, then Playwright. It starts Next on **port 3005** (not 3000) so it does not fight `pnpm dev`. Default `BOOTSTRAP_ADMIN_*` / `E2E_ADMIN_*` / `DATABASE_URL` match [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) (local disposable only). Override any of them in your environment if needed.
+This runs `docker compose up -d postgres`, waits for Postgres, `prisma migrate deploy`, `seed`, `seed:e2e`, then Playwright. It starts Next on **port 3005** (not 3000) so it does not fight `pnpm dev`. Default `BOOTSTRAP_ADMIN_*` / `E2E_ADMIN_*` / `DATABASE_URL` match [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) (local disposable only). Override any of them in your environment if needed.
 
 Install Chromium once first: `pnpm --filter @stay-ops/web test:e2e:install`
 
 ### Manual steps
 
 1. Install Chromium once: `pnpm --filter @stay-ops/web test:e2e:install`
-2. Start Postgres/Redis (`docker compose up -d postgres redis`) and migrate + seed + E2E fixtures:  
+2. Start Postgres (`docker compose up -d postgres`) and migrate + seed + E2E fixtures:  
    `pnpm --filter @stay-ops/db exec prisma migrate deploy`  
    `pnpm --filter @stay-ops/db seed`  
    `pnpm --filter @stay-ops/db seed:e2e`

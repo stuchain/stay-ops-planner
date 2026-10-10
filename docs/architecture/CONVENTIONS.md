@@ -4,8 +4,8 @@ Authoritative conventions for module boundaries, API errors, data access, and te
 
 ## System shape
 
-- **Monolith:** Next.js (App Router) for UI and HTTP API; background workers (BullMQ) for sync and polling.
-- **Data:** PostgreSQL + Prisma; Redis for queues.
+- **Monolith:** Next.js (App Router) for UI and HTTP API; Hosthub sync runs in-request from the API routes (cron, reconcile, webhook).
+- **Data:** PostgreSQL + Prisma.
 - **Auth:** Session-based internal admin access.
 
 ## Directory intent (`apps/web`)
@@ -14,7 +14,7 @@ Authoritative conventions for module boundaries, API errors, data access, and te
 |------|----------------|
 | `src/modules/auth` | Password verification, session creation, route guards |
 | `src/modules/bookings` | Booking queries, direct booking creation (UI-driven), status |
-| `src/modules/sync` | Hosthub client, webhook handler, poll worker registration |
+| `src/modules/sync` | Hosthub client, webhook handler |
 | `src/modules/allocation` | Assignment commands, conflict checks, revalidation |
 | `src/modules/calendar` | Month aggregation for UI |
 | `src/modules/cleaning` | Task generation, scheduling validation, status transitions |
@@ -27,8 +27,7 @@ Authoritative conventions for module boundaries, API errors, data access, and te
 ## Packages
 
 - `packages/db`: Prisma schema, migrations, generated client, seed.
-- `packages/shared`: Env schema (Zod), shared date helpers, DTO types used by API and workers.
-- `packages/worker`: Background jobs (BullMQ) entrypoint; shared `parseEnv`, queue registration, and calls into module services (no HTTP).
+- `packages/shared`: Env schema (Zod), shared date helpers, DTO types used by API.
 
 ## Data access boundaries
 

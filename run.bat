@@ -50,8 +50,8 @@ if exist "apps\web\.next" (
   rmdir /s /q "apps\web\.next"
 )
 
-echo [stay-ops] Starting Docker dependencies (postgres, redis)...
-docker compose up -d postgres redis
+echo [stay-ops] Starting Docker dependencies (postgres)...
+docker compose up -d postgres
 if errorlevel 1 (
   echo [stay-ops] ERROR: Failed to start Docker services. Is Docker Desktop running?
   exit /b 1
