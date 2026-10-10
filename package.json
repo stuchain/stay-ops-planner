@@ -8,11 +8,11 @@
   },
   "scripts": {
     "dev": "corepack pnpm --filter @stay-ops/shared build && corepack pnpm --filter @stay-ops/db build && corepack pnpm --filter @stay-ops/audit build && corepack pnpm --filter @stay-ops/sync build && corepack pnpm --filter @stay-ops/web dev",
-    "build": "corepack pnpm -r run build",
+    "build": "turbo run build",
     "build:web": "corepack pnpm --filter=@stay-ops/web... --reporter=append-only run build",
-    "lint": "corepack pnpm -r run lint",
-    "typecheck": "corepack pnpm --filter @stay-ops/db generate && corepack pnpm -r run typecheck",
-    "test": "corepack pnpm -r run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
     "test:integration": "node ./scripts/test-integration.mjs",
     "hosthub:smoke": "node ./scripts/hosthub-smoke.mjs",
     "hosthub:count-bookings": "node ./scripts/hosthub-count-bookings.mjs",
@@ -29,6 +29,7 @@
     "db:create-user": "node ./scripts/db-create-user.mjs"
   },
   "devDependencies": {
+    "turbo": "^2",
     "typescript": "5.7.2"
   }
 }
