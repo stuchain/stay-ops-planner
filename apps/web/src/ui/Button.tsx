@@ -1,4 +1,5 @@
 import { Loader2, type LucideIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/ui/cn";
 
@@ -38,7 +39,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     variant = "secondary",
     size = "md",
     loading = false,
-    loadingLabel = "Παρακαλώ περιμένετε",
+    loadingLabel,
     icon: Icon,
     className,
     disabled,
@@ -48,6 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   },
   ref,
 ) {
+  const t = useTranslations("common");
   return (
     <button
       ref={ref}
@@ -64,7 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {loading ? (
         <span className="absolute inset-0 inline-flex items-center justify-center">
           <Loader2 size={24} className="animate-spin" aria-hidden="true" />
-          <span className="sr-only">{loadingLabel}</span>
+          <span className="sr-only">{loadingLabel ?? t("pleaseWait")}</span>
         </span>
       ) : null}
     </button>

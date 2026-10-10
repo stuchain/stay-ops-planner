@@ -1,9 +1,10 @@
 import { TRPCClientError } from "@trpc/client";
+import { useTranslations } from "next-intl";
+import { useCallback } from "react";
 import { isDomainErrorCode, type DomainErrorCode, type DomainErrorParams } from "@stay-ops/domain";
-import { errorsEl } from "@/i18n/errors.el";
-import { errorsEn } from "@/i18n/errors.en";
 
-export type ClientError = { code: DomainErrorCode | "NETWORK"; params: DomainErrorParams };
+export type ClientErrorCode = DomainErrorCode | "NETWORK";
+export type ClientError = { code: ClientErrorCode; params: DomainErrorParams };
 
 /** The error code and params from any thrown value; a failed fetch is NETWORK. */
 export function readClientError(error: unknown): ClientError {
@@ -15,9 +16,18 @@ export function readClientError(error: unknown): ClientError {
   return { code: "INTERNAL", params: {} };
 }
 
-/** The sentence to show for an error, in the user's language. Never the server's message. */
-export function errorText(error: unknown, locale: "el" | "en" = "el"): string {
+/** Translates one code under `errors` in the messages. */
+export type ErrorTranslator = (code: ClientErrorCode, params: Record<string, string | number>) => string;
+
+/** The sentence for an error from the messages. Never the server's message. */
+export function translateError(error: unknown, translate: ErrorTranslator): string {
   const { code, params } = readClientError(error);
-  const template = (locale === "el" ? errorsEl : errorsEn)[code];
-  return template.replace(/\{(\w+)\}/g, (_, key: string) => String(params[key] ?? ""));
+  // Messages may name a guest or apartment; a missing one reads as empty, never as "{guestName}".
+  return translate(code, { guestName: "", roomName: "", ...params });
+}
+
+/** `(error) => sentence` in the user's language. */
+export function useErrorText(): (error: unknown) => string {
+  const t = useTranslations("errors");
+  return useCallback((error: unknown) => translateError(error, (code, params) => t(code, params)), [t]);
 }

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/ui/cn";
 
 type Props = {
@@ -11,7 +12,8 @@ type Props = {
 };
 
 /** Small pill with the apartment colour dot and its name. */
-export function ApartmentChip({ name, color, inactive = false, inactiveLabel = "Απενεργοποιημένο", className }: Props) {
+export function ApartmentChip({ name, color, inactive = false, inactiveLabel, className }: Props) {
+  const t = useTranslations("ui");
   return (
     <span
       style={{ "--apt": color } as CSSProperties}
@@ -26,7 +28,7 @@ export function ApartmentChip({ name, color, inactive = false, inactiveLabel = "
         className={cn("size-3.5 shrink-0 rounded-[4px]", inactive ? "bg-border" : "bg-[var(--apt)]")}
       />
       <span>{name}</span>
-      {inactive ? <span className="text-xs font-normal">· {inactiveLabel}</span> : null}
+      {inactive ? <span className="text-xs font-normal">· {inactiveLabel ?? t("inactive")}</span> : null}
     </span>
   );
 }

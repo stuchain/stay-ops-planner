@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/ui/cn";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 
@@ -30,13 +31,14 @@ export function ApartmentRow({
   inactive = false,
   dropState = null,
   busyGuest,
-  capacityLabel = (n) => `έως ${n} άτομα`,
-  freeLabel = "Ελεύθερο",
-  busyLabel = "Κλεισμένο",
-  inactiveLabel = "Απενεργοποιημένο",
+  capacityLabel,
+  freeLabel,
+  busyLabel,
+  inactiveLabel,
   children,
   className,
 }: Props) {
+  const t = useTranslations();
   const free = !inactive && dropState === "free";
   const busy = !inactive && dropState === "busy";
   return (
@@ -63,15 +65,20 @@ export function ApartmentRow({
           name={name}
           color={color}
           inactive={inactive}
-          inactiveLabel={inactiveLabel}
+          inactiveLabel={inactiveLabel ?? t("ui.inactive")}
           className="self-start"
         />
-        <span className="text-xs text-text-muted">{capacityLabel(capacity)}</span>
-        {free ? <span className="text-xs font-semibold text-success-text">{freeLabel}</span> : null}
+        <span className="text-xs text-text-muted">
+          {capacityLabel ? capacityLabel(capacity) : t("common.upToPeople", { count: capacity })}
+        </span>
+        {free ? <span className="text-xs font-semibold text-success-text">{freeLabel ?? t("ui.free")}</span> : null}
         {busy ? (
           <span className="truncate text-xs font-semibold text-text-muted">
-            {busyLabel}
-            {busyGuest ? `: ${busyGuest}` : ""}
+            {busyLabel !== undefined
+              ? `${busyLabel}${busyGuest ? `: ${busyGuest}` : ""}`
+              : busyGuest
+                ? t("ui.busyBy", { guest: busyGuest })
+                : t("ui.busy")}
           </span>
         ) : null}
       </div>

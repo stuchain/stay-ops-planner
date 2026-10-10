@@ -6,9 +6,10 @@ import { z } from "zod";
 
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 
-import { errorText, readClientError } from "@/api/errors";
-import { errorsEl } from "@/i18n/errors.el";
-import { errorsEn } from "@/i18n/errors.en";
+import { createTranslator } from "next-intl";
+import { readClientError, translateError } from "@/api/errors";
+import el from "../../../messages/el.json";
+import en from "../../../messages/en.json";
 import {
   adminProcedure,
   createTRPCRouter,
@@ -89,8 +90,8 @@ describe("tRPC procedures", () => {
 describe("client error text", () => {
   it("has Greek and English text for every code", () => {
     for (const code of [...DOMAIN_ERROR_CODES, "NETWORK"] as const) {
-      expect(errorsEl[code]).toBeTruthy();
-      expect(errorsEn[code]).toBeTruthy();
+      expect(el.errors[code]).toBeTruthy();
+      expect(en.errors[code]).toBeTruthy();
     }
   });
 
@@ -104,8 +105,14 @@ describe("client error text", () => {
         },
       },
     });
-    expect(errorText(err)).toBe("Το διαμέρισμα είναι πιασμένο από Maria αυτές τις ημέρες.");
-    expect(errorText(err, "en")).toBe("The apartment is taken by Maria on these days.");
+    const tEl = createTranslator({ locale: "el", messages: el, namespace: "errors" });
+    const tEn = createTranslator({ locale: "en", messages: en, namespace: "errors" });
+    expect(translateError(err, (code, params) => tEl(code, params))).toBe(
+      "Το διαμέρισμα είναι πιασμένο από Maria αυτές τις ημέρες.",
+    );
+    expect(translateError(err, (code, params) => tEn(code, params))).toBe(
+      "The apartment is taken by Maria on these days.",
+    );
   });
 
   it("treats a failed request as NETWORK and anything else as INTERNAL", () => {

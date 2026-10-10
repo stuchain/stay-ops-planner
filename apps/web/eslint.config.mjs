@@ -2,6 +2,7 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { FlatCompat } from "@eslint/eslintrc";
 import boundaries from "eslint-plugin-boundaries";
+import i18next from "eslint-plugin-i18next";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -59,6 +60,52 @@ const eslintConfig = [
             { from: "api-client", disallow: ["features", "ui", "app", "legacy"], message: "The api client cannot import ${dependency.type}." },
             { from: "server", disallow: ["ui", "features", "api-client", "app"], message: "Server code cannot import browser code (${dependency.type})." },
           ],
+        },
+      ],
+    },
+  },
+  /**
+   * Screen text lives in messages/el.json and messages/en.json (Phase 2, P2-1):
+   * a literal string in JSX in the new screens fails the build.
+   */
+  {
+    files: ["src/features/**/*.tsx", "src/ui/**/*.tsx"],
+    plugins: { i18next },
+    rules: {
+      "i18next/no-literal-string": [
+        "error",
+        {
+          mode: "jsx-only",
+          "jsx-attributes": {
+            exclude: [
+              "className",
+              "style",
+              "type",
+              "key",
+              "id",
+              "role",
+              "href",
+              "variant",
+              "size",
+              "tone",
+              "side",
+              "position",
+              "dateTime",
+              "inputMode",
+              "autoComplete",
+              "data-.*",
+              "aria-labelledby",
+              "aria-describedby",
+              "aria-hidden",
+              "aria-live",
+              "aria-current",
+              "aria-haspopup",
+              "strokeWidth",
+            ],
+          },
+          // Not screen text: class names and other lower-case tokens, hex colours, CONSTANTS, punctuation.
+          // Anything with a Greek letter or an English capitalised word is still an error.
+          words: { exclude: ["[^A-Z\\u0370-\\u03ff\\u1f00-\\u1fff]*", "#[0-9A-Fa-f]{3,8}", "[A-Z_-]+"] },
         },
       ],
     },

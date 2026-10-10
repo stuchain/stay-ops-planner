@@ -2,26 +2,37 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 
-/** "πριν από 5 λεπτά" style text for how long ago something happened. */
-export function agoText(iso: string, now: Date = new Date()): string {
+export type Ago = { unit: "now" } | { unit: "minutes" | "hours" | "days"; count: number };
+
+/** How long ago something happened, rounded to the unit a person would say ("πριν από 5 λεπτά"). */
+export function agoParts(iso: string, now: Date = new Date()): Ago {
   const minutes = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000));
-  if (minutes < 1) return "μόλις τώρα";
-  if (minutes === 1) return "πριν από 1 λεπτό";
-  if (minutes < 60) return `πριν από ${minutes} λεπτά`;
+  if (minutes < 1) return { unit: "now" };
+  if (minutes < 60) return { unit: "minutes", count: minutes };
   const hours = Math.round(minutes / 60);
-  if (hours === 1) return "πριν από 1 ώρα";
-  if (hours < 24) return `πριν από ${hours} ώρες`;
-  const days = Math.round(hours / 24);
-  return days === 1 ? "πριν από 1 μέρα" : `πριν από ${days} μέρες`;
+  if (hours < 24) return { unit: "hours", count: hours };
+  return { unit: "days", count: Math.round(hours / 24) };
+}
+
+/** "πριν από 5 λεπτά" in the user's language. */
+export function useAgoText(): (iso: string, now?: Date) => string {
+  const t = useTranslations("common.ago");
+  return (iso, now) => {
+    const ago = agoParts(iso, now);
+    return ago.unit === "now" ? t("now") : t(ago.unit, { count: ago.count });
+  };
 }
 
 /** The Hosthub "last updated" line at the bottom of the sidebar. */
 export function SyncIndicator() {
+  const t = useTranslations("sync");
+  const agoText = useAgoText();
   const trpc = useTRPC();
   const status = useQuery({ ...trpc.sync.status.queryOptions(), refetchInterval: 60_000 });
-  if (!status.data) return <span>Ενημέρωση από Hosthub…</span>;
+  if (!status.data) return <span>{t("loading")}</span>;
   return (
     <span className="flex items-start gap-2" aria-live="polite">
       <RefreshCw
@@ -32,10 +43,10 @@ export function SyncIndicator() {
       />
       <span>
         {status.data.running
-          ? "Ενημέρωση από Hosthub τώρα…"
+          ? t("running")
           : status.data.lastSuccessAt
-            ? `Τελευταία ενημέρωση από Hosthub: ${agoText(status.data.lastSuccessAt)}`
-            : "Δεν έχει γίνει ακόμα ενημέρωση από Hosthub"}
+            ? t("lastSuccess", { ago: agoText(status.data.lastSuccessAt) })
+            : t("never")}
       </span>
     </span>
   );

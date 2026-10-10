@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "../intl";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { Plus } from "lucide-react";

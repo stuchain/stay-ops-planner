@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { verifyAndLoadAuthContext } from "@/modules/auth/guard";
 import { SESSION_COOKIE_NAME } from "@/modules/auth/session";
@@ -17,13 +18,28 @@ export function readFlags(raw: unknown): UserFlags {
   return { newUi: record.newUi === true };
 }
 
-export type UserPreferences = { flags: UserFlags; textSize: string };
+export type UiLocale = "el" | "en";
 
-/** Flags and display settings for the signed-in user, read on the server; defaults when signed out. */
-export async function currentUserPreferences(): Promise<UserPreferences> {
+/** Greek unless the user chose English. Signed-out pages (login) are Greek. */
+export const DEFAULT_LOCALE: UiLocale = "el";
+
+export type UserPreferences = { flags: UserFlags; textSize: string; locale: UiLocale };
+
+/**
+ * Flags and display settings for the signed-in user, read on the server; defaults when signed out.
+ * Cached per request, so the layout and the translation config share one query.
+ */
+export const currentUserPreferences = cache(async (): Promise<UserPreferences> => {
   const cookieStore = await cookies();
   const ctx = await verifyAndLoadAuthContext(cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null);
-  if (!ctx) return { flags: { ...DEFAULT_FLAGS }, textSize: "normal" };
-  const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { flags: true, textSize: true } });
-  return { flags: readFlags(user?.flags), textSize: user?.textSize ?? "normal" };
-}
+  if (!ctx) return { flags: { ...DEFAULT_FLAGS }, textSize: "normal", locale: DEFAULT_LOCALE };
+  const user = await prisma.user.findUnique({
+    where: { id: ctx.userId },
+    select: { flags: true, textSize: true, uiLocale: true },
+  });
+  return {
+    flags: readFlags(user?.flags),
+    textSize: user?.textSize ?? "normal",
+    locale: user?.uiLocale === "en" ? "en" : DEFAULT_LOCALE,
+  };
+});

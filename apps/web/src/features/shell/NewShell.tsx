@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Settings, Sun, Wallet } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ApiProvider } from "@/api/client";
 import { Sidebar, type SidebarItem } from "@/ui/Sidebar";
@@ -11,12 +12,12 @@ import { SyncIndicator } from "./SyncIndicator";
 import { useSyncWhileOpen } from "./useSyncWhileOpen";
 
 /** Until Σήμερα and Έσοδα are rebuilt (Phase 2 and 3), those items open the current screens. */
-const NAV: Omit<SidebarItem, "current">[] = [
-  { href: "/app/dashboard", label: "Σήμερα", icon: Sun },
-  { href: "/app/calendar", label: "Ημερολόγιο", icon: CalendarDays },
-  { href: "/app/excel", label: "Έσοδα", icon: Wallet },
-  { href: "/app/settings", label: "Ρυθμίσεις", icon: Settings },
-];
+const NAV = [
+  { href: "/app/dashboard", key: "today", icon: Sun },
+  { href: "/app/calendar", key: "calendar", icon: CalendarDays },
+  { href: "/app/excel", key: "income", icon: Wallet },
+  { href: "/app/settings", key: "settings", icon: Settings },
+] as const;
 
 export type NewShellProps = {
   textSize: string;
@@ -25,8 +26,14 @@ export type NewShellProps = {
 
 function ShellInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
   useSyncWhileOpen();
-  const items = NAV.map((item) => ({ ...item, current: pathname?.startsWith(item.href) ?? false }));
+  const items: SidebarItem[] = NAV.map(({ href, key, icon }) => ({
+    href,
+    icon,
+    label: t(key),
+    current: pathname?.startsWith(href) ?? false,
+  }));
   return (
     <>
       <Sidebar items={items} linkComponent={Link} footer={<SyncIndicator />} />

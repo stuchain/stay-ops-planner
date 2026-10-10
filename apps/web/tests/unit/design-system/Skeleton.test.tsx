@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render } from "../intl";
 import axe from "axe-core";
 import { describe, expect, it } from "vitest";
 import { Skeleton } from "@/ui/Skeleton";

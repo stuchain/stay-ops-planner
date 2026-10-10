@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "./intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { CalendarClient } from "@/modules/calendar/CalendarClient";
@@ -90,6 +90,7 @@ describe("CalendarClient loads", () => {
       <I18nProvider>
         <CalendarClient />
       </I18nProvider>,
+      { locale: "en" },
     );
     await waitFor(() => expect(monthRequests).toHaveLength(1));
     await act(async () => monthRequests[0]!.resolve(monthWithBookingIn("onar")));
@@ -117,6 +118,7 @@ describe("CalendarClient loads", () => {
       <I18nProvider>
         <CalendarClient />
       </I18nProvider>,
+      { locale: "en" },
     );
     await waitFor(() => expect(monthRequests).toHaveLength(1));
     await act(async () => monthRequests[0]!.resolve(monthWithBookingIn("onar")));

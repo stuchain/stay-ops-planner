@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "../intl";
 import axe from "axe-core";
 import { isoDate } from "@stay-ops/domain";
 import { DateText } from "@/ui/DateText";

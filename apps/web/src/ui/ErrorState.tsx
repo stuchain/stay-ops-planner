@@ -1,4 +1,5 @@
 import { RotateCw, TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 
@@ -9,7 +10,8 @@ export interface ErrorStateProps {
   className?: string;
 }
 
-export function ErrorState({ message, onRetry, retryLabel = "Δοκιμάστε ξανά", className }: ErrorStateProps) {
+export function ErrorState({ message, onRetry, retryLabel, className }: ErrorStateProps) {
+  const t = useTranslations("common");
   return (
     <div
       role="alert"
@@ -20,7 +22,7 @@ export function ErrorState({ message, onRetry, retryLabel = "Δοκιμάστε 
         <span>{message}</span>
       </p>
       <Button variant="secondary" icon={RotateCw} onClick={onRetry}>
-        {retryLabel}
+        {retryLabel ?? t("retry")}
       </Button>
     </div>
   );

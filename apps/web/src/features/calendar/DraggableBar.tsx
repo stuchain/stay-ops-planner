@@ -1,6 +1,7 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
+import { useTranslations } from "next-intl";
 import type { CSSProperties } from "react";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
@@ -27,6 +28,7 @@ export function DraggableBar({
   className,
   onOpen,
 }: DraggableBarProps) {
+  const t = useTranslations("common");
   const pending = booking.status === "pending";
   const { listeners, setNodeRef, isDragging } = useDraggable({
     id: `booking:${booking.id}`,
@@ -38,7 +40,7 @@ export function DraggableBar({
   return (
     <div ref={setNodeRef} {...listeners} style={style} className={className}>
       <BookingBar
-        guest={booking.guestName ?? "Χωρίς όνομα"}
+        guest={booking.guestName ?? t("noName")}
         checkin={booking.checkin}
         checkout={booking.checkout}
         channel={booking.channel}

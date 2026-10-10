@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "../intl";
 import axe from "axe-core";
 import { Plus } from "lucide-react";
 import { describe, expect, it } from "vitest";

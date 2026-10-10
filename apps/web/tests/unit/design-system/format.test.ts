@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isoDate } from "@stay-ops/domain";
-import { formatDay, formatMoney, formatNights, formatRange, nightsBetween } from "@/ui/format";
+import { formatDay, formatMoney, formatRange, nightsBetween } from "@/ui/format";
 
 const d = isoDate;
 
@@ -67,13 +67,9 @@ describe("formatRange", () => {
 });
 
 describe("nights", () => {
-  it("counts and words nights", () => {
+  it("counts nights", () => {
     expect(nightsBetween(d("2026-02-27"), d("2026-03-02"))).toBe(3);
     expect(nightsBetween(d("2026-12-30"), d("2027-01-03"))).toBe(4);
-    expect(formatNights(1)).toBe("1 νύχτα");
-    expect(formatNights(4)).toBe("4 νύχτες");
-    expect(formatNights(4, "en")).toBe("4 nights");
-    expect(formatNights(1, "en")).toBe("1 night");
   });
 });
 

@@ -27,8 +27,8 @@
     "smoke:epic7-auth": "corepack pnpm --filter @stay-ops/db run smoke:epic7-auth",
     "db:migrate-docker-to-neon": "node ./scripts/migrate-docker-to-neon.mjs",
     "db:create-user": "node ./scripts/db-create-user.mjs",
-    "format": "prettier --write packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/src/features apps/web/tests/unit/features apps/web/tests/unit/api apps/web/tests/unit/design-system apps/web/tests/integration/server apps/web/src/i18n/errors.el.ts apps/web/src/i18n/errors.en.ts apps/web/tests/e2e/calendar-journeys.spec.ts apps/web/tests/e2e/calendarFixtures.ts apps/web/tests/e2e/calendar-lighthouse.spec.ts",
-    "format:check": "prettier --check packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/src/features apps/web/tests/unit/features apps/web/tests/unit/api apps/web/tests/unit/design-system apps/web/tests/integration/server apps/web/src/i18n/errors.el.ts apps/web/src/i18n/errors.en.ts apps/web/tests/e2e/calendar-journeys.spec.ts apps/web/tests/e2e/calendarFixtures.ts apps/web/tests/e2e/calendar-lighthouse.spec.ts"
+    "format": "prettier --write packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/src/features apps/web/tests/unit/features apps/web/tests/unit/api apps/web/tests/unit/design-system apps/web/tests/integration/server apps/web/src/i18n/request.ts apps/web/src/i18n/next-intl.d.ts apps/web/messages apps/web/tests/unit/i18n apps/web/tests/e2e/calendar-journeys.spec.ts apps/web/tests/e2e/calendarFixtures.ts apps/web/tests/e2e/calendar-lighthouse.spec.ts",
+    "format:check": "prettier --check packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/src/features apps/web/tests/unit/features apps/web/tests/unit/api apps/web/tests/unit/design-system apps/web/tests/integration/server apps/web/src/i18n/request.ts apps/web/src/i18n/next-intl.d.ts apps/web/messages apps/web/tests/unit/i18n apps/web/tests/e2e/calendar-journeys.spec.ts apps/web/tests/e2e/calendarFixtures.ts apps/web/tests/e2e/calendar-lighthouse.spec.ts"
   },
   "devDependencies": {
     "prettier": "^3",

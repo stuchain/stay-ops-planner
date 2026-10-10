@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "../intl";
 import axe from "axe-core";
-import { Sidebar, defaultSidebarItems, type SidebarLinkProps } from "@/ui/Sidebar";
+import { CalendarDays, Settings, Sun, Wallet } from "lucide-react";
+import { Sidebar, type SidebarLinkProps } from "@/ui/Sidebar";
 
 afterEach(cleanup);
 
-const items = defaultSidebarItems.map((i) => ({ ...i, current: i.label === "Ημερολόγιο" }));
+const items = [
+  { href: "/today", label: "Σήμερα", icon: Sun },
+  { href: "/calendar", label: "Ημερολόγιο", icon: CalendarDays, current: true },
+  { href: "/income", label: "Έσοδα", icon: Wallet },
+  { href: "/settings", label: "Ρυθμίσεις", icon: Settings },
+];
 
 describe("Sidebar", () => {
   it("renders the four items with the current page marked", async () => {
@@ -21,9 +27,12 @@ describe("Sidebar", () => {
     expect(results.violations).toEqual([]);
   });
 
-  it("defaults to four items without a current page", () => {
+  it("defaults to the four screens, translated", () => {
     render(<Sidebar />);
     expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getByRole("link", { name: "Ημερολόγιο" })).toBeInTheDocument();
+    render(<Sidebar />, { locale: "en" });
+    expect(screen.getByRole("link", { name: "Calendar" })).toBeInTheDocument();
   });
 
   it("uses a custom link component", () => {

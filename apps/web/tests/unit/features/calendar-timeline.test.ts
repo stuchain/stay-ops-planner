@@ -2,8 +2,10 @@
 import { describe, expect, it } from "vitest";
 import { isoDate } from "@stay-ops/domain";
 import { addMonths, blocksToLoad, dateAt, dayIndex, monthsBetween, spanAround } from "@/features/calendar/timeline";
-import { recommendationText } from "@/features/calendar/text";
-import { agoText } from "@/features/shell/SyncIndicator";
+import { createTranslator } from "next-intl";
+import { recommendationText } from "@/features/calendar/recommendation";
+import { agoParts } from "@/features/shell/SyncIndicator";
+import el from "../../../messages/el.json";
 
 describe("calendar timeline", () => {
   const span = spanAround(isoDate("2026-10-10"));
@@ -35,11 +37,22 @@ describe("calendar timeline", () => {
   });
 });
 
+const tBooking = createTranslator({ locale: "el", messages: el, namespace: "booking" });
+const tAgo = createTranslator({ locale: "el", messages: el, namespace: "common.ago" });
+const agoText = (iso: string, now: Date) => {
+  const ago = agoParts(iso, now);
+  return ago.unit === "now" ? tAgo("now") : tAgo(ago.unit, { count: ago.count });
+};
+
 describe("calendar text", () => {
   it("explains the recommendation in words", () => {
-    expect(recommendationText(["FREE", "FITS_PARTY", "LARGE_PARTY_ROOM"], 4)).toBe("Προτείνεται: χωράει 4 άτομα");
-    expect(recommendationText(["FREE", "BOOKED_THIS_ROOM"], 2)).toBe("Προτείνεται: αυτό έκλεισε ο επισκέπτης");
-    expect(recommendationText(["FREE", "NO_GAP"], null)).toBe("Προτείνεται: δεν αφήνει κενή νύχτα");
+    expect(recommendationText(tBooking, ["FREE", "FITS_PARTY", "LARGE_PARTY_ROOM"], 4)).toBe(
+      "Προτείνεται: χωράει 4 άτομα",
+    );
+    expect(recommendationText(tBooking, ["FREE", "BOOKED_THIS_ROOM"], 2)).toBe(
+      "Προτείνεται: αυτό έκλεισε ο επισκέπτης",
+    );
+    expect(recommendationText(tBooking, ["FREE", "NO_GAP"], null)).toBe("Προτείνεται: δεν αφήνει κενή νύχτα");
   });
 
   it("says how long ago Hosthub updated", () => {

@@ -72,12 +72,6 @@ export function nightsBetween(from: IsoDate, to: IsoDate): number {
   return Math.round((parse(to).getTime() - parse(from).getTime()) / 86_400_000);
 }
 
-/** "1 νύχτα" / "4 νύχτες"; English "1 night" / "4 nights". */
-export function formatNights(count: number, locale: UiLocale = "el"): string {
-  if (locale === "en") return count === 1 ? "1 night" : `${count} nights`;
-  return count === 1 ? "1 νύχτα" : `${count} νύχτες`;
-}
-
 /** Integer cents to "1.250 €" / "12,50 €" (el) or "€1,250" / "€12.50" (en). */
 export function formatMoney(cents: number, locale: UiLocale = "el"): string {
   const rounded = Math.round(cents);

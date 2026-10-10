@@ -2,6 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRef, type ReactNode } from "react";
 import { cn } from "@/ui/cn";
 
@@ -32,9 +33,10 @@ export function SidePanel({
   children,
   footer,
   modal = false,
-  closeLabel = "Κλείσιμο",
+  closeLabel,
   className,
 }: SidePanelProps) {
+  const t = useTranslations("common");
   const opener = useRef<HTMLElement | null>(null);
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal={modal}>
@@ -69,7 +71,7 @@ export function SidePanel({
               ) : null}
             </div>
             <Dialog.Close
-              aria-label={closeLabel}
+              aria-label={closeLabel ?? t("close")}
               className="text-text hover:bg-surface-muted h-target w-target inline-flex shrink-0 items-center justify-center rounded-sm"
             >
               <X size={24} strokeWidth={2} aria-hidden="true" />

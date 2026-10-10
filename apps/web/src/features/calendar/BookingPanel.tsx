@@ -2,9 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, LogOut } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
-import { errorText } from "@/api/errors";
+import { useErrorText } from "@/api/errors";
 import type { CalendarBooking, CalendarRoom, Suggestion } from "@/api/types";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { Button } from "@/ui/Button";
@@ -15,7 +16,7 @@ import { formatDay } from "@/ui/format";
 import { MoneyText } from "@/ui/MoneyText";
 import { SidePanel } from "@/ui/SidePanel";
 import { Skeleton } from "@/ui/Skeleton";
-import { CHANNEL_EL, partyText, recommendationText, smallRoomText } from "./text";
+import { recommendationText } from "./recommendation";
 import type { MoveRequest } from "./useMoveBooking";
 
 const NEUTRAL = "#5B5852";
@@ -41,10 +42,12 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-function busyText(s: Suggestion): string {
-  if (s.reasons.includes("ROOM_INACTIVE")) return "Απενεργοποιημένο";
-  if (s.reasons.includes("ROOM_CLOSED")) return "Κλειστό εκείνες τις μέρες";
-  return s.blockedByGuest ? `Κλεισμένο: ${s.blockedByGuest}` : "Κλεισμένο";
+type T = ReturnType<typeof useTranslations<"booking">>;
+
+function busyText(t: T, s: Suggestion): string {
+  if (s.reasons.includes("ROOM_INACTIVE")) return t("inactive");
+  if (s.reasons.includes("ROOM_CLOSED")) return t("closedThoseDays");
+  return s.blockedByGuest ? t("busyBy", { guest: s.blockedByGuest }) : t("busy");
 }
 
 function MoveButtons({
@@ -58,6 +61,8 @@ function MoveButtons({
   moving: boolean;
   onMove: (request: MoveRequest) => void;
 }) {
+  const t = useTranslations("booking");
+  const errorText = useErrorText();
   const trpc = useTRPC();
   const suggestions = useQuery(trpc.booking.suggestions.queryOptions({ bookingId: booking.id }));
   if (suggestions.isPending) return <Skeleton variant="block" className="h-64" />;
@@ -73,21 +78,21 @@ function MoveButtons({
         const here = s.roomId === current;
         const small = s.available && s.warnings.includes("OVER_CAPACITY") && room.capacity !== null;
         const note = here
-          ? "Είναι εδώ τώρα"
+          ? t("isHereNow")
           : !s.available
-            ? busyText(s)
+            ? busyText(t, s)
             : small
-              ? smallRoomText(room.capacity!)
+              ? t("smallRoom", { count: room.capacity! })
               : s.recommended
-                ? recommendationText(s.reasons, booking.partySize)
-                : "Ελεύθερο";
+                ? recommendationText(t, s.reasons, booking.partySize)
+                : t("free");
         return (
           <li key={s.roomId}>
             <button
               type="button"
               disabled={here || !s.available || moving}
               onClick={() => onMove({ booking, roomId: s.roomId })}
-              aria-label={`Μετακίνηση στο ${room.name}. ${note}`}
+              aria-label={t("moveToAria", { room: room.name, note })}
               className={cn(
                 "min-h-button rounded-sm flex w-full items-center gap-3 border px-4 py-2 text-left",
                 "disabled:cursor-not-allowed",
@@ -126,6 +131,8 @@ export function BookingPanel({
   onCancelConfirm,
   onClose,
 }: BookingPanelProps) {
+  const t = useTranslations();
+  const locale = useLocale();
   const trpc = useTRPC();
   const details = useQuery({
     ...trpc.booking.details.queryOptions({ bookingId: booking?.id ?? "" }),
@@ -138,23 +145,27 @@ export function BookingPanel({
     <SidePanel
       open={open}
       onOpenChange={(next) => (next ? undefined : onClose())}
-      title={booking?.guestName ?? "Κράτηση"}
+      title={booking?.guestName ?? t("booking.title")}
       {...(booking ? { description: <DateText date={booking.checkin} to={booking.checkout} showNights /> } : {})}
     >
       {booking ? (
         <div className="flex flex-col gap-6">
           <dl className="text-sm divide-border divide-y">
-            <Detail label="Άτομα">{partyText(booking.partySize)}</Detail>
-            <Detail label="Κανάλι">{CHANNEL_EL[booking.channel]}</Detail>
-            <Detail label="Διαμέρισμα">
-              {booking.assignment ? roomName(booking.assignment.roomId) : "Χρειάζεται διαμέρισμα"}
+            <Detail label={t("booking.people")}>
+              {booking.partySize === null
+                ? t("common.unknownPeople")
+                : t("common.people", { count: booking.partySize })}
+            </Detail>
+            <Detail label={t("booking.channel")}>{t(`channel.${booking.channel}`)}</Detail>
+            <Detail label={t("booking.apartment")}>
+              {booking.assignment ? roomName(booking.assignment.roomId) : t("booking.needsApartment")}
             </Detail>
             {details.data?.totalAmountCents != null ? (
-              <Detail label="Ποσό">
+              <Detail label={t("booking.amount")}>
                 <MoneyText cents={details.data.totalAmountCents} />
               </Detail>
             ) : null}
-            {details.data?.notes ? <Detail label="Σημειώσεις">{details.data.notes}</Detail> : null}
+            {details.data?.notes ? <Detail label={t("booking.notes")}>{details.data.notes}</Detail> : null}
           </dl>
 
           {confirm && confirm.booking.id === booking.id ? (
@@ -164,11 +175,14 @@ export function BookingPanel({
               className="bg-warning-soft text-warning-text rounded-card p-4"
             >
               <p id="confirm-started" className="text-base mb-3 font-medium">
-                {booking.guestName ?? "Ο επισκέπτης"} μένει ήδη στο {roomName(booking.assignment?.roomId)} από{" "}
-                {formatDay(booking.checkin)}.{" "}
+                {t("booking.confirmStarted", {
+                  guest: booking.guestName ?? t("common.guest"),
+                  room: roomName(booking.assignment?.roomId),
+                  date: formatDay(booking.checkin, locale),
+                })}{" "}
                 {confirm.roomId === null
-                  ? "Να βγει από το διαμέρισμα;"
-                  : `Να μετακινηθεί στο ${roomName(confirm.roomId)} για τις υπόλοιπες νύχτες;`}
+                  ? t("booking.confirmRemove")
+                  : t("booking.confirmMove", { room: roomName(confirm.roomId) })}
               </p>
               <div className="flex gap-3">
                 <Button
@@ -177,27 +191,25 @@ export function BookingPanel({
                   loading={moving}
                   onClick={() => onMove({ ...confirm, confirmStarted: true })}
                 >
-                  Ναι, μετακίνηση
+                  {t("booking.confirmYes")}
                 </Button>
                 <Button size="lg" onClick={onCancelConfirm}>
-                  Όχι
+                  {t("common.no")}
                 </Button>
               </div>
             </div>
           ) : null}
 
           {booking.status === "pending" ? (
-            <p className="bg-surface-muted rounded-card text-text-muted p-4">
-              Η κράτηση δεν έχει επιβεβαιωθεί ακόμα, οπότε δεν μπαίνει σε διαμέρισμα.
-            </p>
+            <p className="bg-surface-muted rounded-card text-text-muted p-4">{t("booking.pendingNote")}</p>
           ) : booking.checkout <= today ? (
             <p className="bg-surface-muted rounded-card text-text-muted p-4">
-              Η διαμονή τελείωσε {formatDay(booking.checkout)}, οπότε δεν μετακινείται.
+              {t("booking.endedNote", { date: formatDay(booking.checkout, locale) })}
             </p>
           ) : (
             <section aria-labelledby="move-title" className="flex flex-col gap-3">
               <h3 id="move-title" className="text-base font-semibold">
-                Μετακίνηση σε
+                {t("booking.moveTo")}
               </h3>
               <MoveButtons booking={booking} rooms={rooms} moving={moving} onMove={onMove} />
               {booking.assignment ? (
@@ -208,7 +220,7 @@ export function BookingPanel({
                   onClick={() => onMove({ booking, roomId: null })}
                   className="self-start"
                 >
-                  Βγάλε την από το διαμέρισμα
+                  {t("booking.removeFromApartment")}
                 </Button>
               ) : null}
             </section>

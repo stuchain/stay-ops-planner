@@ -1,6 +1,6 @@
 /**
  * Every error the new UI can show has a code. The client translates the code
- * (`i18n/errors.el.ts`, `i18n/errors.en.ts`) and never shows `error.message`.
+ * (`apps/web/messages/*.json`, under `errors`) and never shows `error.message`.
  */
 export const DOMAIN_ERROR_CODES = [
   "UNAUTHORIZED",

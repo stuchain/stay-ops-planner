@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "../intl";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { Toaster, showToast, undoToast } from "@/ui/Toast";
@@ -49,6 +49,7 @@ describe("Toast", () => {
       undoToast({
         message: "Μετακινήθηκε στο Cosmos",
         warning: "Μικρό: χωράει έως 3 άτομα",
+        undoLabel: "Αναίρεση",
         onUndo,
       });
     });

@@ -1,6 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { MONTHS_EL } from "../../src/features/calendar/text";
 import {
   CAL_USER,
   GUEST,
@@ -47,6 +46,20 @@ const tray = (page: Page) => page.getByRole("region", { name: /Χρειάζον�
 const room = (page: Page, name: string) => page.getByRole("group", { name, exact: true });
 const bar = (scope: Locator | Page, guest: string) => scope.getByRole("button", { name: new RegExp(`^${guest},`) });
 const panel = (page: Page) => page.getByRole("dialog");
+const MONTHS_EL = [
+  "Ιανουάριος",
+  "Φεβρουάριος",
+  "Μάρτιος",
+  "Απρίλιος",
+  "Μάιος",
+  "Ιούνιος",
+  "Ιούλιος",
+  "Αύγουστος",
+  "Σεπτέμβριος",
+  "Οκτώβριος",
+  "Νοέμβριος",
+  "Δεκέμβριος",
+];
 const toast = (page: Page, text: string) => page.locator("[data-sonner-toast]").filter({ hasText: text });
 const moveButton = (page: Page, roomName: string) =>
   panel(page).getByRole("button", { name: new RegExp(`^Μετακίνηση στο ${roomName}\\.`) });

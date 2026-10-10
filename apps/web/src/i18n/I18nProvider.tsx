@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { en, type MessageTree } from "./messages/en";
 import { el } from "./messages/el";
@@ -16,8 +17,13 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 const trees: Record<LocaleCode, MessageTree> = { en, el };
 
+/**
+ * Text for the screens not rebuilt yet (removed with them in P2-10). It starts from the
+ * locale the server chose for this user, so there is no flash of English (E2-12).
+ */
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<LocaleCode>("en");
+  const serverLocale = useLocale();
+  const [locale, setLocaleState] = useState<LocaleCode>(serverLocale);
 
   const setLocale = useCallback((next: LocaleCode) => {
     setLocaleState(next);
@@ -27,16 +33,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshFromServer = useCallback(async () => {
-    const res = await fetch("/api/auth/me", { credentials: "include" });
-    if (!res.ok) return;
-    const j = (await res.json()) as { data?: { user?: { uiLocale?: string } } };
-    const raw = j.data?.user?.uiLocale;
-    if (raw === "el" || raw === "en") setLocale(raw);
+    try {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) return;
+      const j = (await res.json()) as { data?: { user?: { uiLocale?: string } } };
+      const raw = j.data?.user?.uiLocale;
+      if (raw === "el" || raw === "en") setLocale(raw);
+    } catch {
+      // Offline or a failed request: keep the locale we have.
+    }
   }, [setLocale]);
-
-  useEffect(() => {
-    void refreshFromServer();
-  }, [refreshFromServer]);
 
   useEffect(() => {
     document.documentElement.lang = locale === "el" ? "el" : "en";

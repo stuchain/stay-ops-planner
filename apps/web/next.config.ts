@@ -3,6 +3,9 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { config as loadEnvFile } from "dotenv";
 import { withSentryConfig } from "@sentry/nextjs";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 // Next.js only auto-loads `.env*` from `apps/web`. This repo keeps `.env` at the
 // monorepo root (see `.env.example`), so load that for DATABASE_URL, etc.
@@ -65,7 +68,7 @@ const sentryUploadEnabled = Boolean(
   process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT,
 );
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withNextIntl(nextConfig), {
   ...(process.env.SENTRY_ORG !== undefined ? { org: process.env.SENTRY_ORG } : {}),
   ...(process.env.SENTRY_PROJECT !== undefined ? { project: process.env.SENTRY_PROJECT } : {}),
   ...(process.env.SENTRY_AUTH_TOKEN !== undefined ? { authToken: process.env.SENTRY_AUTH_TOKEN } : {}),

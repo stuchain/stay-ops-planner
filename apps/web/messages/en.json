@@ -1,0 +1,139 @@
+{
+  "common": {
+    "noName": "No name",
+    "guest": "The guest",
+    "retry": "Try again",
+    "close": "Close",
+    "pleaseWait": "Please wait",
+    "undo": "Undo",
+    "notifications": "Notifications",
+    "yes": "Yes",
+    "no": "No",
+    "nights": "{count, plural, one {# night} other {# nights}}",
+    "people": "{count, plural, one {# person} other {# people}}",
+    "unknownPeople": "Number of people unknown",
+    "upToPeople": "{count, plural, one {up to # person} other {up to # people}}",
+    "noCapacity": "capacity not set",
+    "ago": {
+      "now": "just now",
+      "minutes": "{count, plural, one {# minute ago} other {# minutes ago}}",
+      "hours": "{count, plural, one {# hour ago} other {# hours ago}}",
+      "days": "{count, plural, one {# day ago} other {# days ago}}"
+    },
+    "month": "{month, select, 1 {January} 2 {February} 3 {March} 4 {April} 5 {May} 6 {June} 7 {July} 8 {August} 9 {September} 10 {October} 11 {November} 12 {December} other {}}",
+    "weekdayShort": "{day, select, 0 {Sun} 1 {Mon} 2 {Tue} 3 {Wed} 4 {Thu} 5 {Fri} 6 {Sat} other {}}"
+  },
+  "channel": {
+    "airbnb": "Airbnb",
+    "booking": "Booking.com",
+    "direct": "Direct",
+    "other": "Other channel"
+  },
+  "bookingStatus": {
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "needsRoom": "Needs an apartment"
+  },
+  "reason": {
+    "FREE": "Free",
+    "ROOM_TAKEN": "Taken",
+    "ROOM_CLOSED": "Closed on those days",
+    "ROOM_INACTIVE": "Not in use",
+    "FITS_PARTY": "Fits the party",
+    "OVER_CAPACITY": "Too small for the party",
+    "LARGE_PARTY_ROOM": "Suits 3–4 people",
+    "SMALL_PARTY_ROOM": "Suits 1–2 people",
+    "BOOKED_THIS_ROOM": "The guest booked this one",
+    "NO_GAP": "Leaves no empty night",
+    "LEAVES_GAP": "Leaves an empty night"
+  },
+  "errors": {
+    "UNAUTHORIZED": "Your session has ended. Please sign in again.",
+    "FORBIDDEN": "You are not allowed to do this.",
+    "NOT_FOUND": "Not found. It may have been deleted.",
+    "VALIDATION": "Something is not filled in correctly. Please check the details.",
+    "BOOKING_CHANGED": "This booking changed in the meantime. Look at it again and retry.",
+    "ROOM_TAKEN": "The apartment is taken by {guestName} on these days.",
+    "ROOM_CLOSED": "The apartment is closed on these days.",
+    "ROOM_INACTIVE": "This apartment is not in use.",
+    "NOT_CONFIRMED": "This booking is not confirmed yet.",
+    "STAY_STARTED": "{guestName} is already staying in {roomName}. Move them anyway?",
+    "STAY_ENDED": "This stay is over, so it cannot be moved.",
+    "INVALID_STAY": "Departure must be after arrival.",
+    "HOSTHUB_DISCONNECTED": "The connection to Hosthub stopped. Let Stelios know.",
+    "INTERNAL": "Something went wrong. Please try again.",
+    "NETWORK": "No internet connection. Please try again."
+  },
+  "nav": {
+    "label": "Main navigation",
+    "today": "Today",
+    "calendar": "Calendar",
+    "income": "Income",
+    "settings": "Settings"
+  },
+  "sync": {
+    "loading": "Updating from Hosthub…",
+    "running": "Updating from Hosthub now…",
+    "lastSuccess": "Last update from Hosthub: {ago}",
+    "never": "No update from Hosthub yet"
+  },
+  "ui": {
+    "inactive": "Not in use",
+    "free": "Free",
+    "busy": "Taken",
+    "busyBy": "Taken: {guest}"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "today": "Today",
+    "view": "View",
+    "week": "Week",
+    "month": "Month",
+    "monthYear": "{month} {year}",
+    "gridLabel": "Apartment calendar",
+    "overbooked": "More bookings than apartments",
+    "closed": "Closed",
+    "closedReason": "Closed: {reason}",
+    "tray": {
+      "title": "Need an apartment",
+      "dropHere": "Drop the booking here to take it out of its apartment.",
+      "allPlaced": "Every booking has an apartment."
+    },
+    "toast": {
+      "moved": "Moved to {room}",
+      "removed": "The booking was taken out of {room}"
+    }
+  },
+  "booking": {
+    "title": "Booking",
+    "people": "People",
+    "channel": "Channel",
+    "apartment": "Apartment",
+    "amount": "Amount",
+    "notes": "Notes",
+    "needsApartment": "Needs an apartment",
+    "moveTo": "Move to",
+    "moveToAria": "Move to {room}. {note}",
+    "removeFromApartment": "Take it out of the apartment",
+    "isHereNow": "It is here now",
+    "free": "Free",
+    "inactive": "Not in use",
+    "closedThoseDays": "Closed on those days",
+    "busy": "Taken",
+    "busyBy": "Taken: {guest}",
+    "smallRoom": "{count, plural, one {Small: fits up to # person} other {Small: fits up to # people}}",
+    "recommended": "Recommended",
+    "recommendedBooked": "Recommended: the guest booked this one",
+    "recommendedFits": "{count, plural, one {Recommended: fits # person} other {Recommended: fits # people}}",
+    "recommendedNoGap": "Recommended: leaves no empty night",
+    "pendingNote": "This booking is not confirmed yet, so it cannot go into an apartment.",
+    "endedNote": "The stay ended {date}, so it cannot be moved.",
+    "confirmStarted": "{guest} has been staying in {room} since {date}.",
+    "confirmRemove": "Take them out of the apartment?",
+    "confirmMove": "Move them to {room} for the remaining nights?",
+    "confirmYes": "Yes, move"
+  }
+}

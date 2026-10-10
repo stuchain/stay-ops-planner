@@ -1,6 +1,7 @@
 "use client";
 
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { motion } from "@/ui/tokens";
 
@@ -53,11 +54,12 @@ export interface UndoToastOptions {
   onUndo: () => void;
   /** Amber warning line, e.g. the over-capacity case. */
   warning?: ReactNode;
-  undoLabel?: string;
+  /** The translated "Αναίρεση" label. */
+  undoLabel: string;
 }
 
 /** "Μετακινήθηκε στο Cosmos · Αναίρεση", visible for 10 seconds. */
-export function undoToast({ message, onUndo, warning, undoLabel = "Αναίρεση" }: UndoToastOptions): string | number {
+export function undoToast({ message, onUndo, warning, undoLabel }: UndoToastOptions): string | number {
   return showToast({
     message,
     tone: warning ? "warning" : "neutral",
@@ -73,11 +75,12 @@ export function dismissToast(id?: string | number): void {
 
 /** Render once inside the new shell. Bottom-centre, announced politely. */
 export function Toaster() {
+  const t = useTranslations("common");
   return (
     <SonnerToaster
       position="bottom-center"
       visibleToasts={3}
-      containerAriaLabel="Ειδοποιήσεις"
+      containerAriaLabel={t("notifications")}
       toastOptions={{
         unstyled: true,
         classNames: {

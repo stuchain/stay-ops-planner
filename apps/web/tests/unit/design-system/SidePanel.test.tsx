@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "../intl";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { SidePanel } from "@/ui/SidePanel";

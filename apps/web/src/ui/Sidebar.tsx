@@ -1,5 +1,6 @@
 import { CalendarDays, Settings, Sun, Wallet, type LucideIcon } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/ui/cn";
 
 export interface SidebarItem {
@@ -26,12 +27,13 @@ export interface SidebarProps {
   className?: string;
 }
 
-export const defaultSidebarItems: SidebarItem[] = [
-  { href: "/today", label: "Σήμερα", icon: Sun },
-  { href: "/calendar", label: "Ημερολόγιο", icon: CalendarDays },
-  { href: "/income", label: "Έσοδα", icon: Wallet },
-  { href: "/settings", label: "Ρυθμίσεις", icon: Settings },
-];
+/** The four main screens; `key` names the label under `nav` in the messages. */
+const DEFAULT_ITEMS = [
+  { href: "/today", key: "today", icon: Sun },
+  { href: "/calendar", key: "calendar", icon: CalendarDays },
+  { href: "/income", key: "income", icon: Wallet },
+  { href: "/settings", key: "settings", icon: Settings },
+] as const;
 
 function PlainLink({ href, children, ...rest }: SidebarLinkProps) {
   return (
@@ -43,12 +45,14 @@ function PlainLink({ href, children, ...rest }: SidebarLinkProps) {
 
 /** Fixed left navigation (240 px); bottom tabs below 760 px. */
 export function Sidebar({
-  items = defaultSidebarItems,
+  items: itemsProp,
   linkComponent: Link = PlainLink,
   footer,
-  navLabel = "Κύρια πλοήγηση",
+  navLabel,
   className,
 }: SidebarProps) {
+  const t = useTranslations("nav");
+  const items: SidebarItem[] = itemsProp ?? DEFAULT_ITEMS.map(({ key, href, icon }) => ({ href, icon, label: t(key) }));
   return (
     <aside
       className={cn(
@@ -57,7 +61,7 @@ export function Sidebar({
         className,
       )}
     >
-      <nav aria-label={navLabel} className="p-3 max-[759px]:p-1">
+      <nav aria-label={navLabel ?? t("label")} className="p-3 max-[759px]:p-1">
         <ul className="flex flex-col gap-1 max-[759px]:flex-row max-[759px]:gap-0">
           {items.map((item) => {
             const Icon = item.icon;

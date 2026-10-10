@@ -1,11 +1,11 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
-import { errorText, readClientError } from "@/api/errors";
+import { readClientError, useErrorText } from "@/api/errors";
 import type { CalendarBooking, CalendarRangeData, CalendarRoom, MoveResult } from "@/api/types";
 import { showToast, undoToast } from "@/ui/Toast";
-import { smallRoomText } from "./text";
 
 export type MoveRequest = {
   booking: CalendarBooking;
@@ -21,6 +21,8 @@ type Snapshot = { booking: CalendarBooking };
  * follows a success, and the ranges refresh in the background.
  */
 export function useMoveBooking(rooms: CalendarRoom[], onNeedsConfirm: (request: MoveRequest) => void) {
+  const t = useTranslations();
+  const errorText = useErrorText();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const rangeKey = trpc.calendar.range.pathKey();
@@ -76,14 +78,19 @@ export function useMoveBooking(rooms: CalendarRoom[], onNeedsConfirm: (request: 
       });
       const room = rooms.find((r) => r.id === roomId);
       const message =
-        roomId === null ? `Η κράτηση βγήκε από το ${roomName(before)}` : `Μετακινήθηκε στο ${roomName(roomId)}`;
+        roomId === null
+          ? t("calendar.toast.removed", { room: roomName(before) })
+          : t("calendar.toast.moved", { room: roomName(roomId) });
       const warning =
-        result.warnings.includes("OVER_CAPACITY") && room?.capacity != null ? smallRoomText(room.capacity) : undefined;
+        result.warnings.includes("OVER_CAPACITY") && room?.capacity != null
+          ? t("booking.smallRoom", { count: room.capacity })
+          : undefined;
       if (options.undoable === false) {
         showToast({ message, tone: "success" });
       } else {
         undoToast({
           message,
+          undoLabel: t("common.undo"),
           ...(warning ? { warning } : {}),
           onUndo: () =>
             void move(

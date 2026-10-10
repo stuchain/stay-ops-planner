@@ -1,12 +1,12 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { useTranslations } from "next-intl";
 import type { IsoDate } from "@stay-ops/domain";
 import type { CalendarBlock, CalendarBooking, CalendarRoom } from "@/api/types";
 import { ApartmentRow } from "@/ui/ApartmentRow";
 import { cn } from "@/ui/cn";
 import { DraggableBar } from "./DraggableBar";
-import { MONTHS_EL, WEEKDAYS_EL, capacityText } from "./text";
 import { dateAt, dayIndex, monthsBetween, type Span } from "./timeline";
 
 /** Width of the sticky apartment column (ApartmentRow's label cell, w-52). */
@@ -35,6 +35,7 @@ function weekdayOf(date: IsoDate): number {
 }
 
 function DayHeader({ span, dayWidth, firstDay, lastDay, today, overbooked }: CalendarGridProps) {
+  const t = useTranslations();
   const days: number[] = [];
   for (let i = Math.max(0, firstDay); i <= Math.min(lastDay, span.days - 1); i++) days.push(i);
   const months = monthsBetween(span, firstDay, lastDay);
@@ -55,7 +56,10 @@ function DayHeader({ span, dayWidth, firstDay, lastDay, today, overbooked }: Cal
               className="bg-surface text-sm sticky inline-block px-2 py-1 font-semibold"
               style={{ left: LABEL_WIDTH }}
             >
-              {MONTHS_EL[Number(m.start.slice(5, 7)) - 1]} {m.start.slice(0, 4)}
+              {t("calendar.monthYear", {
+                month: t("common.month", { month: String(Number(m.start.slice(5, 7))) }),
+                year: m.start.slice(0, 4),
+              })}
             </span>
           </div>
         ))}
@@ -72,14 +76,14 @@ function DayHeader({ span, dayWidth, firstDay, lastDay, today, overbooked }: Cal
                 isToday ? "bg-accent font-bold text-white" : (weekday === 0 || weekday === 6) && "bg-surface-muted",
               )}
               style={{ left: i * dayWidth, width: dayWidth }}
-              title={isOverbooked ? "Περισσότερες κρατήσεις από διαμερίσματα" : undefined}
+              title={isOverbooked ? t("calendar.overbooked") : undefined}
             >
-              {dayWidth >= 80 ? <span>{WEEKDAYS_EL[weekday]}</span> : null}
+              {dayWidth >= 80 ? <span>{t("common.weekdayShort", { day: String(weekday) })}</span> : null}
               <span>{Number(date.slice(8, 10))}</span>
               {isOverbooked ? (
                 <span
                   className="bg-danger absolute bottom-0 h-1.5 w-full"
-                  aria-label="Περισσότερες κρατήσεις από διαμερίσματα"
+                  aria-label={t("calendar.overbooked")}
                   role="img"
                 />
               ) : null}
@@ -102,6 +106,7 @@ function RoomTrack({
   rowBookings: CalendarBooking[];
   rowBlocks: CalendarBlock[];
 }) {
+  const t = useTranslations();
   const { span, dayWidth, firstDay, lastDay, today, selectedId, onOpen } = props;
   const { setNodeRef } = useDroppable({ id: `room:${room.id}`, data: { roomId: room.id }, disabled: !room.isActive });
   const drop = props.dropStates.get(room.id) ?? null;
@@ -113,7 +118,9 @@ function RoomTrack({
         name={room.name}
         color={room.color ?? NEUTRAL}
         capacity={room.capacity ?? 0}
-        capacityLabel={() => capacityText(room.capacity)}
+        capacityLabel={() =>
+          room.capacity === null ? t("common.noCapacity") : t("common.upToPeople", { count: room.capacity })
+        }
         inactive={!room.isActive}
         dropState={drop?.state ?? null}
         {...(drop?.guest ? { busyGuest: drop.guest } : {})}
@@ -136,9 +143,11 @@ function RoomTrack({
                   left: (dayIndex(span, b.start) + 0.5) * dayWidth + 2,
                   width: (dayIndex(span, b.end) - dayIndex(span, b.start)) * dayWidth - 4,
                 }}
-                title={b.reason ?? "Κλειστό"}
+                title={b.reason ?? t("calendar.closed")}
               >
-                <span className="truncate">Κλειστό{b.reason ? `: ${b.reason}` : ""}</span>
+                <span className="truncate">
+                  {b.reason ? t("calendar.closedReason", { reason: b.reason }) : t("calendar.closed")}
+                </span>
               </div>
             ))}
           {rowBookings

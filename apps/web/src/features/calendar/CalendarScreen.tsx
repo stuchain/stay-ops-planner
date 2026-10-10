@@ -10,9 +10,10 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { canPlace, type IsoDate, type Occupant } from "@stay-ops/domain";
-import { errorText } from "@/api/errors";
+import { useErrorText } from "@/api/errors";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
 import { Button } from "@/ui/Button";
@@ -71,6 +72,8 @@ function dropStatesFor(
 }
 
 export function CalendarScreen({ today }: CalendarScreenProps) {
+  const t = useTranslations();
+  const errorText = useErrorText();
   const span = useMemo(() => spanAround(today), [today]);
   const [zoom, setZoom] = useState<Zoom>("month");
   const dayWidth = DAY_WIDTH[zoom];
@@ -190,13 +193,13 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
       )}
     >
       <PageHeader
-        title="Ημερολόγιο"
+        title={t("calendar.title")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <IconButton label="Προηγούμενος μήνας" icon={ChevronLeft} onClick={() => shiftMonth(-1)} />
-            <Button onClick={() => scrollToDate(today)}>Σήμερα</Button>
-            <IconButton label="Επόμενος μήνας" icon={ChevronRight} onClick={() => shiftMonth(1)} />
-            <div role="group" aria-label="Εμφάνιση" className="border-border ml-2 flex rounded-sm border">
+            <IconButton label={t("calendar.previousMonth")} icon={ChevronLeft} onClick={() => shiftMonth(-1)} />
+            <Button onClick={() => scrollToDate(today)}>{t("calendar.today")}</Button>
+            <IconButton label={t("calendar.nextMonth")} icon={ChevronRight} onClick={() => shiftMonth(1)} />
+            <div role="group" aria-label={t("calendar.view")} className="border-border ml-2 flex rounded-sm border">
               {(["week", "month"] as const).map((z) => (
                 <button
                   key={z}
@@ -208,7 +211,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                     zoom === z ? "bg-accent text-white" : "bg-surface text-text",
                   )}
                 >
-                  {z === "week" ? "Εβδομάδα" : "Μήνας"}
+                  {z === "week" ? t("calendar.week") : t("calendar.month")}
                 </button>
               ))}
             </div>
@@ -237,7 +240,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
             ref={scroller}
             onScroll={onScroll}
             className="bg-surface border-border shadow-card rounded-card relative max-h-[calc(100vh-280px)] min-h-[300px] overflow-auto border"
-            aria-label="Ημερολόγιο διαμερισμάτων"
+            aria-label={t("calendar.gridLabel")}
             role="region"
             tabIndex={0}
           >
@@ -269,7 +272,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
         <DragOverlay dropAnimation={null}>
           {dragging ? (
             <BookingBar
-              guest={dragging.guestName ?? "Χωρίς όνομα"}
+              guest={dragging.guestName ?? t("common.noName")}
               checkin={dragging.checkin}
               checkout={dragging.checkout}
               channel={dragging.channel}

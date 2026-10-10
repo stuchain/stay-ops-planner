@@ -1,17 +1,11 @@
 import { Globe, Handshake } from "lucide-react";
 import type { ButtonHTMLAttributes, CSSProperties } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import type { IsoDate } from "@stay-ops/domain";
 import { cn } from "@/ui/cn";
-import { formatNights, formatRange, nightsBetween } from "@/ui/format";
+import { formatRange, nightsBetween } from "@/ui/format";
 
 export type BookingChannel = "airbnb" | "booking" | "direct" | "other";
-
-const CHANNEL_LABELS: Record<BookingChannel, string> = {
-  airbnb: "Airbnb",
-  booking: "Booking.com",
-  direct: "Απευθείας",
-  other: "Άλλο κανάλι",
-};
 
 type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" | "draggable"> & {
   guest: string;
@@ -57,18 +51,24 @@ export function BookingBar({
   dragging = false,
   pending = false,
   needsRoom = false,
-  pendingLabel = "Εκκρεμεί",
-  needsRoomLabel = "Χρειάζεται διαμέρισμα",
+  pendingLabel,
+  needsRoomLabel,
   channelLabels,
   className,
   style,
   type = "button",
   ...rest
 }: Props) {
-  const channelLabel = { ...CHANNEL_LABELS, ...channelLabels }[channel];
-  const range = formatRange(checkin, checkout);
-  const nights = formatNights(nightsBetween(checkin, checkout));
-  const status = pending ? pendingLabel : needsRoom ? needsRoomLabel : null;
+  const t = useTranslations();
+  const locale = useLocale();
+  const channelLabel = channelLabels?.[channel] ?? t(`channel.${channel}`);
+  const range = formatRange(checkin, checkout, locale);
+  const nights = t("common.nights", { count: nightsBetween(checkin, checkout) });
+  const status = pending
+    ? (pendingLabel ?? t("bookingStatus.pending"))
+    : needsRoom
+      ? (needsRoomLabel ?? t("bookingStatus.needsRoom"))
+      : null;
   const accessibleName = [guest, range, nights, status].filter(Boolean).join(", ");
   const draggable = !pending;
 
