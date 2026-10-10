@@ -105,10 +105,49 @@ async function main() {
     rooms.push(
       await prisma.room.upsert({
         where: { code: room.code },
-        update: { ...room, isActive: true, calendarSortIndex: index },
-        create: { ...room, isActive: true, calendarSortIndex: index },
+        update: { ...room, isActive: true, calendarSortIndex: index, rentalIndex: index + 1 },
+        create: { ...room, isActive: true, calendarSortIndex: index, rentalIndex: index + 1 },
       }),
     );
+  }
+
+  // One listing per platform and apartment, so the money page knows which apartment was booked.
+  const listings = new Map<string, string>();
+  for (const channel of [Channel.airbnb, Channel.booking]) {
+    for (const [index, room] of ROOMS.entries()) {
+      const listing = await prisma.sourceListing.upsert({
+        where: { channel_externalListingId: { channel, externalListingId: `${room.code}-${channel}` } },
+        update: { rentalIndex: index + 1, title: room.displayName },
+        create: {
+          channel,
+          externalListingId: `${room.code}-${channel}`,
+          rentalIndex: index + 1,
+          title: room.displayName,
+        },
+      });
+      listings.set(`${channel}:${index}`, listing.id);
+    }
+  }
+
+  // Earlier stays this year, so the money page has a year to show: one every 6 days per apartment,
+  // ending before the hand-written bookings above; summer nights cost more.
+  const today = dayFromToday(0);
+  const daysIntoYear = Math.round((today.getTime() - Date.UTC(today.getUTCFullYear(), 0, 1)) / 86_400_000);
+  for (let room = 0; room < ROOMS.length; room += 1) {
+    for (let from = -daysIntoYear + room; from <= -26; from += 6) {
+      const month = dayFromToday(from).getUTCMonth();
+      const nightly = [70, 70, 80, 95, 110, 140, 165, 170, 130, 100, 75, 80][month]! + room * 5;
+      const channel = [Channel.airbnb, Channel.booking, Channel.direct][(from + 400) % 3]!;
+      BOOKINGS.push({
+        guest: `Demo Guest ${room + 1}-${-from}`,
+        from,
+        nights: 3,
+        adults: 2,
+        channel,
+        room,
+        cents: nightly * 3 * 100,
+      });
+    }
   }
 
   for (const [index, b] of BOOKINGS.entries()) {
@@ -128,6 +167,10 @@ async function main() {
         guestInfants: 0,
         guestTotal: b.adults + (b.children ?? 0),
         totalAmountCents: b.cents ?? null,
+        totalValueCents: b.cents ?? null,
+        payoutAmountCents: b.cents == null ? null : b.channel === Channel.direct ? b.cents : Math.round(b.cents * 0.85),
+        sourceListingId:
+          b.channel === Channel.direct ? null : (listings.get(`${b.channel}:${b.room ?? index % 4}`) ?? null),
         currency: "EUR",
       },
     });
