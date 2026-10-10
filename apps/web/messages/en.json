@@ -63,7 +63,9 @@
     "INVALID_STAY": "Departure must be after arrival.",
     "HOSTHUB_DISCONNECTED": "The connection to Hosthub stopped. Let Stelios know.",
     "INTERNAL": "Something went wrong. Please try again.",
-    "NETWORK": "No internet connection. Please try again."
+    "NETWORK": "No internet connection. Please try again.",
+    "ROOM_HAS_BOOKINGS": "The apartment still has {count, plural, one {# booking} other {# bookings}}. Move them first.",
+    "CHANGED_MEANWHILE": "Something changed in the meantime. Look again and retry."
   },
   "nav": {
     "label": "Main navigation",
@@ -245,6 +247,47 @@
       "deleteConfirm": "Delete the entry “{name}”?",
       "deleteYes": "Yes, delete",
       "deleted": "Entry deleted"
+    }
+  },
+  "dev": {
+    "nav": {
+      "label": "Dev mode",
+      "apartments": "Apartments"
+    },
+    "noAccess": {
+      "title": "You don't have access",
+      "text": "This page is for the admin only, with Dev mode switched on in Settings."
+    },
+    "apartments": {
+      "title": "Apartments",
+      "subtitle": "Name, colour, capacity and order on the calendar.",
+      "needsSetup": "{count, plural, one {# new apartment from Hosthub needs setting up.} other {# new apartments from Hosthub need setting up.}}",
+      "order": "Order",
+      "name": "Name",
+      "color": "Colour",
+      "capacity": "Capacity (people)",
+      "preferredLarge": "Preferred for 3–4 people",
+      "preferredLargeShort": "For 3–4 people",
+      "active": "In use (shown on the calendar)",
+      "status": "Status",
+      "inUse": "In use",
+      "notInUse": "Not in use",
+      "rental": "Hosthub rental",
+      "noRental": "Not linked",
+      "rentalLine": "Hosthub rental {id}",
+      "upcoming": "Upcoming bookings",
+      "actions": "Actions",
+      "notSet": "Not set",
+      "yes": "Yes",
+      "no": "No",
+      "edit": "Edit",
+      "setUp": "Set up",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "The apartment was saved.",
+      "drag": "Drag to reorder {name}",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down"
     }
   }
 }

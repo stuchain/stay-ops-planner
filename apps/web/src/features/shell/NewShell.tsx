@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Settings, Sun, Wallet } from "lucide-react";
+import { Building2, CalendarDays, Settings, Sun, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ApiProvider } from "@/api/client";
@@ -19,14 +19,19 @@ const NAV = [
   { href: "/app/settings", key: "settings", icon: Settings },
 ] as const;
 
+/** Dev mode sections, shown only to an admin with Dev mode switched on (decided on the server). */
+const DEV_NAV = [{ href: "/app/dev/apartments", key: "apartments", icon: Building2 }] as const;
+
 export type NewShellProps = {
   textSize: string;
+  devMode: boolean;
   children: ReactNode;
 };
 
-function ShellInner({ children }: { children: ReactNode }) {
+function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNode }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const tDev = useTranslations("dev.nav");
   useSyncWhileOpen();
   const items: SidebarItem[] = NAV.map(({ href, key, icon }) => ({
     href,
@@ -34,9 +39,20 @@ function ShellInner({ children }: { children: ReactNode }) {
     label: t(key),
     current: pathname?.startsWith(href) ?? false,
   }));
+  const secondary = devMode
+    ? {
+        label: tDev("label"),
+        items: DEV_NAV.map(({ href, key, icon }) => ({
+          href,
+          icon,
+          label: tDev(key),
+          current: pathname?.startsWith(href) ?? false,
+        })),
+      }
+    : undefined;
   return (
     <>
-      <Sidebar items={items} linkComponent={Link} footer={<SyncIndicator />} />
+      <Sidebar items={items} linkComponent={Link} footer={<SyncIndicator />} {...(secondary ? { secondary } : {})} />
       <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20">{children}</main>
       <Toaster />
     </>
@@ -44,11 +60,11 @@ function ShellInner({ children }: { children: ReactNode }) {
 }
 
 /** The redesigned app shell, shown to users with the `newUi` flag. */
-export function NewShell({ textSize, children }: NewShellProps) {
+export function NewShell({ textSize, devMode, children }: NewShellProps) {
   return (
     <div id="new-ui-root" data-ui="new" data-text-size={textSize}>
       <ApiProvider>
-        <ShellInner>{children}</ShellInner>
+        <ShellInner devMode={devMode}>{children}</ShellInner>
       </ApiProvider>
     </div>
   );

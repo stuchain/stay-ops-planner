@@ -16,7 +16,7 @@ export default async function AppLayout({
   if (prefs.flags.newUi) {
     // Screens not rebuilt yet still use the old I18n provider inside the new shell.
     return (
-      <NewShell textSize={prefs.textSize}>
+      <NewShell textSize={prefs.textSize} devMode={prefs.devMode}>
         <I18nProvider>{children}</I18nProvider>
       </NewShell>
     );

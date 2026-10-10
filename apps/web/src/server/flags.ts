@@ -23,7 +23,13 @@ export type UiLocale = "el" | "en";
 /** Greek unless the user chose English. Signed-out pages (login) are Greek. */
 export const DEFAULT_LOCALE: UiLocale = "el";
 
-export type UserPreferences = { flags: UserFlags; textSize: string; locale: UiLocale };
+export type UserPreferences = {
+  flags: UserFlags;
+  textSize: string;
+  locale: UiLocale;
+  /** Dev mode is shown: the user switched it on AND is an admin. It decides what is shown, never what is allowed. */
+  devMode: boolean;
+};
 
 /**
  * Flags and display settings for the signed-in user, read on the server; defaults when signed out.
@@ -32,14 +38,15 @@ export type UserPreferences = { flags: UserFlags; textSize: string; locale: UiLo
 export const currentUserPreferences = cache(async (): Promise<UserPreferences> => {
   const cookieStore = await cookies();
   const ctx = await verifyAndLoadAuthContext(cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null);
-  if (!ctx) return { flags: { ...DEFAULT_FLAGS }, textSize: "normal", locale: DEFAULT_LOCALE };
+  if (!ctx) return { flags: { ...DEFAULT_FLAGS }, textSize: "normal", locale: DEFAULT_LOCALE, devMode: false };
   const user = await prisma.user.findUnique({
     where: { id: ctx.userId },
-    select: { flags: true, textSize: true, uiLocale: true },
+    select: { flags: true, textSize: true, uiLocale: true, devMode: true },
   });
   return {
     flags: readFlags(user?.flags),
     textSize: user?.textSize ?? "normal",
     locale: user?.uiLocale === "en" ? "en" : DEFAULT_LOCALE,
+    devMode: Boolean(user?.devMode) && ctx.role === "admin",
   };
 });
