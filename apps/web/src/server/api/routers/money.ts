@@ -1,7 +1,7 @@
 import { TaxBracketsSchema } from "@stay-ops/domain";
 import { z } from "zod";
 import { buildLedger } from "@/server/useCases/buildLedger";
-import { saveTaxRules } from "@/server/useCases/taxRules";
+import { saveTaxRules, taxRulesForEditing } from "@/server/useCases/taxRules";
 import {
   addManualLedgerRow,
   deleteManualLedgerRow,
@@ -49,6 +49,9 @@ export const moneyRouter = createTRPCRouter({
   deleteManualRow: operatorProcedure
     .input(z.object({ entryId: z.string().min(1), expectedVersion: version }))
     .mutation(({ ctx, input }) => deleteManualLedgerRow({ ...input, actorUserId: ctx.user.userId })),
+
+  /** A year's tax brackets for the Dev mode editor (admins only). */
+  taxRules: adminProcedure.input(z.object({ year })).query(({ input }) => taxRulesForEditing(input.year)),
 
   /** Tax brackets for a year (Dev mode, admins only). */
   setTaxRules: adminProcedure

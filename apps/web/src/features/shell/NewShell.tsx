@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, CalendarDays, Settings, Sun, Wallet } from "lucide-react";
+import { Building2, CalendarDays, Landmark, Settings, Sun, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ApiProvider } from "@/api/client";
@@ -23,7 +23,10 @@ const NAV = [
 ] as const;
 
 /** Dev mode sections, shown only to an admin with Dev mode switched on (decided on the server). */
-const DEV_NAV = [{ href: "/app/dev/apartments", key: "apartments", icon: Building2 }] as const;
+const DEV_NAV = [
+  { href: "/app/dev/apartments", key: "apartments", icon: Building2 },
+  { href: "/app/dev/taxes", key: "taxes", icon: Landmark },
+] as const;
 
 export type NewShellProps = {
   textSize: string;

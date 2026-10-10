@@ -16,4 +16,5 @@ export type BookingDetails = RouterOutputs["booking"]["details"];
 export type LedgerYearData = RouterOutputs["money"]["year"];
 export type LedgerRowData = LedgerYearData["rows"][number];
 export type LedgerApartmentData = LedgerYearData["apartments"][number];
+export type TaxRulesEditData = RouterOutputs["money"]["taxRules"];
 export type ApartmentRow = RouterOutputs["dev"]["apartments"]["list"][number];

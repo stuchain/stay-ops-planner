@@ -250,12 +250,49 @@
       "deleteConfirm": "Delete the entry “{name}”?",
       "deleteYes": "Yes, delete",
       "deleted": "Entry deleted"
+    },
+    "taxEditor": {
+      "title": "Tax brackets",
+      "subtitle": "The brackets the Income page uses to estimate the tax, one set per year.",
+      "year": "Year",
+      "notSaved": "Nothing saved for {year} yet: the Income page uses the brackets from last year's spreadsheet.",
+      "lastSaved": "Last saved on {date}",
+      "brackets": "Brackets",
+      "bracketsHint": "Each bracket taxes only the part of the income that falls inside it.",
+      "from": "From",
+      "upTo": "Up to (€)",
+      "upToAria": "Bracket {n}: up to how many euros",
+      "rate": "Rate (%)",
+      "rateAria": "Bracket {n}: rate in percent",
+      "andAbove": "and above",
+      "add": "Add a bracket",
+      "remove": "Remove bracket {n}",
+      "limitInvalid": "Write an amount in euros, for example 12.000.",
+      "limitNotRising": "Each limit must be higher than the one before.",
+      "rateInvalid": "Write a rate from 0 to 100, for example 15 or 22,5.",
+      "scope": "Taxed on",
+      "scopeTotal": "The total of all apartments (one owner)",
+      "scopePerApartment": "Each apartment on its own",
+      "basis": "Income counted",
+      "basisGross": "What the guest paid",
+      "basisPayout": "What arrives after platform fees",
+      "confirmed": "Confirmed by the accountant",
+      "confirmedHint": "Until this is ticked, the Income page says the figures are not confirmed.",
+      "note": "Note",
+      "noteHint": "Where the figures came from, for example the accountant's email.",
+      "example": "Example: on {income} the tax would be {tax}.",
+      "save": "Save",
+      "reset": "Undo changes",
+      "saved": "The brackets for {year} were saved.",
+      "fixErrors": "Some boxes need correcting before saving.",
+      "actions": "Actions"
     }
   },
   "dev": {
     "nav": {
       "label": "Dev mode",
-      "apartments": "Apartments"
+      "apartments": "Apartments",
+      "taxes": "Tax brackets"
     },
     "noAccess": {
       "title": "You don't have access",

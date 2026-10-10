@@ -14,7 +14,7 @@ let seq = 0;
 async function truncate() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE "audit_events", "ledger_entries", "assignments", "cleaning_tasks", "bookings",
-      "source_listings", "rooms", "users", "tax_rules"
+      "source_listings", "rooms", "users", "tax_rules", "excel_rental_config"
     RESTART IDENTITY CASCADE;
   `);
 }
@@ -229,7 +229,10 @@ describe("money ledger", () => {
   });
 
   it("reads tax rules from settings", async () => {
-    const { saveTaxRules } = await import("@/server/useCases/taxRules");
+    const { saveTaxRules, taxRulesForEditing } = await import("@/server/useCases/taxRules");
+    const before = await taxRulesForEditing(YEAR, new Date("2030-03-01T12:00:00Z"));
+    expect(before).toMatchObject({ saved: false, note: null, years: [2029, 2030, 2031] });
+    expect(before.rules.confirmed).toBe(false);
     const saved = await saveTaxRules({
       year: YEAR,
       brackets: [
@@ -243,6 +246,9 @@ describe("money ledger", () => {
       actorUserId,
     });
     expect(saved).toMatchObject({ scope: "per_apartment", incomeBasis: "payout", confirmed: true });
+    const after = await taxRulesForEditing(YEAR - 5, new Date("2030-03-01T12:00:00Z"));
+    expect(after.years).toEqual([2025, 2029, 2030, 2031]);
+    expect((await taxRulesForEditing(YEAR)).note).toBe("From the accountant");
     await booking("2030-07-01", { listingId: (await listing(Channel.airbnb, 1)).id });
     const l = await ledger();
     expect(l.totals.byRentalCents[0]).toBe(27_000); // payout basis
