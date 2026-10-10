@@ -118,6 +118,17 @@ describe("TodayScreen", () => {
     expect(tomorrow.getByRole("link", { name: /Elena Tomorrow/ })).toHaveTextContent("4 άτομα · 2 νύχτες");
     expect(tomorrow.getByText("Καμία αναχώρηση αύριο.")).toBeInTheDocument();
 
+    // Arrival cards: one link per card with that day's arrivals; none for departures.
+    expect(arrivals.getByRole("link", { name: "Εκτύπωση καρτών άφιξης" })).toHaveAttribute(
+      "href",
+      "/app/arrival-cards?ids=b1,b2,b3",
+    );
+    expect(tomorrow.getByRole("link", { name: "Εκτύπωση καρτών άφιξης" })).toHaveAttribute(
+      "href",
+      "/app/arrival-cards?ids=b5",
+    );
+    expect(departures.queryByRole("link", { name: "Εκτύπωση καρτών άφιξης" })).toBeNull();
+
     const needs = within(screen.getByRole("region", { name: "Χρειάζονται διαμέρισμα" }));
     expect(needs.getByText("2 κρατήσεις περιμένουν διαμέρισμα.")).toBeInTheDocument();
     expect(needs.getByRole("link", { name: "Βάλτε τις σε διαμέρισμα" })).toHaveAttribute("href", "/app/calendar");

@@ -25,7 +25,7 @@ export function HosthubBanner() {
   return (
     <div
       role="alert"
-      className="bg-warning-soft text-warning-text border-warning flex flex-wrap items-center justify-between gap-3 border-b-2 px-6 py-3"
+      className="bg-warning-soft text-warning-text border-warning flex print:hidden flex-wrap items-center justify-between gap-3 border-b-2 px-6 py-3"
     >
       <p className="flex items-start gap-3 text-base">
         <TriangleAlert size={24} className="shrink-0" aria-hidden="true" />

@@ -1,14 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, LogOut } from "lucide-react";
+import { ArrowRight, IdCard, LogOut } from "lucide-react";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { CalendarBooking, CalendarRoom, Suggestion } from "@/api/types";
 import { ApartmentChip } from "@/ui/ApartmentChip";
-import { Button } from "@/ui/Button";
+import { arrivalCardsHref } from "@/features/arrivalCards/ids";
+import { Button, buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 import { DateText } from "@/ui/DateText";
 import { ErrorState } from "@/ui/ErrorState";
@@ -172,6 +174,15 @@ export function BookingPanel({
           ) : null}
 
           <ReturningGuest bookingId={booking.id} />
+
+          <Link
+            href={arrivalCardsHref([booking.id])}
+            target="_blank"
+            className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg, "self-start")}
+          >
+            <IdCard size={24} aria-hidden="true" />
+            {t("arrivalCards.open")}
+          </Link>
 
           {confirm && confirm.booking.id === booking.id ? (
             <div

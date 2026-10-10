@@ -92,7 +92,7 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
         }
         {...(secondary ? { secondary } : {})}
       />
-      <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20">
+      <main className="ml-sidebar min-h-screen print:ml-0 max-[759px]:ml-0 max-[759px]:pb-20">
         <HosthubBanner />
         {children}
       </main>

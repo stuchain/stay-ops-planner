@@ -836,7 +836,8 @@
     "departureLine": "Έμειναν {nights}",
     "pendingLabel": "Αναμένει επιβεβαίωση",
     "needsApartment": "Χρειάζεται διαμέρισμα",
-    "loading": "Φόρτωση της σημερινής εικόνας"
+    "loading": "Φόρτωση της σημερινής εικόνας",
+    "printCards": "Εκτύπωση καρτών άφιξης"
   },
   "errorPage": {
     "retry": "Δοκιμάστε ξανά",
@@ -906,5 +907,31 @@
     "stay": "{apartment}, {month}",
     "noApartment": "χωρίς διαμέρισμα",
     "more": "+{count} ακόμα"
+  },
+  "arrivalCards": {
+    "title": "Κάρτες άφιξης",
+    "count": "{count, plural, one {# κάρτα} other {# κάρτες}}",
+    "print": "Εκτύπωση",
+    "open": "Κάρτα άφιξης",
+    "cardTitle": "Κάρτα άφιξης",
+    "checkin": "Άφιξη",
+    "checkout": "Αναχώρηση",
+    "stay": "Διαμονή",
+    "apartment": "Διαμέρισμα",
+    "noApartment": "Δεν έχει διαμέρισμα ακόμα",
+    "people": "Άτομα",
+    "channel": "Κανάλι",
+    "phone": "Τηλέφωνο",
+    "email": "Email",
+    "notes": "Σημειώσεις",
+    "noNotes": "Δεν υπάρχουν σημειώσεις.",
+    "notGiven": "Δεν έχει δοθεί",
+    "adults": "{count, plural, one {# ενήλικας} other {# ενήλικες}}",
+    "children": "{count, plural, one {# παιδί} other {# παιδιά}}",
+    "infants": "{count, plural, one {# βρέφος} other {# βρέφη}}",
+    "noIdsTitle": "Δεν επιλέχθηκε άφιξη",
+    "noIdsText": "Ανοίξτε αυτή τη σελίδα από το «Σήμερα» ή από μια κράτηση.",
+    "noneFoundTitle": "Δεν βρέθηκαν κρατήσεις",
+    "noneFoundText": "Ίσως οι κρατήσεις αυτές διαγράφηκαν. Γυρίστε πίσω και δοκιμάστε ξανά."
   }
 }

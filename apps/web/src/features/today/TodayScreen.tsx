@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, CircleAlert, LogIn, LogOut, Sunrise } from "lucide-react";
+import { CalendarDays, CircleAlert, LogIn, LogOut, Printer, Sunrise } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { TodayStay, TodaySummary } from "@/api/types";
+import { arrivalCardsHref } from "@/features/arrivalCards/ids";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { Card } from "@/ui/Card";
@@ -93,6 +94,21 @@ function CalendarLink({ primary, children }: { primary?: boolean; children: stri
   );
 }
 
+/** Opens the printable arrival cards for these stays. Nothing when there are none. */
+function PrintCardsLink({ stays }: { stays: TodayStay[] }) {
+  const t = useTranslations("today");
+  if (stays.length === 0) return null;
+  return (
+    <Link
+      href={arrivalCardsHref(stays.map((s) => s.id))}
+      className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg, "self-start")}
+    >
+      <Printer size={24} aria-hidden="true" />
+      {t("printCards")}
+    </Link>
+  );
+}
+
 function Loading() {
   const t = useTranslations("today");
   return (
@@ -116,6 +132,7 @@ function Summary({ data }: { data: TodaySummary }) {
         <Card title={<CardTitle icon={LogIn}>{t("arrivals")}</CardTitle>} aria-label={t("arrivals")}>
           <p className="text-3xl font-bold">{data.arrivals.length}</p>
           <StayList stays={data.arrivals} line="arrival" empty={t("noArrivals")} />
+          <PrintCardsLink stays={data.arrivals} />
           <CalendarLink>{t("toCalendar")}</CalendarLink>
         </Card>
         <Card title={<CardTitle icon={LogOut}>{t("departures")}</CardTitle>} aria-label={t("departures")}>
@@ -141,6 +158,7 @@ function Summary({ data }: { data: TodaySummary }) {
               {t("tomorrowArrivals")} ({data.tomorrowArrivals.length})
             </h4>
             <StayList stays={data.tomorrowArrivals} line="arrival" empty={t("noTomorrowArrivals")} />
+            <PrintCardsLink stays={data.tomorrowArrivals} />
           </div>
           <div className="flex flex-col gap-3">
             <h4 className="text-base font-semibold">

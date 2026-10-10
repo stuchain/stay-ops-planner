@@ -3,6 +3,7 @@ import { EDITABLE_FIELDS, resetBookingField, updateBookingDetails } from "@/serv
 import { bookingHistory } from "@/server/useCases/bookingHistory";
 import { getBookingDetails } from "@/server/useCases/bookingDetails";
 import { bookingSuggestions } from "@/server/useCases/bookingSuggestions";
+import { getArrivalCards } from "@/server/useCases/arrivalCards";
 import { getPreviousStays } from "@/server/useCases/previousStays";
 import { moveBooking } from "@/server/useCases/moveBooking";
 import { createTRPCRouter, operatorProcedure, userProcedure } from "../trpc";
@@ -29,6 +30,11 @@ export const bookingRouter = createTRPCRouter({
   previousStays: userProcedure
     .input(z.object({ bookingId: z.string().min(1) }))
     .query(({ input }) => getPreviousStays(input.bookingId)),
+
+  /** The printable arrival cards (Κάρτες άφιξης) for up to 30 bookings, in check-in order. */
+  arrivalCards: userProcedure
+    .input(z.object({ ids: z.array(z.string().min(1)).min(1).max(30) }))
+    .query(({ input }) => getArrivalCards(input.ids)),
 
   /** Every apartment for this booking, best first, with reasons. */
   suggestions: userProcedure

@@ -205,3 +205,23 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
 @utility money-hatch {
   background-image: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.6) 0 3px, transparent 3px 7px);
 }
+
+/* Printing (arrival cards): A4, black on white whatever the theme, nothing but the page content. */
+@page {
+  size: A4;
+  margin: 14mm;
+}
+
+@media print {
+  [data-ui="new"],
+  [data-ui="new"][data-theme="dark"] {
+    --so-bg: #ffffff;
+    --so-surface: #ffffff;
+    --so-surface-muted: #ffffff;
+    --so-border: #666666;
+    --so-text: #000000;
+    --so-text-muted: #222222;
+    --so-accent: #000000;
+    --so-warning-text: #000000;
+  }
+}
