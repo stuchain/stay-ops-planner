@@ -1,5 +1,5 @@
 import { TRPCClientError } from "@trpc/client";
-import { isDomainErrorCode, type DomainErrorCode, type DomainErrorParams } from "@/server/errors";
+import { isDomainErrorCode, type DomainErrorCode, type DomainErrorParams } from "@stay-ops/domain";
 import { errorsEl } from "@/i18n/errors.el";
 import { errorsEn } from "@/i18n/errors.en";
 

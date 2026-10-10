@@ -14,6 +14,7 @@ import {
   stay,
 } from "../stay.js";
 import { cents } from "../money.js";
+import { DomainError, isDomainErrorCode } from "../errors.js";
 
 describe("dates", () => {
   it("accepts real calendar dates only", () => {
@@ -70,5 +71,24 @@ describe("money", () => {
   it("only accepts whole cents", () => {
     expect(cents(125000)).toBe(125000);
     expect(() => cents(1.5)).toThrow(RangeError);
+  });
+});
+
+describe("domain errors", () => {
+  it("carries a code and safe params", () => {
+    const err = new DomainError("ROOM_TAKEN", { guestName: "Maria" });
+    expect([err.code, err.params, err.message, err.name]).toEqual([
+      "ROOM_TAKEN",
+      { guestName: "Maria" },
+      "ROOM_TAKEN",
+      "DomainError",
+    ]);
+    expect(new DomainError("INTERNAL", {}, "details for logs").message).toBe("details for logs");
+    expect(new DomainError("NOT_FOUND").params).toEqual({});
+    expect([isDomainErrorCode("ROOM_TAKEN"), isDomainErrorCode("nope"), isDomainErrorCode(3)]).toEqual([
+      true,
+      false,
+      false,
+    ]);
   });
 });

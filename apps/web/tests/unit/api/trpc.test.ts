@@ -9,8 +9,15 @@ vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined })
 import { errorText, readClientError } from "@/api/errors";
 import { errorsEl } from "@/i18n/errors.el";
 import { errorsEn } from "@/i18n/errors.en";
-import { adminProcedure, createTRPCRouter, domainErrorShape, operatorProcedure, publicProcedure, userProcedure } from "@/server/api/trpc";
-import { DOMAIN_ERROR_CODES, DomainError } from "@/server/errors";
+import {
+  adminProcedure,
+  createTRPCRouter,
+  domainErrorShape,
+  operatorProcedure,
+  publicProcedure,
+  userProcedure,
+} from "@/server/api/trpc";
+import { DOMAIN_ERROR_CODES, DomainError } from "@stay-ops/domain";
 import { readFlags } from "@/server/flags";
 
 const router = createTRPCRouter({
@@ -45,7 +52,10 @@ describe("tRPC procedures", () => {
   });
 
   it("requires a session for user procedures", async () => {
-    expect(await codeOf(caller(null).mine())).toEqual({ http: "UNAUTHORIZED", domain: { code: "UNAUTHORIZED", params: {} } });
+    expect(await codeOf(caller(null).mine())).toEqual({
+      http: "UNAUTHORIZED",
+      domain: { code: "UNAUTHORIZED", params: {} },
+    });
     await expect(caller("viewer").mine()).resolves.toBe("u1");
   });
 
@@ -65,7 +75,10 @@ describe("tRPC procedures", () => {
 
   it("reports bad input as VALIDATION", async () => {
     // @ts-expect-error deliberately wrong input
-    expect(await codeOf(caller(null).validated({ n: "x" }))).toEqual({ http: "BAD_REQUEST", domain: { code: "VALIDATION", params: {} } });
+    expect(await codeOf(caller(null).validated({ n: "x" }))).toEqual({
+      http: "BAD_REQUEST",
+      domain: { code: "VALIDATION", params: {} },
+    });
   });
 
   it("maps unexpected errors to INTERNAL", () => {
@@ -83,7 +96,13 @@ describe("client error text", () => {
 
   it("fills params and never shows the server message", () => {
     const err = new TRPCClientError("raw server text", {
-      result: { error: { code: -32009, message: "raw server text", data: { domain: { code: "ROOM_TAKEN", params: { guestName: "Maria" } } } } },
+      result: {
+        error: {
+          code: -32009,
+          message: "raw server text",
+          data: { domain: { code: "ROOM_TAKEN", params: { guestName: "Maria" } } },
+        },
+      },
     });
     expect(errorText(err)).toBe("Το διαμέρισμα είναι πιασμένο από Maria αυτές τις ημέρες.");
     expect(errorText(err, "en")).toBe("The apartment is taken by Maria on these days.");

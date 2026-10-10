@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { DomainError } from "@/server/errors";
+import { DomainError } from "@stay-ops/domain";
 import { userProcedure, createTRPCRouter } from "../trpc";
 import { readFlags } from "@/server/flags";
 

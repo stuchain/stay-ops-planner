@@ -17,14 +17,22 @@ const want = (party: BookingToPlace["party"], extra: Partial<BookingToPlace> = {
   party,
   ...extra,
 });
-const busy = (id: string, from: string, to: string): Occupant => ({ kind: "booking", id, stay: stay(from, to), guestName: id });
+const busy = (id: string, from: string, to: string): Occupant => ({
+  kind: "booking",
+  id,
+  stay: stay(from, to),
+  guestName: id,
+});
 const order = (ranked: ReturnType<typeof rankRooms>) => ranked.map((r) => r.roomId);
 
 describe("rankRooms", () => {
   it("sends a party of 4 to the large-party rooms first", () => {
     const ranked = rankRooms(want(guest(2, 2, 1)), rooms, new Map());
     expect(order(ranked)).toEqual(["cosmos", "helios", "onar", "iris"]);
-    expect(ranked[0]).toMatchObject({ recommended: true, reasons: ["FREE", "FITS_PARTY", "LARGE_PARTY_ROOM", "NO_GAP"] });
+    expect(ranked[0]).toMatchObject({
+      recommended: true,
+      reasons: ["FREE", "FITS_PARTY", "LARGE_PARTY_ROOM", "NO_GAP"],
+    });
     expect(ranked[2]).toMatchObject({ recommended: false, warnings: ["OVER_CAPACITY"] });
   });
 
@@ -47,7 +55,11 @@ describe("rankRooms", () => {
     expect(ranked[1]).toMatchObject({ available: false, reasons: expect.arrayContaining(["ROOM_TAKEN"]) });
     expect(ranked[1]!.blockedBy).toMatchObject({ guestName: "Maria" });
     expect(ranked[2]).toMatchObject({ available: false, reasons: expect.arrayContaining(["ROOM_CLOSED"]) });
-    expect(ranked[3]).toMatchObject({ available: false, blockedBy: null, reasons: expect.arrayContaining(["ROOM_INACTIVE"]) });
+    expect(ranked[3]).toMatchObject({
+      available: false,
+      blockedBy: null,
+      reasons: expect.arrayContaining(["ROOM_INACTIVE"]),
+    });
   });
 
   it("recommends nothing when every room is busy", () => {

@@ -1,9 +1,9 @@
 /**
  * Stay Ops Planner design tokens (Phase 1A, P1A-1).
  *
- * Source of truth for the new UI. In Phase 1B (P1B-1) this file moves to
- * apps/web/src/ui/tokens.ts and feeds the Tailwind v4 theme. The clickable
- * prototype in docs/design/prototype/ mirrors these values as CSS variables.
+ * Source of truth for the new UI. `theme.css` exposes the same values to
+ * Tailwind v4 as CSS variables (a unit test keeps the two in step), and the
+ * clickable prototype in docs/design/prototype/ mirrors them too.
  *
  * Every text/background pair used below meets WCAG AA (4.5:1). Ratios are
  * noted next to the pairs that matter.

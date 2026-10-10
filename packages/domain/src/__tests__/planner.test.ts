@@ -16,7 +16,11 @@ const b = (id: string, from: string, to: string, adults = 2): BookingToPlace => 
 describe("planAssignments", () => {
   it("places bookings by arrival with the recommender's choice", () => {
     const result = planAssignments(
-      [b("late", "2026-10-05", "2026-10-07"), b("big", "2026-10-01", "2026-10-04", 4), b("couple", "2026-10-02", "2026-10-06")],
+      [
+        b("late", "2026-10-05", "2026-10-07"),
+        b("big", "2026-10-01", "2026-10-04", 4),
+        b("couple", "2026-10-02", "2026-10-06"),
+      ],
       rooms,
       [],
     );
@@ -25,20 +29,20 @@ describe("planAssignments", () => {
   });
 
   it("works around pinned placements and reports what does not fit", () => {
-    const result = planAssignments(
-      [b("x", "2026-10-02", "2026-10-03"), b("y", "2026-10-02", "2026-10-03")],
-      rooms,
-      [
-        { roomId: "onar", occupant: { kind: "block", id: "closed", stay: stay("2026-10-01", "2026-10-05") } },
-        { roomId: "gone", occupant: { kind: "block", id: "ignored", stay: stay("2026-10-01", "2026-10-05") } },
-      ],
-    );
+    const result = planAssignments([b("x", "2026-10-02", "2026-10-03"), b("y", "2026-10-02", "2026-10-03")], rooms, [
+      { roomId: "onar", occupant: { kind: "block", id: "closed", stay: stay("2026-10-01", "2026-10-05") } },
+      { roomId: "gone", occupant: { kind: "block", id: "ignored", stay: stay("2026-10-01", "2026-10-05") } },
+    ]);
     expect(Object.fromEntries(result.assignments)).toEqual({ x: "cosmos" });
     expect(result.unplaced).toEqual(["y"]);
   });
 
   it("orders same-day arrivals longest first, then by id", () => {
-    const result = planAssignments([b("b", "2026-10-01", "2026-10-02"), b("a", "2026-10-01", "2026-10-02"), b("long", "2026-10-01", "2026-10-09")], rooms, []);
+    const result = planAssignments(
+      [b("b", "2026-10-01", "2026-10-02"), b("a", "2026-10-01", "2026-10-02"), b("long", "2026-10-01", "2026-10-09")],
+      rooms,
+      [],
+    );
     expect(result.unplaced).toEqual(["b"]);
   });
 

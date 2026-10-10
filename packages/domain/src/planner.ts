@@ -30,8 +30,7 @@ export function planAssignments(
   for (const p of pinned) timelines.get(p.roomId)?.push(p.occupant);
 
   const ordered = [...bookings].sort(
-    (a, b) =>
-      compareDates(a.stay.checkin, b.stay.checkin) || nights(b.stay) - nights(a.stay) || compareIds(a.id, b.id),
+    (a, b) => compareDates(a.stay.checkin, b.stay.checkin) || nights(b.stay) - nights(a.stay) || compareIds(a.id, b.id),
   );
 
   const assignments = new Map<string, string>();

@@ -1,0 +1,6 @@
+# Prettier formats new code only (packages/domain, apps/web/src/{ui,features,api,server}); old code is left as is.
+**/node_modules
+**/dist
+**/.next
+**/coverage
+pnpm-lock.yaml

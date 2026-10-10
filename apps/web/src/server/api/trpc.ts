@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { ZodError } from "zod";
-import { DomainError, type DomainErrorCode, type DomainErrorParams } from "@/server/errors";
+import { DomainError, type DomainErrorCode, type DomainErrorParams } from "@stay-ops/domain";
 import type { TrpcContext } from "./context";
 
 const TRPC_TO_DOMAIN: Partial<Record<TRPCError["code"], DomainErrorCode>> = {

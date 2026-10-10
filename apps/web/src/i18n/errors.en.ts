@@ -1,4 +1,4 @@
-import type { DomainErrorCode } from "@/server/errors";
+import type { DomainErrorCode } from "@stay-ops/domain";
 
 /** English text for every error code. `{name}` is filled from the error's params. */
 export const errorsEn: Record<DomainErrorCode | "NETWORK", string> = {

@@ -72,15 +72,23 @@ describe("domain properties", () => {
       fc.property(bookingsArb, roomsArb, (bookings, rooms) => {
         const sized = rooms.map((r, i) => ({ ...r, capacity: i === 0 ? 2 : r.capacity }));
         const plan = planAssignments(bookings, sized, []);
-        const timelines = new Map(sized.map((r) => [r.id, [] as { kind: "booking"; id: string; stay: BookingToPlace["stay"] }[]]));
+        const timelines = new Map(
+          sized.map((r) => [r.id, [] as { kind: "booking"; id: string; stay: BookingToPlace["stay"] }[]]),
+        );
         for (const b of bookings) {
           const roomId = plan.assignments.get(b.id);
           if (roomId) timelines.get(roomId)!.push({ kind: "booking", id: b.id, stay: b.stay });
         }
-        const four: BookingToPlace = { id: "four", stay: { checkin: START, checkout: addDays(START, 3) }, party: { adults: 4, children: 0, infants: 0 } };
+        const four: BookingToPlace = {
+          id: "four",
+          stay: { checkin: START, checkout: addDays(START, 3) },
+          party: { adults: 4, children: 0, infants: 0 },
+        };
         const ranked = rankRooms(four, sized, timelines);
         const best = ranked[0]!;
-        const biggerFree = ranked.some((r) => r.available && r.warnings.length === 0 && sized.find((s) => s.id === r.roomId)!.capacity !== null);
+        const biggerFree = ranked.some(
+          (r) => r.available && r.warnings.length === 0 && sized.find((s) => s.id === r.roomId)!.capacity !== null,
+        );
         if (biggerFree) expect(best.roomId).not.toBe("room-0");
       }),
     );
@@ -89,8 +97,12 @@ describe("domain properties", () => {
   it("ranking is deterministic and does not depend on input order", () => {
     fc.assert(
       fc.property(bookingsArb, roomsArb, fc.integer({ min: 0, max: 60 }), (bookings, rooms, offset) => {
-        const timelines = new Map(rooms.map((r) => [r.id, [] as { kind: "booking"; id: string; stay: BookingToPlace["stay"] }[]]));
-        bookings.forEach((b, i) => timelines.get(rooms[i % rooms.length]!.id)!.push({ kind: "booking", id: b.id, stay: b.stay }));
+        const timelines = new Map(
+          rooms.map((r) => [r.id, [] as { kind: "booking"; id: string; stay: BookingToPlace["stay"] }[]]),
+        );
+        bookings.forEach((b, i) =>
+          timelines.get(rooms[i % rooms.length]!.id)!.push({ kind: "booking", id: b.id, stay: b.stay }),
+        );
         const target: BookingToPlace = {
           id: "target",
           stay: { checkin: addDays(START, offset), checkout: addDays(START, offset + 2) },

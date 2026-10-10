@@ -1,6 +1,6 @@
 # Design language
 
-Phase 1A, task P1A-1. The rules every new screen follows. Values live in [`tokens.ts`](./tokens.ts); the clickable prototype in [`prototype/`](./prototype/) uses the same values as CSS variables.
+Phase 1A, task P1A-1. The rules every new screen follows. Values live in [`apps/web/src/ui/tokens.ts`](../../apps/web/src/ui/tokens.ts) (moved there in Phase 1B); the clickable prototype in [`prototype/`](./prototype/) uses the same values as CSS variables.
 
 **Who it is for.** The main user is a 70-year-old owner of four apartments, working on a computer with a mouse. He places new bookings in an apartment, moves them when needed, checks who arrives and leaves, and looks at income. Stelios (admin) uses the same screens plus Dev mode, sometimes on a phone.
 
@@ -35,7 +35,7 @@ Phase 1A, task P1A-1. The rules every new screen follows. Values live in [`token
   | Helios | amber `#A65F00` |
 
 - Colour is never the only signal: every apartment colour comes with its name, every state with a word.
-- All text meets WCAG AA (4.5:1); ratios are in `tokens.ts`. Light theme is the default; a dark theme exists for Stelios.
+- All text meets WCAG AA (4.5:1); ratios are in `apps/web/src/ui/tokens.ts`. Light theme is the default; a dark theme exists for Stelios.
 
 ## Shape and space
 

@@ -26,9 +26,12 @@
     "retention:prune": "corepack pnpm --filter @stay-ops/db run retention:prune",
     "smoke:epic7-auth": "corepack pnpm --filter @stay-ops/db run smoke:epic7-auth",
     "db:migrate-docker-to-neon": "node ./scripts/migrate-docker-to-neon.mjs",
-    "db:create-user": "node ./scripts/db-create-user.mjs"
+    "db:create-user": "node ./scripts/db-create-user.mjs",
+    "format": "prettier --write packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/tests/unit/api",
+    "format:check": "prettier --check packages/domain/src apps/web/src/ui apps/web/src/api apps/web/src/server apps/web/tests/unit/api"
   },
   "devDependencies": {
+    "prettier": "^3",
     "turbo": "^2",
     "typescript": "5.7.2"
   }

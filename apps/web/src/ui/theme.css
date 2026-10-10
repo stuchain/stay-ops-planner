@@ -1,0 +1,198 @@
+/*
+ * New UI stylesheet (Phase 1B). Tailwind v4 utilities and the design tokens,
+ * without Tailwind's global reset so the old screens keep their look. Everything
+ * here applies inside the new shell only (`[data-ui="new"]`).
+ * Values mirror tokens.ts; tests/unit/ui/theme.test.ts keeps them in step.
+ */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "@fontsource-variable/commissioner/index.css";
+
+@source "./";
+@source "../features";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--so-bg);
+  --color-surface: var(--so-surface);
+  --color-surface-muted: var(--so-surface-muted);
+  --color-border: var(--so-border);
+  --color-text: var(--so-text);
+  --color-text-muted: var(--so-text-muted);
+  --color-accent: var(--so-accent);
+  --color-accent-soft: var(--so-accent-soft);
+  --color-success: var(--so-success);
+  --color-success-soft: var(--so-success-soft);
+  --color-success-text: var(--so-success-text);
+  --color-warning: var(--so-warning);
+  --color-warning-soft: var(--so-warning-soft);
+  --color-warning-text: var(--so-warning-text);
+  --color-danger: var(--so-danger);
+  --color-danger-soft: var(--so-danger-soft);
+  --color-focus: var(--so-focus);
+  --color-onar: #0f766e;
+  --color-onar-soft: #e6f4f2;
+  --color-cosmos: #4338ca;
+  --color-cosmos-soft: #ecebfb;
+  --color-iris: #be185d;
+  --color-iris-soft: #fce8f0;
+  --color-helios: #a65f00;
+  --color-helios-soft: #fff1dc;
+
+  --font-sans: "Commissioner Variable", "Commissioner", "Inter", "Segoe UI", system-ui, sans-serif;
+
+  /* 14 / 16 / 18 / 22 / 28 / 36 px, scaled by the Text size setting. */
+  --text-xs: calc(0.875rem * var(--so-text-scale));
+  --text-sm: calc(1rem * var(--so-text-scale));
+  --text-base: calc(1.125rem * var(--so-text-scale));
+  --text-lg: calc(1.375rem * var(--so-text-scale));
+  --text-xl: calc(1.75rem * var(--so-text-scale));
+  --text-2xl: calc(2.25rem * var(--so-text-scale));
+  --text-xs--line-height: 1.5;
+  --text-sm--line-height: 1.5;
+  --text-base--line-height: 1.5;
+  --text-lg--line-height: 1.25;
+  --text-xl--line-height: 1.25;
+  --text-2xl--line-height: 1.25;
+
+  --radius-sm: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgba(28, 27, 25, 0.06), 0 2px 8px rgba(28, 27, 25, 0.06);
+  --shadow-raised: 0 4px 12px rgba(28, 27, 25, 0.1), 0 12px 32px rgba(28, 27, 25, 0.1);
+
+  --spacing-target: 44px;
+  --spacing-button: 56px;
+  --spacing-sidebar: 240px;
+  --spacing-panel: 420px;
+  --spacing-row: 88px;
+  --container-content: 1440px;
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+[data-ui="new"] {
+  --so-text-scale: 1;
+  --so-bg: #f2f1ee;
+  --so-surface: #ffffff;
+  --so-surface-muted: #f8f7f5;
+  --so-border: #e2e0db;
+  --so-text: #1c1b19;
+  --so-text-muted: #5b5852;
+  --so-accent: #1e4b8f;
+  --so-accent-soft: #e7eef8;
+  --so-success: #15803d;
+  --so-success-soft: #dcfce7;
+  --so-success-text: #14532d;
+  --so-warning: #a65f00;
+  --so-warning-soft: #fff4db;
+  --so-warning-text: #7a4a00;
+  --so-danger: #b42318;
+  --so-danger-soft: #fdecea;
+  --so-focus: #1e4b8f;
+}
+
+[data-ui="new"][data-text-size="large"] {
+  --so-text-scale: 1.125;
+}
+
+[data-ui="new"][data-text-size="xlarge"] {
+  --so-text-scale: 1.25;
+}
+
+[data-ui="new"][data-theme="dark"] {
+  --so-bg: #161616;
+  --so-surface: #202020;
+  --so-surface-muted: #1b1b1b;
+  --so-border: #343330;
+  --so-text: #f2f1ee;
+  --so-text-muted: #b6b2aa;
+  --so-accent: #8db4f2;
+  --so-accent-soft: #1d2a3f;
+  --so-success: #4ade80;
+  --so-success-soft: #14301f;
+  --so-success-text: #bbf7d0;
+  --so-warning: #f5b544;
+  --so-warning-soft: #3a2a0e;
+  --so-warning-text: #fcd9a0;
+  --so-danger: #f87171;
+  --so-danger-soft: #3b1717;
+  --so-focus: #8db4f2;
+}
+
+/* A small reset, scoped to the new shell instead of Tailwind's global preflight. */
+@layer base {
+  [data-ui="new"] {
+    min-height: 100vh;
+    background: var(--so-bg);
+    color: var(--so-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  [data-ui="new"] *,
+  [data-ui="new"] *::before,
+  [data-ui="new"] *::after {
+    box-sizing: border-box;
+    border: 0 solid var(--so-border);
+    margin: 0;
+    padding: 0;
+  }
+
+  [data-ui="new"] :where(h1, h2, h3, h4) {
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: 1.25;
+  }
+
+  [data-ui="new"] :where(ul, ol) {
+    list-style: none;
+  }
+
+  [data-ui="new"] :where(a) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  [data-ui="new"] :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+  }
+
+  [data-ui="new"] :where(button, [role="button"]) {
+    cursor: pointer;
+  }
+
+  [data-ui="new"] :where(img, svg) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  [data-ui="new"] :focus-visible {
+    outline: 3px solid var(--so-focus);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-ui="new"] *,
+    [data-ui="new"] *::before,
+    [data-ui="new"] *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

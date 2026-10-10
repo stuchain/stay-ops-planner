@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { canPlace, findConflicts, firstClash, overbookedNights, singleNightGapsCreated, type Occupant } from "../allocation.js";
+import {
+  canPlace,
+  findConflicts,
+  firstClash,
+  overbookedNights,
+  singleNightGapsCreated,
+  type Occupant,
+} from "../allocation.js";
 import { isoDate, stay } from "../stay.js";
 
 const booking = (id: string, from: string, to: string, guestName?: string): Occupant => ({
@@ -13,17 +20,27 @@ const block = (id: string, from: string, to: string): Occupant => ({ kind: "bloc
 describe("canPlace", () => {
   it("fits an empty room and back-to-back stays", () => {
     expect(canPlace(stay("2026-10-01", "2026-10-03"), [])).toEqual({ ok: true });
-    expect(canPlace(stay("2026-10-03", "2026-10-05"), [booking("a", "2026-10-01", "2026-10-03")])).toEqual({ ok: true });
+    expect(canPlace(stay("2026-10-03", "2026-10-05"), [booking("a", "2026-10-01", "2026-10-03")])).toEqual({
+      ok: true,
+    });
   });
 
   it("names the guest who is there", () => {
     const maria = booking("a", "2026-10-01", "2026-10-05", "Maria");
-    expect(canPlace(stay("2026-10-04", "2026-10-06"), [maria])).toEqual({ ok: false, reason: "ROOM_TAKEN", clash: maria });
+    expect(canPlace(stay("2026-10-04", "2026-10-06"), [maria])).toEqual({
+      ok: false,
+      reason: "ROOM_TAKEN",
+      clash: maria,
+    });
   });
 
   it("reports a closed period", () => {
     const closed = block("b", "2026-10-01", "2026-10-05");
-    expect(canPlace(stay("2026-10-04", "2026-10-06"), [closed])).toEqual({ ok: false, reason: "ROOM_CLOSED", clash: closed });
+    expect(canPlace(stay("2026-10-04", "2026-10-06"), [closed])).toEqual({
+      ok: false,
+      reason: "ROOM_CLOSED",
+      clash: closed,
+    });
   });
 
   it("rejects an invalid stay", () => {
@@ -34,7 +51,9 @@ describe("canPlace", () => {
   });
 
   it("ignores the booking being moved", () => {
-    expect(canPlace(stay("2026-10-02", "2026-10-04"), [booking("a", "2026-10-01", "2026-10-05")], { ignoreBookingId: "a" })).toEqual({
+    expect(
+      canPlace(stay("2026-10-02", "2026-10-04"), [booking("a", "2026-10-01", "2026-10-05")], { ignoreBookingId: "a" }),
+    ).toEqual({
       ok: true,
     });
   });
@@ -70,10 +89,17 @@ describe("findConflicts", () => {
 
 describe("overbookedNights", () => {
   it("returns nights inside the range where stays exceed rooms", () => {
-    const stays = [stay("2026-10-01", "2026-10-04"), stay("2026-10-02", "2026-10-05"), stay("2026-10-03", "2026-10-04")];
+    const stays = [
+      stay("2026-10-01", "2026-10-04"),
+      stay("2026-10-02", "2026-10-05"),
+      stay("2026-10-03", "2026-10-04"),
+    ];
     expect(overbookedNights(stays, 2, isoDate("2026-10-01"), isoDate("2026-10-31"))).toEqual(["2026-10-03"]);
     expect(overbookedNights(stays, 1, isoDate("2026-10-03"), isoDate("2026-10-04"))).toEqual(["2026-10-03"]);
-    expect(overbookedNights(stays, 1, isoDate("2026-10-02"), isoDate("2026-10-04"))).toEqual(["2026-10-02", "2026-10-03"]);
+    expect(overbookedNights(stays, 1, isoDate("2026-10-02"), isoDate("2026-10-04"))).toEqual([
+      "2026-10-02",
+      "2026-10-03",
+    ]);
   });
 });
 
