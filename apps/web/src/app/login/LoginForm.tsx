@@ -2,11 +2,12 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
+import { safeNextPath } from "./safeNextPath";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/app/calendar";
+  const next = safeNextPath(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +34,7 @@ export function LoginForm() {
         setError(json?.error?.message ?? "Login failed");
         return;
       }
-      router.push(next.startsWith("/") ? next : "/app/calendar");
+      router.push(next);
       router.refresh();
     } finally {
       setPending(false);

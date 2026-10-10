@@ -376,6 +376,7 @@ export function SettingsView() {
   }
 
   async function deleteToken() {
+    if (!window.confirm("Θα σταματήσει ο συγχρονισμός με το Hosthub. Διαγραφή;")) return;
     setSaving(true);
     setError(null);
     setFlash(null);
@@ -457,9 +458,11 @@ export function SettingsView() {
                   >
                     Edit
                   </button>
-                  <button type="button" className="ops-btn ops-btn-danger" disabled={saving} onClick={() => void deleteToken()}>
-                    Delete
-                  </button>
+                  {isAdmin ? (
+                    <button type="button" className="ops-btn ops-btn-danger" disabled={saving} onClick={() => void deleteToken()}>
+                      Delete
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )}

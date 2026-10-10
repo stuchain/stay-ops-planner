@@ -7,6 +7,7 @@ import { CookieJar } from "../cookieJar";
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
 
 const operatorEmail = "hosthub-token-op@example.com";
+const adminEmail = "hosthub-token-admin@example.com";
 const viewerEmail = "hosthub-token-viewer@example.com";
 const password = "password1234";
 
@@ -53,11 +54,14 @@ describe("api /api/admin/integrations/hosthub/token", () => {
   beforeEach(async () => {
     await truncate(prisma);
     await prisma.user.deleteMany({
-      where: { email: { in: [operatorEmail, viewerEmail] } },
+      where: { email: { in: [operatorEmail, viewerEmail, adminEmail] } },
     });
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.user.create({
       data: { email: operatorEmail, passwordHash, isActive: true, role: "operator" },
+    });
+    await prisma.user.create({
+      data: { email: adminEmail, passwordHash, isActive: true, role: "admin" },
     });
     await prisma.user.create({
       data: { email: viewerEmail, passwordHash, isActive: true, role: "viewer" },
@@ -78,7 +82,7 @@ describe("api /api/admin/integrations/hosthub/token", () => {
     return jar;
   }
 
-  it("operator can PUT then GET token status, then DELETE clears it", async () => {
+  it("operator can PUT then GET token status, then admin DELETE clears it", async () => {
     const jar = await loginJar(operatorEmail);
 
     const putRes = await PUT_HOSTHUB_TOKEN(
@@ -107,10 +111,11 @@ describe("api /api/admin/integrations/hosthub/token", () => {
     expect(getJson.data.configured).toBe(true);
     expect(getJson.data.name).toBe("test-label");
 
+    const adminJar = await loginJar(adminEmail);
     const delRes = await DELETE_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
         method: "DELETE",
-        headers: { cookie: jar.getCookieHeader() },
+        headers: { cookie: adminJar.getCookieHeader() },
       }),
     );
     expect(delRes.status).toBe(200);
@@ -126,6 +131,32 @@ describe("api /api/admin/integrations/hosthub/token", () => {
     expect(getAfter.status).toBe(200);
     const afterJson = (await getAfter.json()) as { data: { configured: boolean } };
     expect(afterJson.data.configured).toBe(false);
+  });
+
+  it("operator is forbidden on DELETE and the token stays", async () => {
+    const jar = await loginJar(operatorEmail);
+    await PUT_HOSTHUB_TOKEN(
+      new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
+        method: "PUT",
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+        body: JSON.stringify({ token: "keep-me" }),
+      }),
+    );
+    const delRes = await DELETE_HOSTHUB_TOKEN(
+      new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
+        method: "DELETE",
+        headers: { cookie: jar.getCookieHeader() },
+      }),
+    );
+    expect(delRes.status).toBe(403);
+    const getRes = await GET_HOSTHUB_TOKEN(
+      new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
+        method: "GET",
+        headers: { cookie: jar.getCookieHeader() },
+      }),
+    );
+    const json = (await getRes.json()) as { data: { configured: boolean } };
+    expect(json.data.configured).toBe(true);
   });
 
   it("viewer is forbidden on GET, PUT, and DELETE", async () => {

@@ -79,7 +79,10 @@ async function postHosthubReconcile(request: NextRequest) {
   }
 
   try {
-    if (dryRun || !fullSync) {
+    // Full sync re-fetches all history from Hosthub, so it is admin-only; everything else is operator or admin.
+    if (fullSync && !dryRun) {
+      requireAnyRole(ctx, ["admin"]);
+    } else {
       requireAnyRole(ctx, ["operator", "admin"]);
     }
   } catch (err) {

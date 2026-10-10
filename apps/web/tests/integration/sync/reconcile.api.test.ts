@@ -116,25 +116,33 @@ describe("api /api/sync/hosthub/reconcile", () => {
     expect(res.status).toBe(403);
   });
 
-  it.skipIf(Boolean(process.env.HOSTHUB_API_TOKEN?.trim()))(
-    "allows viewer fullSync body when token is not configured (503)",
-    async () => {
+  it.each(["sync-viewer@example.com", operatorEmail])("returns 403 for %s on fullSync", async (email) => {
+    if (email !== operatorEmail) {
       const passwordHash = await bcrypt.hash(password, 12);
-      await prisma.user.create({
-        data: { email: "sync-viewer@example.com", passwordHash, isActive: true, role: "viewer" },
-      });
-      const jar = await loginJar("sync-viewer@example.com");
+      await prisma.user.create({ data: { email, passwordHash, isActive: true, role: "viewer" } });
+    }
+    const jar = await loginJar(email);
+    const res = await POST_RECONCILE(
+      new NextRequest("http://localhost/api/sync/hosthub/reconcile", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+        body: JSON.stringify({ fullSync: true }),
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it.skipIf(Boolean(process.env.HOSTHUB_API_TOKEN?.trim()))(
+    "lets admin start fullSync (503 when token is not configured)",
+    async () => {
+      const jar = await loginJar(adminEmail);
       const res = await POST_RECONCILE(
         new NextRequest("http://localhost/api/sync/hosthub/reconcile", {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-            cookie: jar.getCookieHeader(),
-          },
+          headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
           body: JSON.stringify({ fullSync: true }),
         }),
       );
-      expect(res.status).not.toBe(403);
       expect(res.status).toBe(503);
     },
   );
