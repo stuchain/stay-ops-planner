@@ -23,6 +23,8 @@ export const meRouter = createTRPCRouter({
       flags: readFlags(user.flags),
       devMode: user.devMode,
       textSize: user.textSize,
+      /** When the login ends for good (12 hours after signing in), so the app can warn 5 minutes before. */
+      sessionEndsAt: ctx.user.sessionEndsAt?.toISOString() ?? null,
     };
   }),
 

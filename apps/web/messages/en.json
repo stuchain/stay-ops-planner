@@ -355,7 +355,23 @@
     "hosthubStopped": "The connection to Hosthub stopped",
     "hosthubStoppedBody": "New bookings are not arriving right now.",
     "goToSettings": "Open settings",
-    "askStelios": "Let Stelios know."
+    "askStelios": "Let Stelios know.",
+    "signIn": {
+      "expiredTitle": "You were signed out",
+      "expiredText": "Sign in again to carry on. Nothing you typed was lost.",
+      "endingTitle": "Your session ends in a few minutes",
+      "endingText": "Sign in again now so your work is not interrupted.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "signingIn": "Signing in…",
+      "cancel": "Cancel",
+      "later": "Later",
+      "wrong": "The email or password is not right.",
+      "offline": "There is no internet connection. Check it and try again.",
+      "locked": "Too many attempts. Try again in a few minutes.",
+      "lockedMinutes": "Too many attempts. {count, plural, one {Try again in # minute.} other {Try again in # minutes.}}"
+    }
   },
   "bookingEdit": {
     "title": "Booking details",

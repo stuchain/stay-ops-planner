@@ -64,6 +64,7 @@ export async function verifyAndLoadAuthContext(token: string | null): Promise<Au
   return {
     userId: session.userId,
     sessionExpiresAt: session.expiresAt,
+    sessionEndsAt: session.aexpUnixSeconds === null ? null : new Date(session.aexpUnixSeconds * 1000),
     role,
   };
 }

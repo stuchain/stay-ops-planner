@@ -10,6 +10,7 @@ import { Sidebar, type SidebarItem } from "@/ui/Sidebar";
 import { Toaster } from "@/ui/Toast";
 import { HosthubBanner } from "./HosthubBanner";
 import { LogoutButton } from "./LogoutButton";
+import { SessionDialog } from "./SessionDialog";
 import { SyncIndicator } from "./SyncIndicator";
 import { useSyncWhileOpen } from "./useSyncWhileOpen";
 
@@ -69,6 +70,7 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
         <HosthubBanner />
         {children}
       </main>
+      <SessionDialog />
       <Toaster />
     </>
   );
