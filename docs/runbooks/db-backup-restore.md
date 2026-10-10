@@ -15,7 +15,7 @@
 
 ## Production daily backup (GitHub Actions, Neon)
 - Workflow: `.github/workflows/daily-backup.yml`, runs every day at `01:30 UTC` and can be started by hand (Actions > Daily database backup > Run workflow).
-- Secret: repository secret `DATABASE_URL`. Use Neon's **direct, non-pooled** connection string (host without `-pooler`, with `sslmode=require`); pg_dump does not work reliably through the pooler. The workflow fails with `::error::Missing repository secret DATABASE_URL` if it is not set, and never prints the value.
+- Secret: `DATABASE_URL` in the GitHub Environment `production` (the same one "Migrate production DB" uses). Use Neon's **direct, non-pooled** connection string (host without `-pooler`, with `sslmode=require`); pg_dump does not work reliably through the pooler. The workflow fails with `::error::Missing secret DATABASE_URL in the production environment` if it is not set, and never prints the value.
 - Output: custom-format dump `stay-ops-YYYY-MM-DD.dump` (UTC date), made with `pg_dump -Fc --no-owner --no-privileges` using the `postgres:16` docker image (matches Neon's Postgres 16). The job fails if the file is empty or `pg_restore --list` cannot read it.
 - Where: Actions > Daily database backup > the run > Artifacts (artifact `stay-ops-db-YYYY-MM-DD`, a zip; unzip to get the `.dump`). Artifacts are kept for 30 days. A red run means no backup was made that day; check it the same day.
 - Use a `pg_restore` of version 16 or newer for the commands below.
@@ -30,7 +30,7 @@
    - Errors about objects that "do not exist" are suppressed by `--if-exists`; anything else should be investigated.
 5. Check row counts against what you expect (compare with production when it is still reachable):
    - `psql "$BRANCH_URL" -c "select (select count(*) from bookings) as bookings, (select count(*) from rooms) as rooms"`
-6. To run the app against the restored data (only if production is lost or corrupted): set `DATABASE_URL` (and `DIRECT_URL`, if used) in the Vercel Production environment to the branch's connection strings (pooled for `DATABASE_URL`, direct for migrations), then redeploy. Otherwise keep the branch for inspection and delete it afterwards.
+6. To run the app against the restored data (only if production is lost or corrupted): set `DATABASE_URL` in the Vercel Production environment to the branch's connection strings (pooled for `DATABASE_URL`, direct for migrations), then redeploy. Otherwise keep the branch for inspection and delete it afterwards.
 
 ## Retention policy
 - Keep 365 days of artifacts (12 months).

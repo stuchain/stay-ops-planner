@@ -23,6 +23,8 @@ concurrency:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    # Same secret as "Migrate production DB": DATABASE_URL in the `production` environment.
+    environment: production
     timeout-minutes: 20
     env:
       PG_IMAGE: postgres:16
@@ -35,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${DATABASE_URL:-}" ]; then
-            echo "::error::Missing repository secret DATABASE_URL (Neon direct, non-pooled connection string)"
+            echo "::error::Missing secret DATABASE_URL in the production environment (Neon direct, non-pooled connection string)"
             exit 1
           fi
 
