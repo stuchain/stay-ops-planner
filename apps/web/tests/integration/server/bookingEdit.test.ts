@@ -130,10 +130,35 @@ describe("booking details edit", () => {
     ).toBe("BOOKING_CHANGED");
     expect(await errorCode(edit({ guestName: "   " }))).toBe("VALIDATION");
     expect(await errorCode(edit({ partySize: 0 }))).toBe("VALIDATION");
+    expect(await version()).toBe(v);
+    await edit({ notes: "Local note" });
     expect(
       await errorCode(resetBookingField({ bookingId, field: "notes", expectedVersion: v + 5, actorUserId: actorId })),
     ).toBe("BOOKING_CHANGED");
-    expect(await version()).toBe(v);
+    expect(await version()).toBe(v + 1);
+  });
+
+  it("a save sent again after its answer was lost succeeds without changing anything (E2-7)", async () => {
+    const v = await version();
+    await edit({ guestName: "Maria", notes: "Late arrival" });
+    // The same save again, still carrying the version the person opened the panel with.
+    const again = await updateBookingDetails({
+      bookingId,
+      expectedVersion: v,
+      guestName: "Maria",
+      notes: "Late arrival",
+      actorUserId: actorId,
+    });
+    expect(again.version).toBe(v + 1);
+    await resetBookingField({ bookingId, field: "notes", expectedVersion: v + 1, actorUserId: actorId });
+    const reset = await resetBookingField({ bookingId, field: "notes", expectedVersion: v + 1, actorUserId: actorId });
+    expect(reset.version).toBe(v + 2);
+    // A different change on the old version is still refused.
+    expect(
+      await errorCode(
+        updateBookingDetails({ bookingId, expectedVersion: v, guestName: "Other", actorUserId: actorId }),
+      ),
+    ).toBe("BOOKING_CHANGED");
   });
 
   it("typing Hosthub's own value again resets the field, and an unchanged save does nothing", async () => {

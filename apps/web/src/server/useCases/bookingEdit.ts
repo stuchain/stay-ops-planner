@@ -110,12 +110,16 @@ export type ResetFieldInput = {
   actorUserId: string;
 };
 
+/**
+ * Locks the booking. `stale` means it changed since the person opened it: the caller refuses with BOOKING_CHANGED
+ * unless the booking already reads as asked, which is what a save that went through before a lost answer looks
+ * like when it is sent again (E2-7).
+ */
 async function lockAndCheck(tx: Prisma.TransactionClient, bookingId: string, expectedVersion: number) {
   await tx.$executeRaw`SELECT id FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
   const row = await tx.booking.findUnique({ where: { id: bookingId }, select: editSelect });
   if (!row) throw new DomainError("NOT_FOUND");
-  if (row.version !== expectedVersion) throw new DomainError("BOOKING_CHANGED");
-  return row;
+  return { row, stale: row.version !== expectedVersion };
 }
 
 /** Restores the Hosthub value of one field and clears the marks that kept sync away from it. */
@@ -160,7 +164,7 @@ function audit(
  */
 export async function updateBookingDetails(input: UpdateDetailsInput): Promise<{ version: number }> {
   return prisma.$transaction(async (tx) => {
-    const row = await lockAndCheck(tx, input.bookingId, input.expectedVersion);
+    const { row, stale } = await lockAndCheck(tx, input.bookingId, input.expectedVersion);
     const overrides = { ...dict(row.localOverrides) };
     const stored = { ...dict(row.hosthubValues) };
     const before = effectiveFields(row);
@@ -199,6 +203,7 @@ export async function updateBookingDetails(input: UpdateDetailsInput): Promise<{
     }
 
     if (changed.length === 0) return { version: row.version };
+    if (stale) throw new DomainError("BOOKING_CHANGED");
 
     const updated = await tx.booking.update({
       where: { id: row.id },
@@ -220,10 +225,11 @@ export async function updateBookingDetails(input: UpdateDetailsInput): Promise<{
 /** Take back Hosthub's value for one field ("Επαναφορά"). */
 export async function resetBookingField(input: ResetFieldInput): Promise<{ version: number }> {
   return prisma.$transaction(async (tx) => {
-    const row = await lockAndCheck(tx, input.bookingId, input.expectedVersion);
+    const { row, stale } = await lockAndCheck(tx, input.bookingId, input.expectedVersion);
     const overrides = { ...dict(row.localOverrides) };
     const stored = { ...dict(row.hosthubValues) };
     if (!COLUMNS[input.field].some((c) => overrides[c] === true)) return { version: row.version };
+    if (stale) throw new DomainError("BOOKING_CHANGED");
     const before = effectiveFields(row);
     const data = resetData(row, input.field, overrides, stored);
     const updated = await tx.booking.update({

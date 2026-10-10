@@ -143,6 +143,19 @@ describe("calendar range and move command", () => {
     );
   });
 
+  it("treats a move sent again after its answer was lost as done (E2-7)", async () => {
+    const onar = await room("Onar", 3);
+    const cosmos = await room("Cosmos", 3);
+    const b = await booking("Maria", "2030-07-01", "2030-07-05");
+    const placed = await move({ bookingId: b.id, roomId: onar.id, expectedVersion: 0 });
+    const again = await move({ bookingId: b.id, roomId: onar.id, expectedVersion: 0 });
+    expect(again.booking.version).toBe(placed.booking.version);
+    expect(again.booking.assignment?.roomId).toBe(onar.id);
+    expect((await errorCode(move({ bookingId: b.id, roomId: cosmos.id, expectedVersion: 0 }))).code).toBe(
+      "BOOKING_CHANGED",
+    );
+  });
+
   it("rejects a stale version, a pending booking and an unknown booking", async () => {
     const onar = await room("Onar", 3);
     const b = await booking("Maria", "2030-07-01", "2030-07-05");

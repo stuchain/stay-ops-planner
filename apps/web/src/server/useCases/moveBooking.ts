@@ -46,19 +46,21 @@ async function moveInTransaction(
     include: { assignment: { include: { room: { select: { id: true, code: true, displayName: true } } } } },
   });
   if (!booking) throw new DomainError("NOT_FOUND");
-  if (booking.version !== input.expectedVersion) throw new DomainError("BOOKING_CHANGED");
-  if (!PLACEABLE.includes(booking.status)) throw new DomainError("NOT_CONFIRMED");
 
   const checkin = dbDateToIso(booking.checkinDate);
   const checkout = dbDateToIso(booking.checkoutDate);
   const current = booking.assignment;
   const warnings: MoveWarning[] = [];
 
-  // Nothing to do: already where it was asked to go.
+  // Nothing to do: already where it was asked to go. Checked before the version, so a move that went through
+  // but whose answer was lost succeeds when it is sent again instead of saying the booking changed (E2-7).
   if ((current?.roomId ?? null) === input.roomId) {
     const slice = await tx.booking.findUniqueOrThrow({ where: { id: booking.id }, select: bookingSliceSelect });
     return { booking: toBookingSlice(slice), warnings };
   }
+
+  if (booking.version !== input.expectedVersion) throw new DomainError("BOOKING_CHANGED");
+  if (!PLACEABLE.includes(booking.status)) throw new DomainError("NOT_CONFIRMED");
 
   if (checkout <= today) throw new DomainError("STAY_ENDED");
   if (current && checkin <= today && !input.confirmStarted) {
