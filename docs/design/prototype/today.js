@@ -9,9 +9,7 @@
     const room = b.roomId ? App.room(b.roomId) : null;
     const chip = room
       ? '<span class="chip"><span class="sw" style="background:' + room.color + '"></span>' + esc(room.name) + "</span>"
-      : b.status === "pending"
-        ? '<span class="pill pill-muted">Αναμένει επιβεβαίωση</span>'
-        : "";
+      : "";
     return '<li><button type="button" class="person" data-open="' + b.id + '">' +
       '<span class="grow"><span class="who">' + esc(b.guest) + '</span><br><span class="what">' + esc(line) + "</span></span>" + chip + "</button></li>";
   }
@@ -52,9 +50,9 @@
         list(departures, (b) => "έμειναν " + fmt.nights(P.nights(b)), "Δεν φεύγει κανείς σήμερα.") +
         '<button type="button" class="btn btn-big" data-cal>' + icon("calendar-days") + "Στο ημερολόγιο</button></section>" +
         '<section class="card today-card' + (needsConfirmed.length ? " attention" : "") + '"><h2>' + icon("circle-alert") + 'Χρειάζονται διαμέρισμα</h2><div class="count num">' + needsConfirmed.length + "</div>" +
-        list(needs, (b) => fmt.range(b.checkin, b.checkout) + " · " + fmt.party(b), "Όλες οι κρατήσεις έχουν διαμέρισμα.") +
+        list(needs, (b) => fmt.range(b.checkin, b.checkout) + " · " + fmt.party(b) + (b.status === "pending" ? " · αναμένει επιβεβαίωση" : ""), "Όλες οι κρατήσεις έχουν διαμέρισμα.") +
         (needsConfirmed.length
-          ? '<button type="button" class="btn btn-primary btn-big" data-place>' + icon("arrow-right") + "Βάλτε τις σε διαμέρισμα</button>"
+          ? '<button type="button" class="btn btn-primary btn-big" data-place>' + icon("arrow-right") + "Βάλτε σε διαμέρισμα</button>"
           : "") +
         "</section></div>" +
         '<section class="card"><h2>' + icon("bed-double") + 'Απόψε στα διαμερίσματα</h2><div class="occupancy">' + occ + "</div></section>" +

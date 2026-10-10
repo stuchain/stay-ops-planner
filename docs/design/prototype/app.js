@@ -204,6 +204,7 @@
     const ranked = P.rankRooms(App.db, b);
     const n = P.nights(b);
     const pending = b.status === "pending";
+    const over = b.checkout <= App.db.today;
 
     let status;
     if (pending) status = '<span class="pill pill-muted">' + icon("hourglass") + "Αναμένει επιβεβαίωση</span>";
@@ -234,16 +235,20 @@
       (pending ? '<div class="notice">' + icon("hourglass") + "<span>Η κράτηση δεν έχει επιβεβαιωθεί ακόμα από το " + esc(b.channel) + ". Θα μπορείτε να τη βάλετε σε διαμέρισμα όταν επιβεβαιωθεί.</span></div>" : "") +
       '<dl class="facts">' +
       "<dt>Άφιξη</dt><dd>" + fmt.day(b.checkin) + "</dd>" +
-      "<dt>Αναχώρηση</dt><dd>" + fmt.day(b.checkout) + "</dd>" +
-      '<dt>Νύχτες</dt><dd class="num">' + n + "</dd>" +
+      "<dt>Αναχώρηση</dt><dd>" + fmt.day(b.checkout) + " · " + fmt.nights(n) + "</dd>" +
       "<dt>Άτομα</dt><dd>" + fmt.people(b) + "</dd>" +
+      "</dl>" +
+      (over
+        ? '<div class="note">' + icon("history") + "<span>Η διαμονή τελείωσε " + fmt.day(b.checkout) + ", οπότε δεν μετακινείται.</span></div>"
+        : '<div class="section-title">' + (room ? "Μετακίνηση σε άλλο διαμέρισμα" : "Σε ποιο διαμέρισμα θα μείνει;") + "</div>" +
+          '<div class="moves">' + moves + "</div>") +
+      '<div class="section-title">Στοιχεία κράτησης</div>' +
+      '<dl class="facts">' +
       "<dt>Από</dt><dd>" + esc(b.channel) + "</dd>" +
       '<dt>Ποσό</dt><dd class="num">' + fmt.money(b.amount) + "</dd>" +
-      (booked && (!room || booked.id !== room.id) ? "<dt>Έκλεισε για</dt><dd>" + esc(booked.name) + "</dd>" : "") +
+      (booked ? "<dt>Έκλεισε για</dt><dd>" + esc(booked.name) + "</dd>" : "") +
       "</dl>" +
       (b.notes ? '<div class="note">' + icon("message-square-text") + "<span>" + esc(b.notes) + "</span></div>" : "") +
-      '<div class="section-title">' + (room ? "Μετακίνηση σε άλλο διαμέρισμα" : "Σε ποιο διαμέρισμα θα μείνει;") + "</div>" +
-      '<div class="moves">' + moves + "</div>" +
       "</div>";
 
     panel.querySelector("[data-close-panel]").onclick = () => App.select(null);

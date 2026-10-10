@@ -128,7 +128,7 @@
       s.style.color = "";
       s.style.fontWeight = "";
     });
-    if (sel && sel.status !== "pending") {
+    if (sel && sel.status !== "pending" && sel.checkout > db.today) {
       const ranked = P.rankRooms(db, sel);
       ranked.forEach((r, i) => {
         const row = el.querySelector('[data-row="' + r.room.id + '"]');
@@ -155,7 +155,8 @@
         } else {
           ghost.type = "button";
           ghost.className = "ghost free" + (r.recommended ? " rec" : "");
-          ghost.innerHTML = (r.recommended ? icon("star") + "Προτείνεται" : icon("check") + "Ελεύθερο");
+          const word = g.width >= 130 ? (r.recommended ? "Προτείνεται" : "Ελεύθερο") : "";
+          ghost.innerHTML = (r.recommended ? icon("star") : icon("check")) + word;
           ghost.setAttribute("aria-label", (sel.roomId ? "Μετακίνηση στο " : "Στο ") + r.room.name);
           ghost.onclick = () => App.move(sel.id, r.room.id);
           row.classList.add("drop-ok");
@@ -245,7 +246,7 @@
     if (e.button !== 0) return;
     const id = e.currentTarget.dataset.id || e.currentTarget.dataset.tray;
     const b = App.booking(id);
-    if (!b || b.status === "pending") return;
+    if (!b || b.status === "pending" || b.checkout <= App.db.today) return;
     drag = { id, startX: e.clientX, startY: e.clientY, active: false, float: null, overRoom: null };
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp, { once: true });
