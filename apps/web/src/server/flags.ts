@@ -17,11 +17,13 @@ export function readFlags(raw: unknown): UserFlags {
   return { newUi: record.newUi === true };
 }
 
-/** Flags for the signed-in user, read on the server; defaults when signed out. */
-export async function currentUserFlags(): Promise<UserFlags> {
+export type UserPreferences = { flags: UserFlags; textSize: string };
+
+/** Flags and display settings for the signed-in user, read on the server; defaults when signed out. */
+export async function currentUserPreferences(): Promise<UserPreferences> {
   const cookieStore = await cookies();
   const ctx = await verifyAndLoadAuthContext(cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null);
-  if (!ctx) return { ...DEFAULT_FLAGS };
-  const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { flags: true } });
-  return readFlags(user?.flags);
+  if (!ctx) return { flags: { ...DEFAULT_FLAGS }, textSize: "normal" };
+  const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { flags: true, textSize: true } });
+  return { flags: readFlags(user?.flags), textSize: user?.textSize ?? "normal" };
 }

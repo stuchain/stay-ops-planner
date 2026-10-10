@@ -22,7 +22,7 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" 
   color: string;
   selected?: boolean;
   dragging?: boolean;
-  /** Greyed and not draggable until confirmed. */
+  /** Greyed and not draggable until confirmed. Dragging itself is wired by the caller (dnd-kit), not native drag. */
   pending?: boolean;
   /** No apartment yet (amber). */
   needsRoom?: boolean;
@@ -76,7 +76,7 @@ export function BookingBar({
     <button
       {...rest}
       type={type}
-      draggable={draggable}
+      data-draggable={draggable}
       aria-label={accessibleName}
       aria-pressed={selected}
       title={`${accessibleName} · ${channelLabel}`}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getBookingDetails } from "@/server/useCases/bookingDetails";
 import { bookingSuggestions } from "@/server/useCases/bookingSuggestions";
 import { moveBooking } from "@/server/useCases/moveBooking";
 import { createTRPCRouter, operatorProcedure, userProcedure } from "../trpc";
@@ -15,6 +16,11 @@ export const bookingRouter = createTRPCRouter({
       }),
     )
     .mutation(({ ctx, input }) => moveBooking({ ...input, actorUserId: ctx.user.userId })),
+
+  /** Guest, dates, party, amount and notes for the booking panel. */
+  details: userProcedure
+    .input(z.object({ bookingId: z.string().min(1) }))
+    .query(({ input }) => getBookingDetails(input.bookingId)),
 
   /** Every apartment for this booking, best first, with reasons. */
   suggestions: userProcedure

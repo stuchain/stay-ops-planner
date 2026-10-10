@@ -24,7 +24,7 @@ describe("BookingBar", () => {
     const { container } = render(<BookingBar {...base} onClick={onClick} style={{ left: 10, width: 200 }} />);
     const bar = screen.getByRole("button", { name: "Maria Konstantinou, Παρ 17 – Τρι 21 Οκτ, 4 νύχτες" });
     expect(bar).toHaveClass("h-14");
-    expect(bar).toHaveAttribute("draggable", "true");
+    expect(bar).toHaveAttribute("data-draggable", "true");
     expect(bar.style.left).toBe("10px");
     expect(bar.style.getPropertyValue("--apt")).toBe("#0F766E");
     expect(screen.getByRole("img", { name: "Airbnb" })).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe("BookingBar", () => {
   it("pending: word shown, not draggable", async () => {
     const { container } = render(<BookingBar {...base} pending />);
     const bar = screen.getByRole("button");
-    expect(bar).toHaveAttribute("draggable", "false");
+    expect(bar).toHaveAttribute("data-draggable", "false");
     expect(bar).toHaveAttribute("data-state", "pending");
     expect(bar).toHaveAccessibleName(/Εκκρεμεί/);
     expect(screen.getByText(/4 νύχτες · Εκκρεμεί/)).toBeInTheDocument();
