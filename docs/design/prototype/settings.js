@@ -89,7 +89,7 @@
       '<button type="button" class="btn" data-dev-fake>' + icon("rotate-ccw") + "Πλήρης επανασυγχρονισμός</button></section>" +
 
       '<section class="card"><h2>' + icon("sparkles") + "Προτάσεις διαμερίσματος</h2>" +
-      '<p class="muted">Οι κανόνες εφαρμόζονται με αυτή τη σειρά. Ο πρώτος που ταιριάζει κερδίζει.</p>' +
+      '<p class="muted">Τα διαμερίσματα ταξινομούνται με αυτούς τους κανόνες, με αυτή τη σειρά. Αν δύο ισοβαθμούν σε έναν κανόνα, αποφασίζει ο επόμενος.</p>' +
       '<ol class="rules">' + rules.map((r) => "<li>" + esc(r) + "</li>").join("") + "</ol></section>" +
 
       '<section class="card"><h2>' + icon("landmark") + "Έσοδα και φόρος</h2>" +
@@ -118,7 +118,7 @@
         '<form novalidate id="pw-form" class="pw-form">' +
         pwField("pw-cur", "Ο κωδικός που έχετε τώρα") + pwField("pw-new", "Νέος κωδικός", "Τουλάχιστον 8 χαρακτήρες.") + pwField("pw-rep", "Ξανά ο νέος κωδικός") +
         '<div class="pw-actions"><button type="submit" class="btn btn-primary btn-big">' + icon("check") + 'Αλλαγή κωδικού</button>' +
-        '<button type="button" class="btn" data-showpw aria-pressed="false">' + icon("eye") + "<span>Δείξε τους κωδικούς</span></button></div></form></section>" +
+        '<button type="button" class="btn" data-showpw aria-pressed="false">' + icon("eye") + "<span>Εμφάνιση κωδικών</span></button></div></form></section>" +
         '<div id="st-dev-switch"></div><div id="st-dev" class="dev"></div></div></div>';
 
       el.querySelectorAll("[data-seg=lang] button").forEach((b) => {
@@ -135,7 +135,7 @@
         const on = showBtn.getAttribute("aria-pressed") !== "true";
         showBtn.setAttribute("aria-pressed", String(on));
         form.querySelectorAll("input").forEach((i) => { i.type = on ? "text" : "password"; });
-        showBtn.querySelector("span").textContent = on ? "Κρύψε τους κωδικούς" : "Δείξε τους κωδικούς";
+        showBtn.querySelector("span").textContent = on ? "Απόκρυψη κωδικών" : "Εμφάνιση κωδικών";
       };
       form.onsubmit = (e) => {
         e.preventDefault();
