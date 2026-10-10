@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import { respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { writeAuditSnapshot } from "@stay-ops/audit";
-import { fireInvalidateCalendarWideForRoomMetadata } from "@/lib/calendarMonthCacheInvalidate";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { auditMetaFromRequest } from "@/modules/audit/requestMeta";
@@ -92,8 +91,6 @@ export async function PATCH(request: NextRequest) {
     }
     throw err;
   }
-
-  fireInvalidateCalendarWideForRoomMetadata();
 
   return NextResponse.json({ data: { ok: true } });
 }

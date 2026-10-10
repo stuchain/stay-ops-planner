@@ -1,6 +1,4 @@
 import { BookingStatus, Channel } from "@stay-ops/db";
-import { getCachedCalendarMonthJson, setCachedCalendarMonthJson } from "@stay-ops/shared/calendar-month-cache";
-import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { extractDailyRatesFromHosthubJson } from "./hosthubDailyRates";
 import { zonedMonthRangeUtc } from "./monthBounds";
@@ -53,23 +51,10 @@ function dateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function guestNameFromRaw(raw: unknown): string {
-  if (!raw || typeof raw !== "object") return "Guest";
-  const o = raw as Record<string, unknown>;
-  const guest = o.guest ?? o.guest_name ?? o.customer ?? o.guestName;
-  if (typeof guest === "string" && guest.trim()) return guest.trim();
-  if (guest && typeof guest === "object") {
-    const g = guest as Record<string, unknown>;
-    const n = g.name ?? g.full_name;
-    if (typeof n === "string" && n.trim()) return n.trim();
-  }
-  return "Guest";
-}
+const FALLBACK_GUEST_NAME = "Επισκέπτης";
 
-function bestGuestName(booking: { guestName: string | null; rawPayload: unknown }): string {
-  const fromColumn = booking.guestName?.trim();
-  if (fromColumn) return fromColumn;
-  return guestNameFromRaw(booking.rawPayload);
+function bestGuestName(booking: { guestName: string | null }): string {
+  return booking.guestName?.trim() || FALLBACK_GUEST_NAME;
 }
 
 function bookingIdFromImportPayload(payload: unknown): string | null {
@@ -94,7 +79,7 @@ export type CalendarMonthAggregatePayload = {
   dailyRatesByRoomDay: DailyRatesByRoomDay;
 };
 
-async function computeCalendarMonthAggregate(args: {
+export async function getCalendarMonthAggregate(args: {
   yearMonth: string;
   timeZone: string;
 }): Promise<CalendarMonthAggregatePayload> {
@@ -149,14 +134,23 @@ async function computeCalendarMonthAggregate(args: {
       guestAdults: true,
       guestChildren: true,
       guestInfants: true,
-      rawPayload: true,
       channel: true,
       status: true,
-      hosthubCalendarEventRaw: true,
       assignment: true,
       sourceListing: true,
     },
   });
+
+  /* Nightly prices live in a large JSON column: load it only for assigned bookings (rates are drawn per room). */
+  const assignedIds = bookings.filter((b) => b.assignment).map((b) => b.id);
+  const calendarEventRows =
+    assignedIds.length > 0
+      ? await prisma.booking.findMany({
+          where: { id: { in: assignedIds } },
+          select: { id: true, hosthubCalendarEventRaw: true },
+        })
+      : [];
+  const calendarEventById = new Map(calendarEventRows.map((r) => [r.id, r.hosthubCalendarEventRaw]));
 
   const blocks = await prisma.manualBlock.findMany({
     where: {
@@ -204,8 +198,9 @@ async function computeCalendarMonthAggregate(args: {
   const dailyRatesByRoomDay: DailyRatesByRoomDay = {};
   for (const b of bookings) {
     const a = b.assignment;
-    if (!a || !b.hosthubCalendarEventRaw) continue;
-    const extracted = extractDailyRatesFromHosthubJson(b.hosthubCalendarEventRaw);
+    const calendarEventRaw = a ? calendarEventById.get(b.id) : null;
+    if (!a || !calendarEventRaw) continue;
+    const extracted = extractDailyRatesFromHosthubJson(calendarEventRaw);
     if (extracted.size === 0) continue;
     const roomId = a.roomId;
     if (!dailyRatesByRoomDay[roomId]) dailyRatesByRoomDay[roomId] = {};
@@ -253,33 +248,4 @@ async function computeCalendarMonthAggregate(args: {
     markers,
     dailyRatesByRoomDay,
   };
-}
-
-/**
- * Calendar month DTO with optional Redis cache-aside (Epic 12).
- * When `REDIS_URL` is unset, always computes fresh.
- */
-export async function getCalendarMonthAggregate(args: {
-  yearMonth: string;
-  timeZone: string;
-}): Promise<CalendarMonthAggregatePayload> {
-  const redisUrl = process.env.REDIS_URL?.trim();
-  if (redisUrl) {
-    const cached = await getCachedCalendarMonthJson(redisUrl, args.timeZone, args.yearMonth);
-    if (cached) {
-      try {
-        return JSON.parse(cached) as CalendarMonthAggregatePayload;
-      } catch {
-        log("warn", "calendar_month_cache_corrupt", { yearMonth: args.yearMonth });
-      }
-    }
-  }
-
-  const data = await computeCalendarMonthAggregate(args);
-
-  if (redisUrl) {
-    await setCachedCalendarMonthJson(redisUrl, args.timeZone, args.yearMonth, JSON.stringify(data));
-  }
-
-  return data;
 }

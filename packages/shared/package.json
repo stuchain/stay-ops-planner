@@ -36,10 +36,10 @@
       "import": "./dist/log/log.js",
       "default": "./dist/log/log.js"
     },
-    "./calendar-month-cache": {
-      "types": "./dist/calendar/calendarMonthRedisCache.d.ts",
-      "import": "./dist/calendar/calendarMonthRedisCache.js",
-      "default": "./dist/calendar/calendarMonthRedisCache.js"
+    "./year-month-buckets": {
+      "types": "./dist/calendar/yearMonthBuckets.d.ts",
+      "import": "./dist/calendar/yearMonthBuckets.js",
+      "default": "./dist/calendar/yearMonthBuckets.js"
     }
   },
   "scripts": {

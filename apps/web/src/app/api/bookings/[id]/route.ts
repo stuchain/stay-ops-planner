@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { writeAuditSnapshot } from "@stay-ops/audit";
 import { BookingStatus, Prisma } from "@stay-ops/db";
 import { applyCancellationSideEffects } from "@stay-ops/sync";
-import { fireInvalidateCalendarForBookingStay } from "@/lib/calendarMonthCacheInvalidate";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { attachTraceToResponse, apiError } from "@/lib/apiError";
@@ -219,8 +218,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
         return row;
       });
-
-      fireInvalidateCalendarForBookingStay(updated.checkinDate, updated.checkoutDate);
 
       return attachTraceToResponse(
         request,

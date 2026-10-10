@@ -86,7 +86,7 @@ describe("api GET /api/bookings/overview", () => {
         checkinDate: new Date("2026-07-02T00:00:00.000Z"),
         checkoutDate: new Date("2026-07-04T00:00:00.000Z"),
         nights: 2,
-        rawPayload: { guest: "Assigned Guest" },
+        guestName: "Assigned Guest",
       },
     });
     await prisma.assignment.create({
@@ -106,7 +106,7 @@ describe("api GET /api/bookings/overview", () => {
         checkinDate: new Date("2026-07-10T00:00:00.000Z"),
         checkoutDate: new Date("2026-07-12T00:00:00.000Z"),
         nights: 2,
-        rawPayload: { guest: "Unassigned Guest" },
+        guestName: "Unassigned Guest",
       },
     });
 
@@ -144,7 +144,7 @@ describe("api GET /api/bookings/overview", () => {
         checkinDate: new Date("2026-06-29T00:00:00.000Z"),
         checkoutDate: new Date("2026-07-02T00:00:00.000Z"),
         nights: 3,
-        rawPayload: { guest: "Boundary Guest" },
+        guestName: "Boundary Guest",
       },
     });
 

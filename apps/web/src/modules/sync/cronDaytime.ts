@@ -1,4 +1,4 @@
-import { getLocalHourInTimeZone, resolveAppTimeZone } from "@stay-ops/shared/calendar-month-cache";
+import { getLocalHourInTimeZone, resolveAppTimeZone } from "@stay-ops/shared/year-month-buckets";
 
 function parseHourEnv(key: string, fallback: number): number {
   const v = process.env[key]?.trim();

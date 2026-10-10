@@ -83,7 +83,7 @@ Re-run the same `EXPLAIN` commands and summarize qualitatively (e.g. “Seq Scan
 
 ## Caching note
 
-Calendar month responses may be cached in **Redis** (module `@stay-ops/shared/calendar-month-cache`, key prefix `cal:month:v1:`) when `REDIS_URL` is set. Baseline latency should be measured **with cache cold** (delete `cal:month:v1:*` keys) vs **warm** for fair before/after index comparisons.
+Calendar month responses are no longer cached (the Redis calendar cache was removed); every request computes fresh.
 
 ## Changelog
 

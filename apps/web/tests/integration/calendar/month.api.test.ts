@@ -129,7 +129,7 @@ describe("api GET /api/calendar/month", () => {
         checkinDate: new Date("2026-07-02T00:00:00.000Z"),
         checkoutDate: new Date("2026-07-05T00:00:00.000Z"),
         nights: 3,
-        rawPayload: { guest: "Ada" },
+        guestName: "Ada",
       },
     });
 
