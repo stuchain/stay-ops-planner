@@ -131,3 +131,61 @@ jobs:
           path: |
             apps/web/test-results/
             apps/web/playwright-report/
+
+  lighthouse:
+    name: lighthouse budget
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: stayops
+          POSTGRES_PASSWORD: stayops
+          POSTGRES_DB: stayops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stayops -d stayops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 8
+          --health-start-period 10s
+
+    env:
+      DATABASE_URL: postgresql://stayops:stayops@localhost:5432/stayops
+      SESSION_SECRET: ci-lighthouse-session-secret-at-least-32-chars-long
+      SESSION_COOKIE_SECURE: "false"
+      APP_TIMEZONE: Etc/UTC
+      SKIP_STAYOPS_ENV_VALIDATE: "1"
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=@stay-ops/web^...
+
+      - name: Migrate database
+        run: pnpm --filter @stay-ops/db exec prisma migrate deploy
+
+      - name: Build the app
+        run: pnpm --filter @stay-ops/web build
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @stay-ops/web exec playwright install chromium --with-deps
+
+      - name: Start the production server
+        working-directory: apps/web
+        run: |
+          nohup pnpm exec next start -p 3000 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:3000/login > /dev/null && exit 0; sleep 1; done
+          cat next.log; exit 1
+
+      - name: Lighthouse on /app/calendar (performance >= 90, accessibility >= 95)
+        run: pnpm --filter @stay-ops/web e2e:lighthouse --reporter=list
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          PLAYWRIGHT_NO_SERVER: "1"
