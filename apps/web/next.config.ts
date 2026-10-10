@@ -15,8 +15,26 @@ const monorepoRoot = path.resolve(webPackageDir, "../..");
 loadEnvFile({ path: path.join(monorepoRoot, ".env") });
 loadEnvFile({ path: path.join(monorepoRoot, ".env.local") });
 
+/**
+ * One release name for source maps (build) and for events (runtime, all three Sentry runtimes):
+ * explicit SENTRY_RELEASE wins; otherwise "<package>@<version>+<7-char commit>" from the Vercel
+ * commit (VERCEL_GIT_COMMIT_SHA) so every deploy is its own release. `undefined` for local builds.
+ */
+function resolveSentryRelease(): string | undefined {
+  const explicit = process.env.SENTRY_RELEASE?.trim();
+  if (explicit) return explicit;
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA?.trim();
+  if (!sha) return undefined;
+  const { version } = require("./package.json") as { version: string };
+  return `stay-ops-web@${version}+${sha.slice(0, 7)}`;
+}
+
+const sentryRelease = resolveSentryRelease();
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Inlined into the browser bundle so client events carry the same release as the uploaded source maps.
+  env: sentryRelease ? { NEXT_PUBLIC_SENTRY_RELEASE: sentryRelease } : {},
   transpilePackages: ["@stay-ops/shared", "@stay-ops/audit"],
   /** @see https://nextjs.org/docs/app/guides/memory-usage */
   experimental: {
@@ -78,7 +96,7 @@ export default withSentryConfig(withNextIntl(nextConfig), {
     disable: !sentryUploadEnabled,
   },
   release: {
-    ...(process.env.SENTRY_RELEASE !== undefined ? { name: process.env.SENTRY_RELEASE } : {}),
+    ...(sentryRelease !== undefined ? { name: sentryRelease } : {}),
     create: sentryUploadEnabled,
     finalize: sentryUploadEnabled,
   },

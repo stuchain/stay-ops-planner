@@ -1,0 +1,31 @@
+name: Monthly restore rehearsal reminder
+
+# Opens (or comments on) one issue on the 1st of each month so the restore rehearsal is not
+# forgotten. Steps are in docs/ops/monitoring.md ("Restore rehearsal"). Close the issue when done.
+on:
+  schedule:
+    - cron: "0 7 1 * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open or update the reminder issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="Monthly restore rehearsal"
+          month="$(date -u +%Y-%m)"
+          body="Time for the ${month} restore rehearsal. Follow \"Restore rehearsal\" in docs/ops/monitoring.md: restore the latest backup (or a Neon point-in-time branch) into a scratch database with \`node scripts/restore-rehearsal.mjs --execute\`, confirm the row counts match, then close this issue with the result."
+          number="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number,title --jq "[.[] | select(.title == \"$title\")][0].number // empty")"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "Still open: $body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi

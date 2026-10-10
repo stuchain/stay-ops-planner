@@ -29,10 +29,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Resolve SENTRY_RELEASE (semver from apps/web)
+      # Same name next.config.ts builds on Vercel from VERCEL_GIT_COMMIT_SHA (== this commit), so
+      # the source maps uploaded here belong to the release the running deployment reports.
+      - name: Resolve SENTRY_RELEASE (semver + commit from apps/web)
         run: |
           VER=$(node -p "require('./apps/web/package.json').version")
-          echo "SENTRY_RELEASE=stay-ops-web@${VER}" >> "$GITHUB_ENV"
+          echo "SENTRY_RELEASE=stay-ops-web@${VER}+${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
 
       - name: Require Sentry upload secrets on tag builds
         if: github.ref_type == 'tag'

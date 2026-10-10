@@ -490,3 +490,14 @@ model SyncLock {
 
   @@map("sync_lock")
 }
+
+/// Last alert sent per problem key (P2-8), so the same problem is not mailed twice.
+/// A row exists only while the problem is open; it is deleted when the problem clears.
+model AlertState {
+  key       String   @id
+  /// Short text of what was reported; shown in the recovery message.
+  detail    String?
+  alertedAt DateTime @default(now()) @map("alerted_at") @db.Timestamptz(6)
+
+  @@map("alert_states")
+}

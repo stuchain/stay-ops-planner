@@ -1,0 +1,47 @@
+name: Sync health alerts
+
+# Every 30 minutes asks the app to check Hosthub sync health and, if something is wrong, tell
+# Stelios (email via Resend and/or Telegram). The app remembers what it already reported, so
+# the same problem is sent once. Logic: apps/web/src/server/monitoring. Setup: docs/ops/monitoring.md.
+#
+# Repo secrets: PRODUCTION_URL (https://...), CRON_SECRET (same value as the Vercel env var),
+# optional VERCEL_AUTOMATION_BYPASS_SECRET.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: health-alerts
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Call /api/cron/health-alerts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${PRODUCTION_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::notice::Not set up yet: add repo secrets PRODUCTION_URL and CRON_SECRET (docs/ops/monitoring.md). Skipping."
+            exit 0
+          fi
+          curl_opts=(--silent --show-error --max-time 60 --header "Authorization: Bearer ${CRON_SECRET}")
+          if [[ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]]; then
+            curl_opts+=(--header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
+          fi
+          status=$(curl "${curl_opts[@]}" -o /tmp/alerts.json -w '%{http_code}' "${PRODUCTION_URL%/}/api/cron/health-alerts")
+          cat /tmp/alerts.json; echo
+          if [ "$status" != "200" ]; then
+            echo "::error::health-alerts endpoint answered HTTP $status"
+            exit 1
+          fi

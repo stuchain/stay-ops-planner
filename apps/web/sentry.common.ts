@@ -42,5 +42,11 @@ export function sentryEnvironment(): string {
 }
 
 export function sentryReleaseFallback(): string | undefined {
-  return process.env.SENTRY_RELEASE?.trim() || process.env.npm_package_version?.trim() || undefined;
+  // NEXT_PUBLIC_SENTRY_RELEASE is set by next.config.ts (same name the source maps were uploaded under).
+  return (
+    process.env.SENTRY_RELEASE?.trim() ||
+    process.env.NEXT_PUBLIC_SENTRY_RELEASE?.trim() ||
+    process.env.npm_package_version?.trim() ||
+    undefined
+  );
 }

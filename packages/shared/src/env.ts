@@ -55,6 +55,13 @@ export const EnvSchema = z.object({
   STAYOPS_SENTRY_REQUIRED: z.preprocess(emptyToUndefined, z.enum(["0", "1"]).optional()),
   /** Vercel Cron + manual: `Authorization: Bearer …` for GET /api/cron/sync-hosthub (min 16 chars when set). */
   CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(16, "CRON_SECRET must be at least 16 characters").optional()),
+  /** Alert delivery for GET /api/cron/health-alerts (P2-8). Email needs both RESEND_API_KEY and ALERT_EMAIL_TO. */
+  RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  ALERT_EMAIL_TO: z.preprocess(emptyToUndefined, z.string().min(3).optional()),
+  ALERT_EMAIL_FROM: z.preprocess(emptyToUndefined, z.string().min(3).optional()),
+  /** Telegram needs both TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID. */
+  TELEGRAM_BOT_TOKEN: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  TELEGRAM_CHAT_ID: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** Local hour (0–23) in APP_TIMEZONE when cron may run; defaults applied in app if unset. */
   SYNC_CRON_LOCAL_START_HOUR: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(23).optional()),
   SYNC_CRON_LOCAL_END_HOUR: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(23).optional()),

@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { ZodError } from "zod";
 import { DomainError, type DomainErrorCode, type DomainErrorParams } from "@stay-ops/domain";
+import { hashUserId } from "@stay-ops/shared/observability/hash-user-id";
 import type { TrpcContext } from "./context";
 
 const TRPC_TO_DOMAIN: Partial<Record<TRPCError["code"], DomainErrorCode>> = {
@@ -60,10 +61,12 @@ const domainErrors = t.middleware(async ({ next }) => {
 });
 
 /** Tags each Sentry event with the procedure name and reports unexpected errors. */
-const sentry = t.middleware(async ({ path, type, next }) => {
+const sentry = t.middleware(async ({ ctx, path, type, next }) => {
   return Sentry.withScope(async (scope) => {
     scope.setTag("trpc.procedure", path);
     scope.setTag("trpc.type", type);
+    // Hashed with the existing pepper: lets Sentry count affected users without holding real ids.
+    if (ctx.user) scope.setUser({ id: hashUserId(ctx.user.userId, process.env.SENTRY_USER_ID_PEPPER) });
     const result = await next();
     if (!result.ok && !(result.error.cause instanceof DomainError) && result.error.code === "INTERNAL_SERVER_ERROR") {
       Sentry.captureException(result.error.cause ?? result.error);
