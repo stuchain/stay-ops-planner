@@ -32,6 +32,7 @@ export default tseslint.config(
       "prisma/migrations/**",
       "prisma/seed.ts",
       "prisma/seed-e2e.ts",
+      "prisma/seed-demo.ts",
       // Lives outside the `src/` rootDir of `tsconfig.json` and is loaded
       // ad-hoc by the seed runners; not worth wiring into the project graph
       // just for two `dotenv.config()` calls.

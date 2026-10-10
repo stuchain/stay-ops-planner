@@ -27,7 +27,8 @@
     "build": "prisma generate && tsc",
     "lint": "eslint .",
     "typecheck": "prisma generate && tsc --noEmit",
-    "test": "node -e \"process.exit(0)\""
+    "test": "node -e \"process.exit(0)\"",
+    "seed:demo": "tsx prisma/seed-demo.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.3.1",
