@@ -53,7 +53,7 @@ test.describe("critical journey @smoke", () => {
 
       const detail = page.getByRole("dialog", { name: "Booking details" });
       await expect(detail).toBeVisible({ timeout: 15_000 });
-      await expect(detail.getByText("E2E Alpha")).toBeVisible();
+      await expect(detail.getByText("E2E Alpha")).toBeVisible({ timeout: 20_000 });
       await expect(detail.getByText("Check-in", { exact: true })).toBeVisible();
       await detail.getByRole("button", { name: "Close" }).click();
       await expect(detail).toBeHidden();

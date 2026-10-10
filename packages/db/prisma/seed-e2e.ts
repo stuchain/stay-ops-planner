@@ -14,8 +14,10 @@ const E2E_EXTERNAL = {
   alpha: "e2e-seed-alpha",
   bravo: "e2e-seed-bravo",
   delta: "e2e-seed-delta",
+  boundary: "e2e-seed-boundary",
+  echo: "e2e-seed-echo",
 } as const;
-const E2E_ROOM_CODES = ["E2E-A", "E2E-B", "R1"] as const;
+const E2E_ROOM_CODES = ["E2E-A", "E2E-B", "E2E-C", "R1"] as const;
 
 async function wipeE2eBookings() {
   for (const externalBookingId of Object.values(E2E_EXTERNAL)) {
@@ -70,6 +72,10 @@ async function main() {
   });
   const rB = await prisma.room.create({
     data: { code: "E2E-B", displayName: "E2E Room B", isActive: true },
+  });
+
+  await prisma.room.create({
+    data: { code: "E2E-C", displayName: "E2E Room C", isActive: true },
   });
 
   const earlyStart = utcYmd(y, m0, 5);
@@ -150,6 +156,47 @@ async function main() {
       nights: nightsMid,
       guestName: "E2E Delta",
       rawPayload: { guest: "E2E Delta" },
+    },
+  });
+
+  /** Stay that crosses into the next month (calendar regression: moves in the 2-month view). Assigned to E2E-A. */
+  const boundaryStart = utcYmd(y, m0, 26);
+  const boundaryEnd = utcYmd(y, m0 + 1, 3);
+  const bBoundary = await prisma.booking.create({
+    data: {
+      channel: Channel.direct,
+      externalBookingId: E2E_EXTERNAL.boundary,
+      status: BookingStatus.confirmed,
+      checkinDate: boundaryStart,
+      checkoutDate: boundaryEnd,
+      nights: Math.round((boundaryEnd.getTime() - boundaryStart.getTime()) / 86_400_000),
+      guestName: "E2E Boundary",
+      rawPayload: { guest: "E2E Boundary" },
+    },
+  });
+
+  /** Second unassigned booking, free on every E2E room (assign from the queue, then move again). */
+  const echoStart = utcYmd(y, m0, 21);
+  const echoEnd = utcYmd(y, m0, 24);
+  await prisma.booking.create({
+    data: {
+      channel: Channel.direct,
+      externalBookingId: E2E_EXTERNAL.echo,
+      status: BookingStatus.confirmed,
+      checkinDate: echoStart,
+      checkoutDate: echoEnd,
+      nights: 3,
+      guestName: "E2E Echo",
+      rawPayload: { guest: "E2E Echo" },
+    },
+  });
+
+  await prisma.assignment.create({
+    data: {
+      bookingId: bBoundary.id,
+      roomId: rA.id,
+      startDate: boundaryStart,
+      endDate: boundaryEnd,
     },
   });
 

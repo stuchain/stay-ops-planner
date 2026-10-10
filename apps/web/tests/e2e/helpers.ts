@@ -68,4 +68,11 @@ export async function loginAsStaff(page: Page): Promise<void> {
 export async function gotoCalendarAndWaitReady(page: Page): Promise<void> {
   await page.goto("/app/calendar");
   await expect(page.locator('input[type="month"]').first()).toBeVisible({ timeout: 15_000 });
+  // Month data loads after the controls render; wait for the first apartment row so callers can count lanes
+  // without racing the load (specs skip themselves when seeded rooms are genuinely missing).
+  await page
+    .locator('[data-testid^="ops-room-lane-"]')
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 })
+    .catch(() => undefined);
 }

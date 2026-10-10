@@ -8,8 +8,10 @@ const E2E_EXTERNAL = [
   "e2e-seed-alpha",
   "e2e-seed-bravo",
   "e2e-seed-delta",
+  "e2e-seed-boundary",
+  "e2e-seed-echo",
 ];
-const E2E_ROOM_CODES = ["E2E-A", "E2E-B", "R1"];
+const E2E_ROOM_CODES = ["E2E-A", "E2E-B", "E2E-C", "R1"];
 
 async function cleanupE2eFixtures() {
   const roomIds = (
