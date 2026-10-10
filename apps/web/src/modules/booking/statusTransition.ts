@@ -1,11 +1,16 @@
-import { BookingStatus } from "@stay-ops/db";
+import type { BookingStatus } from "@stay-ops/db";
 
 const ALLOWED: Record<BookingStatus, ReadonlySet<BookingStatus>> = {
-  pending: new Set([BookingStatus.confirmed, BookingStatus.cancelled]),
-  confirmed: new Set([BookingStatus.cancelled, BookingStatus.needs_reassignment]),
-  needs_reassignment: new Set([BookingStatus.confirmed, BookingStatus.cancelled]),
-  cancelled: new Set(),
+  pending: new Set<BookingStatus>(["confirmed", "cancelled"]),
+  confirmed: new Set<BookingStatus>(["cancelled", "needs_reassignment"]),
+  needs_reassignment: new Set<BookingStatus>(["confirmed", "cancelled"]),
+  cancelled: new Set<BookingStatus>(),
 };
+
+/** Legal next statuses (excluding staying put) for a booking in `from`. */
+export function allowedNextStatuses(from: BookingStatus): BookingStatus[] {
+  return [...ALLOWED[from]];
+}
 
 export class InvalidBookingStatusTransitionError extends Error {
   readonly name = "InvalidBookingStatusTransitionError";

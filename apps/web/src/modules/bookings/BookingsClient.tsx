@@ -11,8 +11,6 @@ type BookingStatus =
   | "pending"
   | "confirmed"
   | "cancelled"
-  | "completed"
-  | "no_show"
   | "needs_reassignment";
 type Channel = "airbnb" | "booking" | "direct";
 type ReservationStatus = "all" | "active" | "cancelled";

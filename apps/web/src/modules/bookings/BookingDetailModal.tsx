@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOverlayAccessibility } from "@/modules/ui/useOverlayAccessibility";
 import type { BookingStatus } from "@stay-ops/db";
-import { bookingStatusLabel } from "./bookingStatusLabel";
+import { bookingStatusLabel, statusChoicesFor } from "./bookingStatusLabel";
 import { ChannelLogo } from "./ChannelLogo";
 import type { BookingDetailDto } from "./details";
 import { PriceDetailsAirbnb } from "./PriceDetailsAirbnb";
@@ -46,9 +46,6 @@ function fmtDateTimeLocal(value: string): string {
   }).format(date);
 }
 
-function statusLabel(status: BookingStatus): string {
-  return bookingStatusLabel(status);
-}
 
 export type BookingDetailModalProps = {
   bookingId: string | null;
@@ -262,7 +259,7 @@ export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingD
             <>
               <div className="ops-booking-popup-summary">
                 <div className="ops-booking-popup-status">
-                  <span>{statusLabel(editing ? editStatus || detail.status : detail.status)}</span>
+                  <span>{bookingStatusLabel(editing ? editStatus || detail.status : detail.status)}</span>
                 </div>
                 <div className="ops-booking-popup-main">
                   <div className="ops-booking-popup-identity">
@@ -451,12 +448,11 @@ export function BookingDetailModal({ bookingId, onClose, onAfterSave }: BookingD
                       disabled={!editing}
                       onChange={(e) => setEditStatus(e.target.value as BookingStatus)}
                     >
-                      <option value="pending">{bookingStatusLabel("pending")}</option>
-                      <option value="confirmed">{bookingStatusLabel("confirmed")}</option>
-                      <option value="cancelled">{bookingStatusLabel("cancelled")}</option>
-                      <option value="completed">{bookingStatusLabel("completed")}</option>
-                      <option value="no_show">{bookingStatusLabel("no_show")}</option>
-                      <option value="needs_reassignment">{bookingStatusLabel("needs_reassignment")}</option>
+                      {statusChoicesFor(detail.status).map((st) => (
+                        <option key={st} value={st}>
+                          {bookingStatusLabel(st)}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className="ops-label">
