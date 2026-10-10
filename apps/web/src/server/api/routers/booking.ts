@@ -3,6 +3,7 @@ import { EDITABLE_FIELDS, resetBookingField, updateBookingDetails } from "@/serv
 import { bookingHistory } from "@/server/useCases/bookingHistory";
 import { getBookingDetails } from "@/server/useCases/bookingDetails";
 import { bookingSuggestions } from "@/server/useCases/bookingSuggestions";
+import { getPreviousStays } from "@/server/useCases/previousStays";
 import { moveBooking } from "@/server/useCases/moveBooking";
 import { createTRPCRouter, operatorProcedure, userProcedure } from "../trpc";
 
@@ -23,6 +24,11 @@ export const bookingRouter = createTRPCRouter({
   details: userProcedure
     .input(z.object({ bookingId: z.string().min(1) }))
     .query(({ input }) => getBookingDetails(input.bookingId)),
+
+  /** Earlier stays of the same guest (same phone or e-mail), and weaker same-name hints. */
+  previousStays: userProcedure
+    .input(z.object({ bookingId: z.string().min(1) }))
+    .query(({ input }) => getPreviousStays(input.bookingId)),
 
   /** Every apartment for this booking, best first, with reasons. */
   suggestions: userProcedure

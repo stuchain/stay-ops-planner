@@ -18,6 +18,7 @@ import { Skeleton } from "@/ui/Skeleton";
 import { BookingEdit } from "./BookingEdit";
 import { BookingHistory } from "./BookingHistory";
 import { BookingPrice } from "./BookingPrice";
+import { ReturningGuest } from "./ReturningGuest";
 import { recommendationText } from "./recommendation";
 import type { MoveRequest } from "./useMoveBooking";
 
@@ -169,6 +170,8 @@ export function BookingPanel({
           ) : details.isPending ? (
             <Skeleton variant="block" className="h-40" />
           ) : null}
+
+          <ReturningGuest bookingId={booking.id} />
 
           {confirm && confirm.booking.id === booking.id ? (
             <div

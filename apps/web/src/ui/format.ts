@@ -7,6 +7,21 @@ const INTL_LOCALE: Record<UiLocale, string> = { el: "el-GR", en: "en-GB" };
 /** Canonical short months, so the output never depends on the ICU build ("Μαΐ", not "Μάι"). */
 const EL_MONTHS = ["Ιαν", "Φεβ", "Μαρ", "Απρ", "Μαΐ", "Ιουν", "Ιουλ", "Αυγ", "Σεπ", "Οκτ", "Νοε", "Δεκ"];
 
+const EL_MONTHS_LONG = [
+  "Ιανουάριος",
+  "Φεβρουάριος",
+  "Μάρτιος",
+  "Απρίλιος",
+  "Μάιος",
+  "Ιούνιος",
+  "Ιούλιος",
+  "Αύγουστος",
+  "Σεπτέμβριος",
+  "Οκτώβριος",
+  "Νοέμβριος",
+  "Δεκέμβριος",
+];
+
 const NBSP = " ";
 
 const formatters = new Map<string, Intl.DateTimeFormat>();
@@ -50,6 +65,16 @@ export function formatDay(iso: IsoDate, locale: UiLocale = "el", withYear = fals
   const date = parse(iso);
   const base = `${weekday(date, locale)} ${date.getUTCDate()} ${month(date, locale)}`;
   return withYear ? `${base} ${date.getUTCFullYear()}` : base;
+}
+
+/** "Αύγουστος 2025" (el) or "August 2025" (en). */
+export function formatMonthYear(iso: IsoDate, locale: UiLocale = "el"): string {
+  const date = parse(iso);
+  const name =
+    locale === "el"
+      ? (EL_MONTHS_LONG[date.getUTCMonth()] ?? "")
+      : dateFormatter(locale, { month: "long" }).format(date);
+  return `${name} ${date.getUTCFullYear()}`;
 }
 
 /**

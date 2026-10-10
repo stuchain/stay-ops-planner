@@ -17,6 +17,7 @@ export type TodayStay = TodaySummary["arrivals"][number];
 export type MoveResult = RouterOutputs["booking"]["move"];
 export type Suggestion = RouterOutputs["booking"]["suggestions"][number];
 export type BookingDetails = RouterOutputs["booking"]["details"];
+export type PreviousStays = RouterOutputs["booking"]["previousStays"];
 export type LedgerYearData = RouterOutputs["money"]["year"];
 export type LedgerRowData = LedgerYearData["rows"][number];
 export type LedgerApartmentData = LedgerYearData["apartments"][number];

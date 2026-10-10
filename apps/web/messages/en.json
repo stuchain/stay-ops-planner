@@ -899,5 +899,12 @@
     "cancel": "Cancel",
     "sent": "Sent to Stelios. He will get back to you soon.",
     "notSent": "It was not sent. Please call Stelios."
+  },
+  "guest": {
+    "returning": "Has stayed before: {stays}",
+    "maybeReturning": "May have stayed before (same name): {stays}",
+    "stay": "{apartment}, {month}",
+    "noApartment": "no apartment",
+    "more": "+{count} more"
   }
 }
