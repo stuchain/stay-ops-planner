@@ -26,8 +26,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
 - `apps/web` — Next.js (App Router) UI and route handlers
 - `packages/db` — Prisma schema and data access
 - `packages/shared` — Shared types, env validation (Zod), and helpers
-- `packages/worker` — Background jobs (BullMQ) entrypoint
-- `packages/sync` — Hosthub client, webhooks queue, booking ingest ([Hosthub API docs](https://www.hosthub.com/docs/api/), [docs/vendor/hosthub-api.md](docs/vendor/hosthub-api.md))
+- `packages/sync` — Hosthub client, webhook, booking ingest ([Hosthub API docs](https://www.hosthub.com/docs/api/), [docs/vendor/hosthub-api.md](docs/vendor/hosthub-api.md))
 
 ## Current Repo Status
 
@@ -36,7 +35,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
 - TypeScript path alias in the web app: `@/*` → `apps/web/src/*` (see `apps/web/tsconfig.json`)
 - Environment validation in `packages/shared/src/env.ts`
 - Prisma schema/migrations + seed harness in `packages/db/prisma/*`
-- Local data stack via `docker-compose.yml` (Postgres + Redis)
+- Local data stack via `docker-compose.yml` (Postgres)
 
 ### Authentication and internal access control
 - Auth endpoints
@@ -65,7 +64,7 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
   - `POST /api/assignments/[id]/unassign` — return a booking to the unassigned queue
   - `GET /api/bookings/unassigned` — list bookings not yet assigned to a room (optional `meta.total`)
 - **Domain logic** lives under `apps/web/src/modules/allocation/` (service + error types). Database overlap and uniqueness are enforced in Postgres; concurrent writes map to stable API errors such as `CONFLICT_ASSIGNMENT` and `BOOKING_ALREADY_ASSIGNED`.
-- **Inactive rooms**: `Room.isActive` is honored; assigning or reassigning to an inactive room returns `ROOM_INACTIVE` (see [docs/phases/phase-04-allocation.md](docs/phases/phase-04-allocation.md)).
+- **Inactive rooms**: `Room.isActive` is honored; assigning or reassigning to an inactive room returns `ROOM_INACTIVE`.
 
 ### Manual blocks
 - **API** (admin session required)
@@ -78,13 +77,13 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
   - `GET /api/cleaning/tasks` / `POST /api/cleaning/tasks` — list and create service cleaning tasks
   - `PATCH /api/cleaning/tasks/[id]/schedule` — adjust planned window (validates against booking turnover rules)
   - `PATCH /api/cleaning/tasks/[id]/status` — status transitions (`in_progress`, `done`)
-- **Engine** modules under `apps/web/src/modules/cleaning/` (scheduling, state machine, turnover generation). Spec and invariants: [docs/phases/phase-05-cleaning-engine.md](docs/phases/phase-05-cleaning-engine.md).
+- **Engine** modules under `apps/web/src/modules/cleaning/` (scheduling, state machine, turnover generation).
 
 ### Sync (Hosthub)
 - `POST /api/sync/hosthub/webhook` — ingest webhook events (signature/HMAC when configured)
 - `GET /api/sync/runs` — list recent sync run records (authenticated)
 - `GET /api/health` — deployment health probe (DB connectivity + process uptime)
-- Client and pipeline: `packages/sync`; vendor notes: [docs/vendor/hosthub-api.md](docs/vendor/hosthub-api.md), phase outline [docs/phases/phase-03-hosthub-sync.md](docs/phases/phase-03-hosthub-sync.md).
+- Client and pipeline: `packages/sync`; vendor notes: [docs/vendor/hosthub-api.md](docs/vendor/hosthub-api.md).
 
 ### API errors (conventions)
 - JSON error shape: `{ error: { code, message, details? } }` (see [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md)).
@@ -92,17 +91,15 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
 
 ### Tests
 - **Unit / package tests**: `packages/shared`, `packages/sync` (Vitest).
-- **Web integration tests**: `apps/web/tests/integration/` (Vitest; `apps/web/vitest.config.ts` uses projects for integration + jsdom unit tests). They hit real Postgres and Redis — start `docker compose` before `pnpm --filter @stay-ops/web test`.
+- **Web integration tests**: `apps/web/tests/integration/` (Vitest; `apps/web/vitest.config.ts` uses projects for integration + jsdom unit tests). They hit real Postgres — start `docker compose` before `pnpm --filter @stay-ops/web test`.
 - **Web component tests (Phase 6 UI)**: `apps/web/tests/unit/` (Vitest + Testing Library + jsdom) — calendar cards/lanes/grid, block modal, unassigned drawer, cleaning board. Run with `pnpm --filter @stay-ops/web run test:unit` (no DB required) or as part of `pnpm --filter @stay-ops/web test`.
-- **Browser E2E (Playwright)**: `apps/web/tests/e2e/` — desktop Chromium and mobile viewport (390×844). **Easiest local run:** `pnpm e2e:local` (Docker Postgres/Redis → migrate → seed → `seed:e2e` → Playwright on **port 3005** so it does not clash with `pnpm dev` on 3000; same disposable test admin as CI). Otherwise install browsers once (`pnpm --filter @stay-ops/web test:e2e:install`), seed the DB, set `E2E_ADMIN_*` to match `BOOTSTRAP_ADMIN_*`, then `pnpm --filter @stay-ops/web test:e2e`. Skipping seed or env vars causes login **401**. CI: [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) runs **Vitest integration** (`stayops_test`) and **Playwright** (`stayops`) in parallel on every PR. To stress-check smokes locally: `pnpm --filter @stay-ops/web test:e2e -- --grep @smoke --repeat-each=5`. See [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
+- **Browser E2E (Playwright)**: `apps/web/tests/e2e/` — desktop Chromium and mobile viewport (390×844). **Easiest local run:** `pnpm e2e:local` (Docker Postgres → migrate → seed → `seed:e2e` → Playwright on **port 3005** so it does not clash with `pnpm dev` on 3000; same disposable test admin as CI). Otherwise install browsers once (`pnpm --filter @stay-ops/web test:e2e:install`), seed the DB, set `E2E_ADMIN_*` to match `BOOTSTRAP_ADMIN_*`, then `pnpm --filter @stay-ops/web test:e2e`. Skipping seed or env vars causes login **401**. CI: [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) runs **Vitest integration** (`stayops_test`) and **Playwright** (`stayops`) in parallel on every PR. To stress-check smokes locally: `pnpm --filter @stay-ops/web test:e2e -- --grep @smoke --repeat-each=5`. See [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
 - **Visual regression (opt-in)**: `pnpm --filter @stay-ops/web run test:e2e:visual` runs tagged `@visual` screenshot tests (desktop 1280×720). First-time or after UI changes, add `-- --update-snapshots` and commit the PNGs next to the spec (Playwright’s `*-snapshots/` folders under `apps/web/tests/e2e/visual/`). Default `test:e2e` does not run this project (`PLAYWRIGHT_VISUAL` is unset).
-- **Storybook (UI primitives)**: `pnpm --filter @stay-ops/web run storybook` (dev) or `pnpm --filter @stay-ops/web run build-storybook` (static output in `apps/web/storybook-static`, gitignored).
 - Coverage includes auth, allocation (including races and inactive rooms), blocks, cleaning flows, DB constraints, and sync webhook behavior.
 
 ### Ship for your household
-- Household production roadmap and ship gates (A1 no-worker primary path): [docs/EPICS_2.md](docs/EPICS_2.md).
-- Production runbook (Vercel + Neon, optional cron, no dedicated worker baseline): [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
-- Docker Compose and worker-based local/dev stack remain available in-repo: [docker-compose.yml](docker-compose.yml), [docs/runbooks/self-host-docker.md](docs/runbooks/self-host-docker.md).
+- Production runbook (Vercel + Neon, optional cron): [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
+- Docker Compose local/dev stack: [docker-compose.yml](docker-compose.yml), [docs/runbooks/self-host-docker.md](docs/runbooks/self-host-docker.md).
 - License: [LICENSE](LICENSE) (MIT).
 
 ### Production deployment reference
@@ -128,7 +125,6 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
 - Production DB (EPICS S3): Vercel **`buildCommand`** runs **`prisma migrate deploy`** then **`migrate status`** before `next build` ([`apps/web/vercel.json`](apps/web/vercel.json)); optional break-glass **[Migrate production DB](.github/workflows/migrate-production.yml)** (`workflow_dispatch`, GitHub Environment `production` + `DATABASE_URL`), **[Seed production DB](.github/workflows/seed-production.yml)** (EPICS S4: `DATABASE_URL` plus `BOOTSTRAP_ADMIN_*` / `BOOTSTRAP_FATHER_*` from GitHub Environment **`production`** secrets; optional Environment **variables** for bootstrap emails — see runbook), and **[Verify production readiness](.github/workflows/verify-production-readiness.yml)** — see [docs/runbooks/production-deploy.md](docs/runbooks/production-deploy.md).
 
 ### Roadmap / deeper spec
-- Phased execution and acceptance criteria: [docs/phases/README.md](docs/phases/README.md) and individual phase files (calendar UX, suggestions, production readiness, etc. are specified there even when not yet built in code).
 
 ## Security note
 
