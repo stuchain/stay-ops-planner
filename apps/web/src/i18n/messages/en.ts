@@ -24,6 +24,10 @@ export const en = {
     filtersSoon: "Filters are coming soon.",
     assignedOk: "Booking assigned successfully.",
     assignFail: "Failed to assign booking.",
+    refreshing: "Updating…",
+    loadTimeout: "The connection was slow. Please try again.",
+    loadFailed: "The calendar could not be loaded. Please try again.",
+    retry: "Try again",
   },
   bookings: {
     title: "Bookings",

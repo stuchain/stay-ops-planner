@@ -13,7 +13,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BookingDetailModal } from "@/modules/bookings/BookingDetailModal";
 import { UnassignedDrawer } from "@/modules/bookings/UnassignedDrawer";
 import { BlockEditorModal, type BlockRoomOption } from "@/modules/blocks/BlockEditorModal";
@@ -27,10 +27,14 @@ import { MultiMonthTimeline } from "./MultiMonthTimeline";
 import { performBookingAssignmentMutation } from "./assignmentMutations";
 import { MobileAssignSheet } from "./MobileAssignSheet";
 import {
-  applyOptimisticBookingMove,
+  applyConfirmedAssignmentToMonths,
+  applyOptimisticBookingMoveToMonths,
   bookingItemToDragPayload,
   parseLaneDropTarget,
+  restoreBookingInMonths,
+  snapshotBookingInMonths,
   type BookingDragPayload,
+  type CalendarDataByMonth,
 } from "./optimisticMove";
 import { useIsNarrowViewport } from "./useIsNarrowViewport";
 import { ChannelLogo } from "@/modules/bookings/ChannelLogo";
@@ -83,7 +87,17 @@ export function CalendarClient() {
     if (stored === "3") return 3;
     return 1;
   });
-  const [dataByMonth, setDataByMonth] = useState<Record<string, CalendarMonthPayload>>({});
+  const [dataByMonth, setDataByMonthState] = useState<CalendarDataByMonth>({});
+  /** Latest calendar data, readable from async callbacks without stale closures. */
+  const dataByMonthRef = useRef<CalendarDataByMonth>({});
+  const setDataByMonth = useCallback(
+    (update: CalendarDataByMonth | ((prev: CalendarDataByMonth) => CalendarDataByMonth)) => {
+      const next = typeof update === "function" ? update(dataByMonthRef.current) : update;
+      dataByMonthRef.current = next;
+      setDataByMonthState(next);
+    },
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blockModal, setBlockModal] = useState<
@@ -107,22 +121,33 @@ export function CalendarClient() {
   );
   const baseData = dataByMonth[month] ?? null;
 
+  /** Each load gets a number; only the newest one may write to the screen. */
+  const loadSeqRef = useRef(0);
+  const loadAbortRef = useRef<AbortController | null>(null);
+  /** Moves sent to the server and not answered yet. */
+  const movesInFlightRef = useRef(0);
+  /** A reload was asked for while a move was in flight; run it once all moves settle. */
+  const reloadAfterMovesRef = useRef(false);
+
   const load = useCallback(async (baseYm: string, monthCount: 1 | 2 | 3) => {
+    loadAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
+    const seq = ++loadSeqRef.current;
+    const isLatest = () => seq === loadSeqRef.current;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 45_000);
     setLoading(true);
-    setError(null);
-    const fetchOpts: RequestInit = {
-      credentials: "include",
-      signal: AbortSignal.timeout(45_000),
-    };
+    const fetchOpts: RequestInit = { credentials: "include", signal: controller.signal };
     try {
       const months = Array.from({ length: monthCount }, (_, idx) => shiftMonth(baseYm, idx));
-      const monthPayloads = await Promise.all(
+      const monthsPromise = Promise.all(
         months.map(async (ym) => {
           const res = await fetch(`/api/calendar/month?month=${encodeURIComponent(ym)}`, fetchOpts);
-          if (!res.ok) {
-            const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-            throw new Error(j?.error?.message ?? `HTTP ${res.status}`);
-          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const json = (await res.json()) as { data: CalendarMonthPayload };
           const payload = json.data;
           return [
@@ -134,50 +159,47 @@ export function CalendarClient() {
           ] as const;
         }),
       );
-      setDataByMonth(Object.fromEntries(monthPayloads));
-
-      const overviewRes = await fetch(
+      const overviewPromise = fetch(
         `/api/bookings/overview?month=${encodeURIComponent(baseYm)}`,
         fetchOpts,
-      );
-      if (overviewRes.ok) {
-        const overviewJson = (await overviewRes.json()) as {
+      ).then(async (res) => {
+        if (!res.ok) return null;
+        const overviewJson = (await res.json()) as {
           data: {
             rooms: Array<{ id: string; label: string; maxGuests: number | null }>;
-            unassigned: Array<{
-              bookingId: string;
-              guestName: string;
-              guestTotal: number | null;
-              guestAdults: number | null;
-              guestChildren: number | null;
-              guestInfants: number | null;
-              checkinDate: string;
-              checkoutDate: string;
-              status: string;
-              channel: "airbnb" | "booking" | "direct";
-            }>;
+            unassigned: OverviewUnassignedBooking[];
           };
         };
-        setOverview({
-          rooms: overviewJson.data.rooms,
-          unassigned: overviewJson.data.unassigned,
-        });
-      } else {
-        setOverview(null);
-      }
+        return { rooms: overviewJson.data.rooms, unassigned: overviewJson.data.unassigned };
+      });
+      const [monthPayloads, nextOverview] = await Promise.all([monthsPromise, overviewPromise]);
+      if (!isLatest()) return;
+      setDataByMonth(Object.fromEntries(monthPayloads));
+      setOverview(nextOverview);
+      setError(null);
     } catch (e) {
-      let message = e instanceof Error ? e.message : "Failed to load";
-      if (e instanceof Error && e.name === "AbortError") {
-        message =
-          "Request timed out. Ensure Docker Postgres is running and DATABASE_URL is set (use the repo-root .env from .env.example).";
-      }
-      setError(message);
-      setDataByMonth({});
-      setOverview(null);
+      if (!isLatest()) return;
+      // Keep whatever is already on screen; only say that this refresh failed.
+      const aborted = e instanceof Error && e.name === "AbortError";
+      if (aborted && !timedOut) return;
+      setError(timedOut ? t("calendar.loadTimeout") : t("calendar.loadFailed"));
     } finally {
-      setLoading(false);
+      clearTimeout(timer);
+      if (isLatest()) {
+        setLoading(false);
+        loadAbortRef.current = null;
+      }
     }
-  }, []);
+  }, [setDataByMonth, t]);
+
+  /** Reload now, or once the moves still waiting on the server have settled. */
+  const reloadWhenIdle = useCallback(() => {
+    if (movesInFlightRef.current > 0) {
+      reloadAfterMovesRef.current = true;
+      return;
+    }
+    void load(month, displayMonths);
+  }, [displayMonths, load, month]);
 
   useEffect(() => {
     void load(month, displayMonths);
@@ -242,11 +264,11 @@ export function CalendarClient() {
 
   useEffect(() => {
     function onSyncTick() {
-      void load(month, displayMonths);
+      reloadWhenIdle();
     }
     window.addEventListener("ops:hosthub-sync-tick", onSyncTick);
     return () => window.removeEventListener("ops:hosthub-sync-tick", onSyncTick);
-  }, [displayMonths, load, month]);
+  }, [reloadWhenIdle]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -277,29 +299,56 @@ export function CalendarClient() {
   }, []);
 
   const completeAssignment = useCallback(
-    async (raw: BookingDragPayload, toRoomId: string | null) => {
-      if (toRoomId === raw.fromRoomId) return;
-      const ownerMonth = visibleMonths.find((ym) =>
-        (dataByMonth[ym]?.items ?? []).some((i) => i.kind === "booking" && i.id === raw.bookingId),
-      );
-      if (!ownerMonth) return;
-      const ownerData = dataByMonth[ownerMonth];
-      if (!ownerData) return;
-      const snapshot = structuredClone(ownerData);
-      setDataByMonth((prev) => ({
-        ...prev,
-        [ownerMonth]: applyOptimisticBookingMove(ownerData, raw.bookingId, toRoomId),
-      }));
-      setFlash(null);
-      try {
-        await performBookingAssignmentMutation(raw, toRoomId);
-        await load(month, displayMonths);
-      } catch (e) {
-        setDataByMonth((prev) => ({ ...prev, [ownerMonth]: snapshot }));
-        setFlash(e instanceof Error ? e.message : "Request failed");
+    async (raw: BookingDragPayload, toRoomId: string | null): Promise<boolean> => {
+      if (toRoomId === raw.fromRoomId) return true;
+      const bookingId = raw.bookingId;
+      const snapshot = snapshotBookingInMonths(dataByMonthRef.current, bookingId);
+      let removedUnassigned: { item: OverviewUnassignedBooking; index: number } | null = null;
+      setDataByMonth((prev) => applyOptimisticBookingMoveToMonths(prev, bookingId, toRoomId));
+      if (toRoomId !== null) {
+        setOverview((prev) => {
+          if (!prev) return prev;
+          const index = prev.unassigned.findIndex((u) => u.bookingId === bookingId);
+          if (index < 0) return prev;
+          removedUnassigned = { item: prev.unassigned[index]!, index };
+          return { ...prev, unassigned: prev.unassigned.filter((u) => u.bookingId !== bookingId) };
+        });
       }
+      setFlash(null);
+      // A load that started before this move would show the booking in its old place.
+      loadAbortRef.current?.abort();
+      loadSeqRef.current += 1;
+      setLoading(false);
+      movesInFlightRef.current += 1;
+      let ok = false;
+      try {
+        const result = await performBookingAssignmentMutation(raw, toRoomId);
+        setDataByMonth((prev) =>
+          applyConfirmedAssignmentToMonths(prev, bookingId, result.assignment),
+        );
+        ok = true;
+      } catch (e) {
+        setDataByMonth((prev) => restoreBookingInMonths(prev, bookingId, snapshot, toRoomId));
+        const removed = removedUnassigned as { item: OverviewUnassignedBooking; index: number } | null;
+        if (removed) {
+          setOverview((prev) => {
+            if (!prev || prev.unassigned.some((u) => u.bookingId === bookingId)) return prev;
+            const unassigned = [...prev.unassigned];
+            unassigned.splice(Math.min(removed.index, unassigned.length), 0, removed.item);
+            return { ...prev, unassigned };
+          });
+        }
+        setFlash(e instanceof Error ? e.message : t("calendar.assignFail"));
+      } finally {
+        movesInFlightRef.current -= 1;
+        if (movesInFlightRef.current === 0) {
+          reloadAfterMovesRef.current = false;
+          void load(month, displayMonths);
+        }
+      }
+      return ok;
     },
-    [dataByMonth, displayMonths, load, month, visibleMonths],
+    [displayMonths, load, month, setDataByMonth, t],
   );
 
   const onDragEnd = useCallback(
@@ -368,9 +417,8 @@ export function CalendarClient() {
       return;
     }
     setAssigningBookingId(bookingId);
-    setFlash(null);
     try {
-      await performBookingAssignmentMutation(
+      const ok = await completeAssignment(
         {
           type: "booking",
           bookingId,
@@ -380,14 +428,16 @@ export function CalendarClient() {
         },
         roomId,
       );
-      setFlash(t("calendar.assignedOk"));
-      await load(month, displayMonths);
-    } catch (e) {
-      setFlash(e instanceof Error ? e.message : t("calendar.assignFail"));
+      if (ok) setFlash(t("calendar.assignedOk"));
     } finally {
       setAssigningBookingId(null);
     }
   }
+
+  const missingVisibleData = visibleMonths.some((ym) => !dataByMonth[ym]);
+  const initialLoading = loading && missingVisibleData;
+  const refreshing = loading && !initialLoading;
+  const retryLoad = () => void load(month, displayMonths);
 
   return (
     <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={onDragEnd}>
@@ -425,8 +475,11 @@ export function CalendarClient() {
           <button type="button" className="ops-btn" disabled={!baseData} onClick={() => setQueueOpen(true)}>
             {t("calendar.unassignedList")}
           </button>
+          <span className="ops-muted" role="status" aria-live="polite">
+            {refreshing ? t("calendar.refreshing") : ""}
+          </span>
         </section>
-        {!loading && !error && overview && (
+        {!initialLoading && overview && (
           <section className="ops-needs-table" aria-label="Needs assignment table">
             <div className="ops-needs-row">
               <div className="ops-needs-label">{t("calendar.needsAssignment")}</div>
@@ -460,6 +513,14 @@ export function CalendarClient() {
           </section>
         )}
         {flash ? <ToastBanner>{flash}</ToastBanner> : null}
+        {error ? (
+          <div className="ops-error" role="alert">
+            <span>{error}</span>{" "}
+            <button type="button" className="ops-btn" onClick={retryLoad}>
+              {t("calendar.retry")}
+            </button>
+          </div>
+        ) : null}
         <section
           className={
             isMobile || displayMonths === 1
@@ -468,18 +529,7 @@ export function CalendarClient() {
           }
         >
           {!isMobile && displayMonths > 1 ? (
-            error ? (
-              <MultiMonthTimeline
-                monthsData={[]}
-                loading={false}
-                error={error}
-                onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
-                onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
-                sortableRoomIds={orderedRoomIds}
-                onBookingClick={(id) => setDetailBookingId(id)}
-                onMarkerBookingClick={(id) => setDetailBookingId(id)}
-              />
-            ) : (
+            error && missingVisibleData ? null : (
               (() => {
                 const monthsPayloadList = visibleMonths.map((ym) => dataByMonth[ym]);
                 const allReady = monthsPayloadList.every(
@@ -491,7 +541,7 @@ export function CalendarClient() {
                 return (
                   <MultiMonthTimeline
                     monthsData={monthsPayloadList}
-                    loading={loading}
+                    loading={initialLoading}
                     error={null}
                     onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
                     onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
@@ -507,8 +557,8 @@ export function CalendarClient() {
               <MonthGrid
                 key={ym}
                 data={dataByMonth[ym] ?? null}
-                loading={loading}
-                error={error}
+                loading={initialLoading && !error}
+                error={null}
                 onPrevMonth={() => setMonth((m) => shiftMonth(m, -1))}
                 onNextMonth={() => setMonth((m) => shiftMonth(m, 1))}
                 onEditBlock={(block) => setBlockModal({ mode: "edit", block })}
