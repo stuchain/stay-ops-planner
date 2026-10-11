@@ -179,7 +179,6 @@ const RoomTrack = memo(function RoomTrack({
             <DraggableBar
               key={b.id}
               booking={b}
-              color={room.color}
               selected={b.id === selectedId}
               onOpen={onOpen}
               className="absolute top-4"
@@ -273,7 +272,6 @@ function PastUnplacedRow({
             <DraggableBar
               key={b.id}
               booking={b}
-              color={null}
               selected={b.id === selectedId}
               needsRoom
               onOpen={onOpen}

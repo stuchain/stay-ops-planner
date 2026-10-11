@@ -10,11 +10,8 @@ import { BookingBar } from "@/ui/BookingBar";
 import { formatMoney, type UiLocale } from "@/ui/format";
 import { motion } from "@/ui/tokens";
 
-const NEUTRAL = "#5B5852";
-
 export type DraggableBarProps = {
   booking: CalendarBooking;
-  color: string | null;
   selected: boolean;
   needsRoom?: boolean;
   style?: CSSProperties;
@@ -39,15 +36,7 @@ export const DraggableBar = memo(DraggableBarInner, (prev, next) => {
   return shallowEqual(pr, nr) && shallowEqual(ps, ns);
 });
 
-function DraggableBarInner({
-  booking,
-  color,
-  selected,
-  needsRoom = false,
-  style,
-  className,
-  onOpen,
-}: DraggableBarProps) {
+function DraggableBarInner({ booking, selected, needsRoom = false, style, className, onOpen }: DraggableBarProps) {
   const t = useTranslations("common");
   const tCalendar = useTranslations("calendar");
   const locale = useLocale() as UiLocale;
@@ -85,7 +74,6 @@ function DraggableBarInner({
         checkin={booking.checkin}
         checkout={booking.checkout}
         channel={booking.channel}
-        color={color ?? NEUTRAL}
         selected={selected}
         dragging={isDragging}
         pending={pending}

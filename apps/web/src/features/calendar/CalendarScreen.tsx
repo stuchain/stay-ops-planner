@@ -354,7 +354,6 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
               checkin={dragging.checkin}
               checkout={dragging.checkout}
               channel={dragging.channel}
-              color={data.rooms.find((r) => r.id === dragging.assignment?.roomId)?.color ?? "#5B5852"}
               className="shadow-raised w-64"
               tabIndex={-1}
               aria-hidden="true"

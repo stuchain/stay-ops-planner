@@ -9,7 +9,6 @@ const base = {
   guest: "Maria Konstantinou",
   checkin: isoDate("2025-10-17"),
   checkout: isoDate("2025-10-21"),
-  color: "#0F766E",
   channel: "airbnb" as const,
 };
 
@@ -26,7 +25,8 @@ describe("BookingBar", () => {
     expect(bar).toHaveClass("h-14");
     expect(bar).toHaveAttribute("data-draggable", "true");
     expect(bar.style.left).toBe("10px");
-    expect(bar.style.getPropertyValue("--apt")).toBe("#0F766E");
+    expect(bar).toHaveAttribute("data-channel", "airbnb");
+    expect(bar).toHaveClass("bg-[#D93B41]");
     expect(screen.getByRole("img", { name: "Airbnb" })).toBeInTheDocument();
     await userEvent.setup().click(bar);
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -49,12 +49,13 @@ describe("BookingBar", () => {
   });
 
   it.each([
-    ["booking", "Booking.com"],
-    ["direct", "Απευθείας"],
-    ["other", "Άλλο κανάλι"],
-  ] as const)("channel %s", async (channel, label) => {
+    ["booking", "Booking.com", "booking"],
+    ["direct", "Απευθείας", "own"],
+    ["other", "Άλλο κανάλι", "own"],
+  ] as const)("channel %s: its colour and logo", async (channel, label, look) => {
     const { container } = render(<BookingBar {...base} channel={channel} />);
     expect(screen.getByRole("img", { name: label })).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAttribute("data-channel", look);
     await expectNoViolations(container);
   });
 
