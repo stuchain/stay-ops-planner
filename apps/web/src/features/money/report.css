@@ -1,0 +1,45 @@
+/*
+ * The accountant's report is printed on A4 portrait, in black on white whatever the screen theme.
+ * Page numbers use the browser's page margin boxes ("1 / 3"); where they are unsupported the
+ * report still prints fine without them.
+ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 14mm 18mm;
+
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font-size: 10pt;
+    }
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  [data-ui="new"],
+  [data-ui="new"][data-theme="dark"] {
+    --so-bg: #fff;
+    --so-surface: #fff;
+    --so-surface-muted: #eee;
+    --so-border: #bbb;
+    --so-text: #000;
+    --so-text-muted: #333;
+    background: #fff;
+    color: #000;
+  }
+
+  .report-sheet thead {
+    display: table-header-group;
+  }
+
+  .report-sheet tfoot {
+    display: table-row-group;
+  }
+
+  .report-sheet tr {
+    break-inside: avoid;
+  }
+}

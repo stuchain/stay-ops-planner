@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BedDouble, ChartColumn, ChevronDown, Download, Table2, TriangleAlert } from "lucide-react";
+import { BedDouble, ChartColumn, ChevronDown, Download, FileText, Table2, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import type { IsoDate } from "@stay-ops/domain";
@@ -224,6 +225,13 @@ function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate 
           <Download size={24} aria-hidden="true" />
           {t("income.export")}
         </a>
+        <Link
+          href={`/app/excel/report?year=${ledger.year}`}
+          className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}
+        >
+          <FileText size={24} aria-hidden="true" />
+          {t("income.report")}
+        </Link>
         <button
           type="button"
           aria-expanded={showDetails}

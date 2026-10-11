@@ -318,7 +318,8 @@
       "down": "Occupancy down {points} percentage points on last year",
       "legend": "▲ and ▼: how many percentage points occupancy is above or below the same month last year. Only confirmed bookings placed in an apartment count.",
       "empty": "There are no apartments."
-    }
+    },
+    "report": "Report for the accountant"
   },
   "dev": {
     "nav": {
@@ -1018,5 +1019,40 @@
     "unplaced": "No apartment yet",
     "noUnplaced": "Every booking has an apartment.",
     "noStays": "No stays this month."
+  },
+  "accountantReport": {
+    "kicker": "Report for the accountant",
+    "title": "Income {year}",
+    "produced": "Produced on {date}",
+    "back": "Back to Income",
+    "print": "Print / Save as PDF",
+    "printHint": "In the window that opens, choose your printer or \"Save as PDF\".",
+    "totalsTitle": "Income per apartment",
+    "unbucketed": "{count, plural, one {# booking does not count for any apartment} other {# bookings do not count for any apartment}} ({amount}) and is not included in the totals.",
+    "basisTitle": "How the amounts were counted",
+    "basisGross": "The gross amount counts: what the guest paid.",
+    "basisPayout": "The net amount counts: what was received after the platforms' fees.",
+    "scopeTotal": "Tax is worked out on the total of all apartments.",
+    "scopePerApartment": "Tax is worked out separately for each apartment.",
+    "cancelled": "Each booking counts in the year of arrival. Cancelled bookings count only for what was paid. Requests that were not confirmed do not count.",
+    "confirmed": "The tax rates have been confirmed by the accountant.",
+    "unconfirmed": "Warning: the tax rates have not been confirmed by the accountant. The tax is an estimate.",
+    "taxTitle": "Tax calculation",
+    "taxFor": "Tax for {apartment}",
+    "bracket": "Bracket",
+    "rate": "Rate",
+    "taxedAmount": "Amount in bracket",
+    "taxCol": "Tax",
+    "sum": "Total",
+    "rangeUpTo": "Up to {upTo}",
+    "rangeBetween": "From {from} to {upTo}",
+    "rangeAbove": "Over {from}",
+    "totalTax": "Total tax",
+    "bookingsTitle": "All bookings",
+    "colDates": "Dates",
+    "colChannel": "Channel",
+    "colAmount": "Amount",
+    "monthTotal": "Total: {month}",
+    "excluded": "{count, plural, one {# request or unpaid cancellation is} other {# requests or unpaid cancellations are}} not shown in the list, because they do not count in the totals."
   }
 }
