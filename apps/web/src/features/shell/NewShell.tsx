@@ -99,9 +99,6 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
       />
       <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20 print:m-0 print:min-h-0 print:pb-0">
         <HosthubBanner />
-        <div className="print:hidden">
-          <HosthubBanner />
-        </div>
         {children}
       </main>
       <div className="print:hidden">

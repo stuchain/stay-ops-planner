@@ -96,7 +96,6 @@ export function Sidebar({
     <aside
       className={cn(
         "bg-surface border-border w-sidebar fixed print:hidden inset-y-0 left-0 z-30 flex flex-col overflow-y-auto border-r",
-        "bg-surface border-border w-sidebar fixed print:hiddeninset-y-0 left-0 z-30 flex flex-col overflow-y-auto border-r",
         "max-[759px]:inset-x-0 max-[759px]:top-auto max-[759px]:bottom-0 max-[759px]:w-full max-[759px]:border-t max-[759px]:border-r-0",
         className,
       )}

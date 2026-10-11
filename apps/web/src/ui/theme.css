@@ -206,7 +206,8 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
   background-image: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.6) 0 3px, transparent 3px 7px);
 }
 
-/* Printing (arrival cards): A4, black on white whatever the theme, nothing but the page content. */
+/* Printing (arrival cards, the cleaning day list, sheets): A4, black on white whatever the theme, nothing but the
+   page content. Pages that need landscape set their own @page. */
 @page {
   size: A4;
   margin: 14mm;
@@ -223,14 +224,6 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
     --so-text-muted: #222222;
     --so-accent: #000000;
     --so-warning-text: #000000;
-/* Printing a day's list: just the page content, on white, without the menu, the banner or the toasts. */
-@media print {
-  [data-ui="new"] {
-    --so-bg: #ffffff;
-    --so-surface: #ffffff;
-    --so-surface-muted: #ffffff;
-    --so-text: #000000;
-    --so-text-muted: #333333;
   }
 
   [data-ui="new"] aside,
