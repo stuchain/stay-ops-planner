@@ -57,6 +57,16 @@ describe("auth.middleware", () => {
     expect(json.error.traceId).toBe(rid);
   });
 
+  it("lets the scheduled /api/cron/* jobs through without a session (they check CRON_SECRET themselves)", () => {
+    for (const path of ["/api/cron/sync-hosthub", "/api/cron/health-alerts", "/api/cron/daily-reminders"]) {
+      const res = middlewareFn(new NextRequestClass(`http://localhost${path}`, { method: "GET" }));
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-middleware-next")).toBe("1");
+    }
+    const post = middlewareFn(new NextRequestClass("http://localhost/api/cron/health-alerts", { method: "POST" }));
+    expect(post.status).toBe(401);
+  });
+
   it("redirects /app/* to login when unauthenticated", async () => {
     const req = new NextRequestClass("http://localhost/app/dashboard", {
       method: "GET",

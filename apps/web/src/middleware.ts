@@ -41,14 +41,15 @@ export function middleware(request: NextRequest) {
     pathname === "/api/auth/_diag" &&
     method === "GET" &&
     process.env.NODE_ENV !== "production";
-  const isCronHosthubSync = isApi && pathname === "/api/cron/sync-hosthub" && method === "GET";
+  // Scheduled jobs (GitHub Actions) have no session: every /api/cron route checks the CRON_SECRET bearer itself.
+  const isCron = isApi && pathname.startsWith("/api/cron/") && method === "GET";
 
   if (!isApi && !isApp) {
     const res = NextResponse.next();
     res.headers.set(TRACE_HEADER, traceId);
     return res;
   }
-  if (isHealth || isLogin || isHosthubWebhook || isAuthDiag || isCronHosthubSync) {
+  if (isHealth || isLogin || isHosthubWebhook || isAuthDiag || isCron) {
     return nextWithTrace(request, traceId);
   }
 
