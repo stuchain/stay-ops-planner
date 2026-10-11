@@ -223,5 +223,23 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
     --so-text-muted: #222222;
     --so-accent: #000000;
     --so-warning-text: #000000;
+/* Printing a day's list: just the page content, on white, without the menu, the banner or the toasts. */
+@media print {
+  [data-ui="new"] {
+    --so-bg: #ffffff;
+    --so-surface: #ffffff;
+    --so-surface-muted: #ffffff;
+    --so-text: #000000;
+    --so-text-muted: #333333;
+  }
+
+  [data-ui="new"] aside,
+  [data-ui="new"] [data-sonner-toaster] {
+    display: none;
+  }
+
+  [data-ui="new"] main {
+    margin-left: 0;
+    padding-bottom: 0;
   }
 }

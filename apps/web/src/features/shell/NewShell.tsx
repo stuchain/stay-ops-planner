@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2,
+  BrushCleaning,
   CalendarDays,
   History,
   MessageSquareText,
@@ -35,6 +36,7 @@ const NAV = [
   { href: "/app/today", key: "today", icon: Sun },
   { href: "/app/calendar", key: "calendar", icon: CalendarDays },
   { href: "/app/free", key: "free", icon: SearchCheck },
+  { href: "/app/turnovers", key: "cleaning", icon: BrushCleaning },
   { href: "/app/excel", key: "income", icon: Wallet },
   { href: "/app/settings", key: "settings", icon: Settings },
 ] as const;
