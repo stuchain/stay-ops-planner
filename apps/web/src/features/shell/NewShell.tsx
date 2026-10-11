@@ -27,6 +27,7 @@ import { Toaster } from "@/ui/Toast";
 import { HelpButton } from "./HelpButton";
 import { HosthubBanner } from "./HosthubBanner";
 import { LogoutButton } from "./LogoutButton";
+import { OfflineBanner } from "./OfflineBanner";
 import { SessionDialog } from "./SessionDialog";
 import { SyncIndicator } from "./SyncIndicator";
 import { useSyncWhileOpen } from "./useSyncWhileOpen";
@@ -57,6 +58,8 @@ const DEV_NAV = [
 export type NewShellProps = {
   textSize: string;
   devMode: boolean;
+  /** Scopes the copy of the data kept for offline reading to this person. */
+  userId?: string;
   children: ReactNode;
 };
 
@@ -98,6 +101,7 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
         {...(secondary ? { secondary } : {})}
       />
       <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20 print:m-0 print:min-h-0 print:pb-0">
+        <OfflineBanner />
         <HosthubBanner />
         {children}
       </main>
@@ -110,10 +114,10 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
 }
 
 /** The redesigned app shell, shown to users with the `newUi` flag. */
-export function NewShell({ textSize, devMode, children }: NewShellProps) {
+export function NewShell({ textSize, devMode, userId, children }: NewShellProps) {
   return (
     <div id="new-ui-root" data-ui="new" data-text-size={textSize}>
-      <ApiProvider>
+      <ApiProvider {...(userId ? { userId } : {})}>
         <ShellInner devMode={devMode}>{children}</ShellInner>
       </ApiProvider>
     </div>

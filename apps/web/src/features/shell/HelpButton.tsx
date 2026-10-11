@@ -7,6 +7,7 @@ import { LifeBuoy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState } from "react";
 import { useTRPC } from "@/api/client";
+import { useOnline } from "@/api/online";
 import { useErrorText } from "@/api/errors";
 import { lastShownError, rememberError } from "@/api/lastError";
 import { Button } from "@/ui/Button";
@@ -31,6 +32,9 @@ function pageContext() {
 /** "Στείλε στον Στέλιο" (P4-11): one button that e-mails Stelios the page, the last error and the Sentry id. */
 export function HelpButton() {
   const t = useTranslations("help");
+  const tOffline = useTranslations("offline");
+  const online = useOnline();
+  const offlineText = online ? null : tOffline("changesOff");
   const errorText = useErrorText();
   const trpc = useTRPC();
   const ids = useId();
@@ -103,8 +107,15 @@ export function HelpButton() {
             className="border-border bg-surface text-text rounded-sm border px-4 py-3 text-base"
           />
           {lastError ? <p className="text-text-muted text-sm">{t("lastError", { error: lastError.text })}</p> : null}
+          {offlineText ? <p className="text-base font-medium">{offlineText}</p> : null}
           <div className="flex flex-wrap gap-3">
-            <Button variant="primary" size="lg" loading={send.isPending} onClick={() => void onSend()}>
+            <Button
+              variant="primary"
+              size="lg"
+              loading={send.isPending}
+              disabled={!online}
+              onClick={() => void onSend()}
+            >
               {t("send")}
             </Button>
             <Dialog.Close asChild>

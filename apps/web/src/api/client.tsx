@@ -1,12 +1,20 @@
 "use client";
 
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createTRPCClient, httpBatchLink, type TRPCLink } from "@trpc/client";
 import { observable, type Unsubscribable } from "@trpc/server/observable";
 import { createTRPCContext } from "@trpc/tanstack-react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { AppRouter } from "@/server/api/root";
 import { isSessionExpired } from "./errors";
+import {
+  createOfflinePersister,
+  dropOtherUsersCache,
+  OFFLINE_BUSTER,
+  OFFLINE_MAX_AGE_MS,
+  shouldPersistQuery,
+} from "./offlineCache";
 import { makeQueryClient } from "./queryClient";
 import { waitForSignIn } from "./sessionGate";
 
@@ -52,16 +60,36 @@ export const sessionLink: TRPCLink<AppRouter> =
       };
     });
 
-export function ApiProvider({ children }: { children: ReactNode }) {
+/**
+ * With a `userId` the answers behind Today and Calendar are also kept in this browser for offline reading (P4-8),
+ * under a key of that user, and are dropped when the release changes.
+ */
+export function ApiProvider({ children, userId }: { children: ReactNode; userId?: string }) {
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({ links: [sessionLink, httpBatchLink({ url: "/api/trpc" })] }),
   );
+  const [persister] = useState(() => (userId ? createOfflinePersister(userId) : null));
+  useEffect(() => {
+    if (userId) dropOtherUsersCache(userId);
+  }, [userId]);
+  const inner = (
+    <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+      {children}
+    </TRPCProvider>
+  );
+  if (!persister) return <QueryClientProvider client={queryClient}>{inner}</QueryClientProvider>;
   return (
-    <QueryClientProvider client={queryClient}>
-      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        {children}
-      </TRPCProvider>
-    </QueryClientProvider>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: OFFLINE_MAX_AGE_MS,
+        buster: OFFLINE_BUSTER,
+        dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+      }}
+    >
+      {inner}
+    </PersistQueryClientProvider>
   );
 }

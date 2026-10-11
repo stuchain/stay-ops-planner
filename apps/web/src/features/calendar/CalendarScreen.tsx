@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { canPlace, type IsoDate, type Occupant } from "@stay-ops/domain";
 import { useErrorText } from "@/api/errors";
+import { useOnline } from "@/api/online";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
 import { Button } from "@/ui/Button";
@@ -114,7 +115,10 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     setSelectedId(request.booking.id);
     setConfirm(request);
   }, []);
-  const { move, pending: moving } = useMoveBooking(data.rooms, askToConfirm);
+  const online = useOnline();
+  const { move, pending: movingNow } = useMoveBooking(data.rooms, askToConfirm);
+  // Without internet the move buttons in the panel are off, like while a move is running.
+  const moving = movingNow || !online;
 
   const selected = selectedId ? (data.bookings.get(selectedId) ?? null) : null;
   const dragging = draggingId ? (data.bookings.get(draggingId) ?? null) : null;
@@ -264,7 +268,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
             <Button icon={Printer} onClick={openPrint} className="ml-2">
               {t("calendar.print")}
             </Button>
-            <Button icon={Wand2} onClick={openArrange}>
+            <Button icon={Wand2} onClick={openArrange} disabled={!online}>
               {t("calendar.arrangeButton")}
             </Button>
           </div>

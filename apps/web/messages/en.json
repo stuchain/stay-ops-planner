@@ -764,6 +764,11 @@
       "off": "Off"
     }
   },
+  "offline": {
+    "banner": "No internet connection. You are seeing the data from {time}. You cannot make changes until it is back.",
+    "bannerNoTime": "No internet connection. You cannot make changes until it is back.",
+    "changesOff": "There is no internet connection. Changes are available again when it is back."
+  },
   "session": {
     "logout": "Sign out",
     "loggingOut": "Signing out…",

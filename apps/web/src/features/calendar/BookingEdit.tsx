@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState } from "react";
 import { useTRPC } from "@/api/client";
+import { useOnline } from "@/api/online";
 import { useErrorText } from "@/api/errors";
 import type { BookingDetails, CalendarBooking } from "@/api/types";
 import { Button } from "@/ui/Button";
@@ -60,6 +61,7 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
   const errorText = useErrorText();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const online = useOnline();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => startDraft(booking, details));
   const [showErrors, setShowErrors] = useState(false);
@@ -180,7 +182,7 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
           {t("title")}
         </h3>
         {editing ? null : (
-          <Button onClick={open} size="md">
+          <Button onClick={open} size="md" disabled={!online}>
             {t("change")}
           </Button>
         )}
@@ -242,7 +244,7 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
             {hosthubTexts.notes ? <p className="text-text-muted">{hosthubTexts.notes}</p> : null}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" variant="primary" size="lg" loading={update.isPending}>
+            <Button type="submit" variant="primary" size="lg" loading={update.isPending} disabled={!online}>
               {t("save")}
             </Button>
             <Button type="button" size="lg" disabled={update.isPending} onClick={() => setEditing(false)}>

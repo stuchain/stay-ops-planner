@@ -6,6 +6,7 @@ import { LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
+import { clearOfflineCache } from "@/api/offlineCache";
 import { askToSignInEarly, sessionGateState, signedIn, signInDismissed, subscribeSessionGate } from "@/api/sessionGate";
 import { Button } from "@/ui/Button";
 
@@ -93,6 +94,7 @@ export function SessionDialog() {
     }
     if (knownEmail && result.email.toLowerCase() !== knownEmail.toLowerCase()) {
       // Someone else signed in: start the app over for them rather than finish the other person's work.
+      clearOfflineCache();
       window.location.assign("/app");
       return;
     }

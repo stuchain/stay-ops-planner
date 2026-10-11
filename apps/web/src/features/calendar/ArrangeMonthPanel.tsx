@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect } from "react";
 import type { IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
+import { useOnline } from "@/api/online";
 import { readClientError, useErrorText } from "@/api/errors";
 import type { ArrangePlacement, ArrangeProposal, CalendarRoom } from "@/api/types";
 import { ApartmentChip } from "@/ui/ApartmentChip";
@@ -104,6 +105,7 @@ function Proposal({ data, rooms }: { data: ArrangeProposal; rooms: CalendarRoom[
 /** "Τακτοποίησε τον μήνα": a preview of where the planner puts the month's unplaced bookings, applied in one go. */
 export function ArrangeMonthPanel({ month, rooms, onPreview, onClose }: ArrangeMonthPanelProps) {
   const t = useTranslations("calendar.arrange");
+  const online = useOnline();
   const locale = useLocale();
   const errorText = useErrorText();
   const trpc = useTRPC();
@@ -166,7 +168,13 @@ export function ArrangeMonthPanel({ month, rooms, onPreview, onClose }: ArrangeM
       footer={
         data && data.placements.length > 0 ? (
           <div className="flex flex-wrap gap-3">
-            <Button variant="primary" size="lg" loading={apply.isPending} onClick={() => void onApply()}>
+            <Button
+              variant="primary"
+              size="lg"
+              loading={apply.isPending}
+              disabled={!online}
+              onClick={() => void onApply()}
+            >
               {t("apply", { count: data.placements.length })}
             </Button>
             <Button size="lg" onClick={onClose} disabled={apply.isPending}>
