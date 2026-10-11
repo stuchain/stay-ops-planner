@@ -2,6 +2,7 @@ import { TRPCClientError } from "@trpc/client";
 import { useTranslations } from "next-intl";
 import { useCallback } from "react";
 import { isDomainErrorCode, type DomainErrorCode, type DomainErrorParams } from "@stay-ops/domain";
+import { rememberError } from "./lastError";
 
 export type ClientErrorCode = DomainErrorCode | "NETWORK";
 export type ClientError = { code: ClientErrorCode; params: DomainErrorParams };
@@ -36,8 +37,15 @@ export function translateError(error: unknown, translate: ErrorTranslator): stri
   return translate(code, { guestName: "", roomName: "", ...params });
 }
 
-/** `(error) => sentence` in the user's language. */
+/** `(error) => sentence` in the user's language. The sentence is remembered for the help button. */
 export function useErrorText(): (error: unknown) => string {
   const t = useTranslations("errors");
-  return useCallback((error: unknown) => translateError(error, (code, params) => t(code, params)), [t]);
+  return useCallback(
+    (error: unknown) => {
+      const text = translateError(error, (code, params) => t(code, params));
+      rememberError(text);
+      return text;
+    },
+    [t],
+  );
 }

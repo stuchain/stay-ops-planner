@@ -4,6 +4,7 @@ import { adminRouter } from "./routers/admin";
 import { bookingRouter } from "./routers/booking";
 import { calendarRouter } from "./routers/calendar";
 import { devRouter } from "./routers/dev";
+import { helpRouter } from "./routers/help";
 import { meRouter } from "./routers/me";
 import { moneyRouter } from "./routers/money";
 import { syncRouter } from "./routers/sync";
@@ -18,6 +19,7 @@ export const appRouter = createTRPCRouter({
   dev: devRouter,
   money: moneyRouter,
   today: todayRouter,
+  help: helpRouter,
   availability: availabilityRouter,
 });
 

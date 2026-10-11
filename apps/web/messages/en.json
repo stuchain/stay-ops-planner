@@ -70,7 +70,8 @@
     "PASSWORD_TOO_SHORT": "The new password is too short. It needs at least 8 characters.",
     "SYNC_RUNNING": "An update from Hosthub is already running. Please wait a moment.",
     "HOSTHUB_TOKEN_REJECTED": "Hosthub did not accept this key. Check that you copied all of it. The old key is kept.",
-    "HOSTHUB_UNREACHABLE": "Could not reach Hosthub to test the key. Try again in a moment. The old key is kept."
+    "HOSTHUB_UNREACHABLE": "Could not reach Hosthub to test the key. Try again in a moment. The old key is kept.",
+    "TOO_MANY_REQUESTS": "Too many tries in a short time. Please try again in a while."
   },
   "nav": {
     "label": "Main navigation",
@@ -886,5 +887,17 @@
     "footer": "Have a good day! Stay Ops sends this message every morning.",
     "testSubject": "Stay Ops: test message",
     "testBody": "This is a test message. Reminders arrive correctly. There is nothing to report today."
+  },
+  "help": {
+    "button": "Send to Stelios",
+    "title": "Send to Stelios",
+    "text": "Stelios gets a message with the page you are on and the last error, so he can help without a phone call.",
+    "messageLabel": "What is happening? (optional)",
+    "messagePlaceholder": "E.g. I can't move Maria's booking",
+    "lastError": "Last error: {error}",
+    "send": "Send",
+    "cancel": "Cancel",
+    "sent": "Sent to Stelios. He will get back to you soon.",
+    "notSent": "It was not sent. Please call Stelios."
   }
 }

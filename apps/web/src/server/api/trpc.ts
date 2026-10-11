@@ -42,6 +42,8 @@ function httpCodeFor(code: DomainErrorCode): TRPCError["code"] {
     case "WRONG_PASSWORD":
     case "PASSWORD_TOO_SHORT":
       return "BAD_REQUEST";
+    case "TOO_MANY_REQUESTS":
+      return "TOO_MANY_REQUESTS";
     case "INTERNAL":
     case "HOSTHUB_DISCONNECTED":
       return "INTERNAL_SERVER_ERROR";

@@ -22,6 +22,7 @@ import type { ReactNode } from "react";
 import { ApiProvider } from "@/api/client";
 import { Sidebar, type SidebarItem } from "@/ui/Sidebar";
 import { Toaster } from "@/ui/Toast";
+import { HelpButton } from "./HelpButton";
 import { HosthubBanner } from "./HosthubBanner";
 import { LogoutButton } from "./LogoutButton";
 import { SessionDialog } from "./SessionDialog";
@@ -85,6 +86,7 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
         footer={
           <div className="flex flex-col gap-3">
             <SyncIndicator />
+            <HelpButton />
             <LogoutButton />
           </div>
         }
