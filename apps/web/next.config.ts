@@ -60,11 +60,10 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: monorepoRoot,
   outputFileTracingIncludes: {
     // Narrow Prisma trace globs — wide `.pnpm` prisma patterns inflate NFT RAM on monorepo trace root.
-    "/*": [
-      "../../node_modules/.pnpm/@prisma+client@*/**/.prisma/**/*",
-      "../../node_modules/.pnpm/@prisma+client@*/**/node_modules/@prisma/client/**/*",
-      "../../node_modules/.pnpm/@prisma+engines@*/**/*",
-    ],
+    // Only the generated client and its query engine: everything else under @prisma/client is traced
+    // from its own requires. Keep this narrow: Vercel packs routes into functions of at most 250 MB, and
+    // the Hobby plan allows 12 functions per deployment, so every MB here multiplies the function count.
+    "/*": ["../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**/*"],
   },
   /** Monorepo `outputFileTracingRoot` widens NFT; exclude paths never imported by the server bundle. */
   outputFileTracingExcludes: {
@@ -73,6 +72,17 @@ const nextConfig: NextConfig = {
       "../../.github/**/*",
       "./tests/**/*",
       "../../scripts/**/*",
+      // Prisma files the Node query engine never loads at runtime: migration/schema engines, other
+      // platforms' engines (Vercel runs rhel), WASM/edge runtimes, source maps and type definitions.
+      "../../node_modules/.pnpm/@prisma+engines@*/**/*",
+      "../../node_modules/.pnpm/@prisma+client@*/**/libquery_engine-debian-*",
+      "../../node_modules/.pnpm/@prisma+client@*/**/libquery_engine-darwin*",
+      "../../node_modules/.pnpm/@prisma+client@*/**/query_engine-windows*",
+      "../../node_modules/.pnpm/@prisma+client@*/**/*.wasm",
+      "../../node_modules/.pnpm/@prisma+client@*/**/*.wasm-base64.*",
+      "../../node_modules/.pnpm/@prisma+client@*/**/*.map",
+      "../../node_modules/.pnpm/@prisma+client@*/**/*.d.ts",
+      "../../node_modules/.pnpm/@prisma+client@*/**/*.d.mts",
     ],
   },
   /**
