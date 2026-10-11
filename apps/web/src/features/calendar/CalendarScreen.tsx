@@ -129,8 +129,17 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     return blocksToLoad(span, firstDay, lastDay).join(",");
   }, [drawn, span]);
   const blockList = useSyncExternalStore(drawn.subscribe, blocksKey, blocksKey);
-  const blockIndexes = useMemo(() => blockList.split(",").filter(Boolean).map(Number), [blockList]);
+  // The months around the screen load first; once they are in, every other month loads too, so scrolling far
+  // never shows empty rows that fill in a moment later.
+  const [loadEverything, setLoadEverything] = useState(false);
+  const blockIndexes = useMemo(
+    () => (loadEverything ? span.blocks.map((_, i) => i) : blockList.split(",").filter(Boolean).map(Number)),
+    [loadEverything, span, blockList],
+  );
   const data = useCalendarData(span, blockIndexes);
+  useEffect(() => {
+    if (!data.loading && data.rooms.length > 0) setLoadEverything(true);
+  }, [data.loading, data.rooms.length]);
   const askToConfirm = useCallback((request: MoveRequest) => {
     setSelectedId(request.booking.id);
     setConfirm(request);

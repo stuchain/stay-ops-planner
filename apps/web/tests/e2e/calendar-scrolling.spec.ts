@@ -166,6 +166,18 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
     expect(await onScreen(future)).toBe(true);
   });
 
+  test("has far months ready before scrolling there, so rows never fill in late", async ({ page }) => {
+    // Once the calendar settles every month is loaded; then the server is cut off and far stays must still show.
+    await page.waitForLoadState("networkidle");
+    await page.route("**/api/trpc/**", (route) =>
+      route.request().url().includes("calendar.range") ? route.abort() : route.fallback(),
+    );
+    await scrollToDay(page, SCROLL_FROM.farAhead - 3);
+    await expect(bar(room(page, ROOM.beta), SCROLL_GUEST.farAhead)).toBeVisible({ timeout: 2_000 });
+    await scrollToDay(page, SCROLL_FROM.twentyMonthsAgo - 3);
+    await expect(bar(room(page, ROOM.beta), SCROLL_GUEST.twentyMonthsAgo)).toBeVisible({ timeout: 2_000 });
+  });
+
   test("lists finished stays without an apartment under the apartments, one under the other", async ({ page }) => {
     await scrollToDay(page, SCROLL_FROM.pastUnplacedA - 3);
     const row = pastRow(page);
