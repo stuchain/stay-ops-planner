@@ -187,7 +187,7 @@ export function BookingPanel({
 
           {details.data ? (
             <GuestMessage
-              key={booking.id}
+              key={`message-${booking.id}`}
               booking={booking}
               roomName={booking.assignment ? roomName(booking.assignment.roomId) : null}
               phone={details.data.phone}
