@@ -9,7 +9,7 @@ import { BookingStatus, Channel, PrismaClient, TURNOVER_TASK_TYPE } from "@stay-
 import { normalizeHosthubReservationPagePayload, parseUpdatedUnix } from "@stay-ops/sync";
 import type { HosthubSource } from "@/server/sync/hosthubSource";
 import { tryAcquireHosthubReconcileLock } from "@/server/sync/lock";
-import { SYNC_BATCH_SIZE, syncHosthub } from "@/server/useCases/syncHosthub";
+import { FULL_SYNC_EVERY_MS, SYNC_BATCH_SIZE, syncHosthub } from "@/server/useCases/syncHosthub";
 
 const prisma = new PrismaClient();
 const fixtures = path.resolve(
@@ -234,6 +234,29 @@ describe("syncHosthub", () => {
     expect(cancelled.assignment).toBeNull();
     const task = await prisma.cleaningTask.findFirstOrThrow({ where: { bookingId: booking.id } });
     expect(task.status).toBe("cancelled");
+  });
+
+  it("fetches everything again once a day, so a cancellation the cursor missed still lands", async () => {
+    const hosthub = new FakeHosthub().put(fixture("new-booking"));
+    await syncHosthub({ source: hosthub, trigger: "manual", db: prisma });
+    await place("Evt-Fake-0001");
+    // Hosthub cancels it, but the cursor is already past that event's `updated`.
+    hosthub.put(fixture("cancellation"));
+    await prisma.syncState.update({ where: { id: 1 }, data: { cursor: "4102444800" } });
+
+    await syncHosthub({ source: hosthub, trigger: "manual", db: prisma });
+    expect((await bookingFor("Evt-Fake-0001")).status).toBe(BookingStatus.confirmed);
+
+    await prisma.syncState.update({
+      where: { id: 1 },
+      data: { lastFullSyncAt: new Date(Date.now() - FULL_SYNC_EVERY_MS - 60_000) },
+    });
+    await syncHosthub({ source: hosthub, trigger: "manual", db: prisma });
+
+    expect(hosthub.calls.list).toEqual([undefined, 4102444800, undefined]);
+    const cancelled = await bookingFor("Evt-Fake-0001");
+    expect(cancelled.status).toBe(BookingStatus.cancelled);
+    expect(cancelled.assignment).toBeNull();
   });
 
   it("keeps a local edit and leaves an existing apartment alone", async () => {

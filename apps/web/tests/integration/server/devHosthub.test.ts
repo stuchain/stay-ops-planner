@@ -175,7 +175,7 @@ describe("sync buttons", () => {
         return emptyPage;
       },
     };
-    await prisma.syncState.create({ data: { id: 1, cursor: "1700000000" } });
+    await prisma.syncState.create({ data: { id: 1, cursor: "1700000000", lastFullSyncAt: new Date() } });
     expect((await runHosthubSync({ full: false, actorUserId: adminId, source: src })).outcome).toBe("done");
     expect((await runHosthubSync({ full: true, actorUserId: adminId, source: src })).outcome).toBe("done");
     expect(calls).toEqual([1700000000, undefined]);

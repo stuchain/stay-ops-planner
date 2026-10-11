@@ -224,9 +224,11 @@ const LANE_HEIGHT = 64;
 function PastUnplacedRow({ props, rowBookings }: { props: CalendarGridProps; rowBookings: CalendarBooking[] }) {
   const t = useTranslations("calendar");
   const { span, dayWidth, firstDay, lastDay, selectedId, onOpen } = props;
-  const lanes = laneOf(rowBookings);
-  const laneCount = Math.max(1, ...[...lanes.values()].map((l) => l + 1));
   const visible = (start: IsoDate, end: IsoDate) => dayIndex(span, end) >= firstDay && dayIndex(span, start) <= lastDay;
+  // Lanes for what is on screen only, so stays months away don't make the row tall and empty.
+  const shown = rowBookings.filter((b) => visible(b.checkin, b.checkout));
+  const lanes = laneOf(shown);
+  const laneCount = Math.max(1, ...[...lanes.values()].map((l) => l + 1));
   return (
     <div
       role="group"
@@ -244,27 +246,22 @@ function PastUnplacedRow({ props, rowBookings }: { props: CalendarGridProps; row
       </div>
       <div className="relative min-w-0 flex-1">
         <div className="relative h-full" style={{ width: span.days * dayWidth }}>
-          {rowBookings
-            .filter((b) => visible(b.checkin, b.checkout))
-            .map((b) => (
-              <DraggableBar
-                key={b.id}
-                booking={b}
-                color={null}
-                selected={b.id === selectedId}
-                needsRoom
-                onOpen={onOpen}
-                className="absolute"
-                style={{
-                  top: 12 + (lanes.get(b.id) ?? 0) * LANE_HEIGHT,
-                  left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2,
-                  width: Math.max(
-                    dayWidth - 4,
-                    (dayIndex(span, b.checkout) - dayIndex(span, b.checkin)) * dayWidth - 4,
-                  ),
-                }}
-              />
-            ))}
+          {shown.map((b) => (
+            <DraggableBar
+              key={b.id}
+              booking={b}
+              color={null}
+              selected={b.id === selectedId}
+              needsRoom
+              onOpen={onOpen}
+              className="absolute"
+              style={{
+                top: 12 + (lanes.get(b.id) ?? 0) * LANE_HEIGHT,
+                left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2,
+                width: Math.max(dayWidth - 4, (dayIndex(span, b.checkout) - dayIndex(span, b.checkin)) * dayWidth - 4),
+              }}
+            />
+          ))}
         </div>
       </div>
     </div>

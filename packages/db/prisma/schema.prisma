@@ -479,6 +479,8 @@ model SyncState {
   id            Int       @id @default(1)
   cursor        String?
   lastSuccessAt DateTime? @map("last_success_at") @db.Timestamptz(6)
+  /// Last completed sync that fetched every event (no `updated_gte`); a day later the next sync does it again.
+  lastFullSyncAt DateTime? @map("last_full_sync_at") @db.Timestamptz(6)
   lastError     String?   @map("last_error")
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 

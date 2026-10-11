@@ -50,6 +50,11 @@ export type SyncHosthubOptions = {
 export const SYNC_BATCH_SIZE = 50;
 /** An "open" sync is skipped when the last good one is newer than this (several people, several tabs). */
 const OPEN_DEBOUNCE_MS = 5 * 60_000;
+/**
+ * Fetch every event again once a day. The incremental fetch only sees events whose `updated` moved past the
+ * cursor, so a cancellation it missed (or one Hosthub made without moving `updated`) would stay on the calendar.
+ */
+export const FULL_SYNC_EVERY_MS = 24 * 60 * 60_000;
 const MAX_PAGES = 500;
 
 function emptyStats(): SyncStats {
@@ -228,9 +233,9 @@ class Run {
  */
 export async function syncHosthub(options: SyncHosthubOptions): Promise<SyncResult> {
   const db = options.db ?? prisma;
-  const full = options.full === true;
+  const askedFull = options.full === true;
 
-  if (options.trigger === "open" && !full) {
+  if (options.trigger === "open" && !askedFull) {
     const state = await db.syncState.findUnique({ where: { id: 1 } });
     if (state?.lastSuccessAt && Date.now() - state.lastSuccessAt.getTime() < OPEN_DEBOUNCE_MS) {
       return { status: "skipped", reason: "recent" };
@@ -258,6 +263,8 @@ export async function syncHosthub(options: SyncHosthubOptions): Promise<SyncResu
         }
       }
 
+      const fullDue = !state.lastFullSyncAt || Date.now() - state.lastFullSyncAt.getTime() >= FULL_SYNC_EVERY_MS;
+      const full = askedFull || fullDue;
       const parsed = state.cursor ? Number.parseInt(state.cursor, 10) : NaN;
       const updatedGte = !full && Number.isFinite(parsed) ? parsed : undefined;
       const isVisible = process.env.HOSTHUB_CALENDAR_EVENTS_IS_VISIBLE?.trim() || "all";
@@ -283,8 +290,17 @@ export async function syncHosthub(options: SyncHosthubOptions): Promise<SyncResu
         failedWithoutUpdated: run.failedWithoutUpdated,
       });
       await finalizeSyncRun(db, run.runId, "completed", run.stats, cursor);
-      await db.syncState.update({ where: { id: 1 }, data: { cursor, lastSuccessAt: new Date(), lastError: null } });
-      log("info", "hosthub_sync_completed", { trigger: options.trigger, full, ...run.stats });
+      const now = new Date();
+      await db.syncState.update({
+        where: { id: 1 },
+        data: {
+          cursor,
+          lastSuccessAt: now,
+          lastError: null,
+          ...(updatedGte === undefined ? { lastFullSyncAt: now } : {}),
+        },
+      });
+      log("info", "hosthub_sync_completed", { trigger: options.trigger, full: updatedGte === undefined, ...run.stats });
       return { status: "completed", runId: run.runId, stats: run.stats };
     } catch (e) {
       if (e instanceof HosthubFetchError) {
