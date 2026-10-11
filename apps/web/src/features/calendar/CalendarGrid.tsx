@@ -177,6 +177,7 @@ const RoomTrack = memo(function RoomTrack({
               redraw all of them, which is what made scrolling stutter. Only the day header follows the scroll. */}
           {rowBookings.map((b) => (
             <DraggableBar
+              stickyLeft={LABEL_WIDTH + 12}
               key={b.id}
               booking={b}
               selected={b.id === selectedId}
@@ -233,7 +234,7 @@ export function laneOf(bookings: CalendarBooking[]): Map<string, number> {
 
 const LANE_HEIGHT = 64;
 
-/** "Χωρίς διαμέρισμα": finished stays that were never put in an apartment, under the apartment rows. */
+/** "Περασμένες κρατήσεις": finished stays that were never put in an apartment, under the apartment rows. */
 function PastUnplacedRow({
   props,
   drawn,
@@ -270,10 +271,10 @@ function PastUnplacedRow({
         <div className="relative h-full" style={{ width: span.days * dayWidth }}>
           {shown.map((b) => (
             <DraggableBar
+              stickyLeft={LABEL_WIDTH + 12}
               key={b.id}
               booking={b}
               selected={b.id === selectedId}
-              needsRoom
               onOpen={onOpen}
               className="absolute"
               style={{

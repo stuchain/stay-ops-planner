@@ -22,7 +22,7 @@ const LABEL_WIDTH = 208;
 
 const grid = (page: Page) => page.getByRole("region", { name: "Ημερολόγιο διαμερισμάτων" });
 const room = (page: Page, name: string) => page.getByRole("group", { name, exact: true });
-const pastRow = (page: Page) => page.getByRole("group", { name: "Χωρίς διαμέρισμα", exact: true });
+const pastRow = (page: Page) => page.getByRole("group", { name: "Περασμένες κρατήσεις", exact: true });
 const bar = (scope: Locator | Page, guest: string) => scope.getByRole("button", { name: new RegExp(`^${guest},`) });
 const panel = (page: Page) => page.getByRole("dialog");
 
@@ -166,6 +166,20 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
     expect(await onScreen(future)).toBe(true);
   });
 
+  test("keeps the guest's name in view when a long stay starts before the screen", async ({ page }) => {
+    await scrollToDay(page, SCROLL_FROM.longStay + 20);
+    const lena = bar(room(page, ROOM.alpha), SCROLL_GUEST.longStay);
+    await expect(lena).toBeVisible();
+    const name = lena.getByText(SCROLL_GUEST.longStay, { exact: true });
+    await expect
+      .poll(async () => {
+        const view = (await grid(page).boundingBox())!;
+        const box = (await name.boundingBox())!;
+        return box.x >= view.x + LABEL_WIDTH && box.x < view.x + LABEL_WIDTH + 80;
+      })
+      .toBe(true);
+  });
+
   test("has far months ready before scrolling there, so rows never fill in late", async ({ page }) => {
     // Once the calendar settles every month is loaded; then the server is cut off and far stays must still show.
     await page.waitForLoadState("networkidle");
@@ -182,7 +196,7 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
     await scrollToDay(page, SCROLL_FROM.pastUnplacedA - 3);
     const row = pastRow(page);
     await expect(row).toBeVisible();
-    await expect(row.getByText("Περασμένες κρατήσεις")).toBeVisible();
+    await expect(row.getByText("Δεν γράφτηκε το διαμέρισμα. Δεν χρειάζεται κάτι.")).toBeVisible();
     const a = bar(row, SCROLL_GUEST.pastUnplacedA);
     const b = bar(row, SCROLL_GUEST.pastUnplacedB);
     await expect(a).toBeVisible();

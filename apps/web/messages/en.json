@@ -109,12 +109,12 @@
     "overbooked": "More bookings than apartments",
     "closed": "Closed",
     "closedReason": "Closed: {reason}",
-    "pastUnplaced": "No apartment",
-    "pastUnplacedHint": "Past bookings",
+    "pastUnplaced": "Past bookings",
+    "pastUnplacedHint": "Apartment not recorded. Nothing to do.",
     "tray": {
       "title": "Need an apartment",
       "dropHere": "Drop the booking here to take it out of its apartment.",
-      "allPlaced": "Every booking has an apartment."
+      "allPlaced": "Every upcoming booking has an apartment."
     },
     "toast": {
       "moved": "Moved to {room}",

@@ -23,6 +23,11 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" 
   channelLabels?: Partial<Record<BookingChannel, string>>;
   /** Extra text after the nights, such as the Dev mode price per night. */
   detail?: string | undefined;
+  /**
+   * Keeps the logo and name this far from the left of the scrolling area while the bar's start is scrolled out
+   * of view (the calendar passes the apartment column's width), so a long stay still shows whose it is.
+   */
+  stickyLeft?: number | undefined;
 };
 
 /** Bar colours per channel; the same in light and dark mode so a channel always looks the same. */
@@ -89,6 +94,7 @@ export function BookingBar({
   needsRoomLabel,
   channelLabels,
   detail,
+  stickyLeft,
   className,
   style,
   type = "button",
@@ -119,7 +125,7 @@ export function BookingBar({
       style={style as CSSProperties}
       data-channel={channelLook(channel)}
       className={cn(
-        "flex h-14 min-w-0 items-center gap-2 overflow-hidden rounded-[10px] px-3 text-left transition-[box-shadow,opacity] select-none",
+        "flex h-14 min-w-0 items-center overflow-clip rounded-[10px] px-3 text-left transition-[box-shadow,opacity] select-none",
         pending
           ? "border-2 border-dashed border-text-muted bg-surface-muted text-text-muted"
           : needsRoom
@@ -131,10 +137,16 @@ export function BookingBar({
         className,
       )}
     >
-      <ChannelLogo channel={channel} label={channelLabel} muted={pending || needsRoom} />
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate text-sm font-bold">{guest}</span>
-        <span className="truncate text-xs">{[nights, status, detail].filter(Boolean).join(" · ")}</span>
+      {/* overflow-clip (not hidden) on the bar lets this stick to the scrolling area. */}
+      <span
+        className={cn("flex min-w-0 items-center gap-2", stickyLeft !== undefined && "sticky")}
+        style={stickyLeft !== undefined ? { left: stickyLeft } : undefined}
+      >
+        <ChannelLogo channel={channel} label={channelLabel} muted={pending || needsRoom} />
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-sm font-bold">{guest}</span>
+          <span className="truncate text-xs">{[nights, status, detail].filter(Boolean).join(" · ")}</span>
+        </span>
       </span>
     </button>
   );

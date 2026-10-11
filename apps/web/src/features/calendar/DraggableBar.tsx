@@ -14,6 +14,8 @@ export type DraggableBarProps = {
   booking: CalendarBooking;
   selected: boolean;
   needsRoom?: boolean;
+  /** See BookingBar: keeps the name in view on long stays. */
+  stickyLeft?: number;
   style?: CSSProperties;
   className?: string;
   onOpen: (bookingId: string) => void;
@@ -36,7 +38,15 @@ export const DraggableBar = memo(DraggableBarInner, (prev, next) => {
   return shallowEqual(pr, nr) && shallowEqual(ps, ns);
 });
 
-function DraggableBarInner({ booking, selected, needsRoom = false, style, className, onOpen }: DraggableBarProps) {
+function DraggableBarInner({
+  booking,
+  selected,
+  needsRoom = false,
+  stickyLeft,
+  style,
+  className,
+  onOpen,
+}: DraggableBarProps) {
   const t = useTranslations("common");
   const tCalendar = useTranslations("calendar");
   const locale = useLocale() as UiLocale;
@@ -79,6 +89,7 @@ function DraggableBarInner({ booking, selected, needsRoom = false, style, classN
         pending={pending}
         needsRoom={needsRoom && !pending}
         detail={priceDetail}
+        stickyLeft={stickyLeft}
         className="w-full"
         onClick={() => onOpen(booking.id)}
       />
