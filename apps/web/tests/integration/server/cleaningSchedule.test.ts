@@ -88,6 +88,28 @@ describe("cleaning schedule use cases", () => {
   const uc = () => import("@/server/useCases/cleaningSchedule");
   const taskOf = (bookingId: string) => prisma.cleaningTask.findFirstOrThrow({ where: { bookingId } });
 
+  it("creates the missing cleaning for a placement that has none, once", async () => {
+    const { loadTurnovers } = await uc();
+    const b = await prisma.booking.create({
+      data: {
+        channel: Channel.direct,
+        externalBookingId: "cs-old",
+        status: BookingStatus.confirmed,
+        checkinDate: new Date("2030-07-01T00:00:00Z"),
+        checkoutDate: new Date("2030-07-03T00:00:00Z"),
+        nights: 2,
+        guestName: "Old",
+      },
+    });
+    await prisma.assignment.create({
+      data: { bookingId: b.id, roomId: onar.id, startDate: b.checkinDate, endDate: b.checkoutDate },
+    });
+    const list = await loadTurnovers(iso("2030-07-01"), 7, { includeCancelled: false }, NOW);
+    expect(list.tasks.map((t) => t.leaving.guestName)).toEqual(["Old"]);
+    await loadTurnovers(iso("2030-07-01"), 7, { includeCancelled: false }, NOW);
+    expect(await prisma.cleaningTask.count({ where: { bookingId: b.id } })).toBe(1);
+  });
+
   it("lists a same-day turnover with who leaves, who arrives and the window in Athens time", async () => {
     const { loadTurnovers } = await uc();
     const out = await stay(onar.id, "Maria", "2030-07-02", "2030-07-05");

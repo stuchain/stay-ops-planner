@@ -4,14 +4,16 @@ import {
   CleaningWindowInvalidError,
   DEFAULT_CHECKIN_TIME,
   DEFAULT_CHECKOUT_TIME,
+  ensureTurnoverCleaningTask,
   Prisma,
+  TURNOVER_TASK_TYPE,
   utcToZonedDay,
   validateCleaningSchedule,
   zonedTimeToUtc,
 } from "@stay-ops/db";
 import { addDays, DomainError, type IsoDate, type Party } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
-import { clockTime, todayIso } from "@/server/time";
+import { clockTime, isoToDbDate, todayIso } from "@/server/time";
 import { findCleanerConflicts } from "./cleaningConflicts";
 import { bookingSliceSelect, partyOf } from "./bookingSlice";
 
@@ -62,6 +64,28 @@ function dayStart(day: IsoDate): Date {
   return zonedTimeToUtc(day, "00:00");
 }
 
+/**
+ * Placements made before turnover tasks existed (or written straight to the database) have no cleaning yet:
+ * create the missing ones for departures in `[from, to)`. Idempotent; a booking that has any turnover task
+ * (done or cancelled included) is left alone.
+ */
+export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate): Promise<number> {
+  const missing = await prisma.assignment.findMany({
+    where: {
+      endDate: { gte: isoToDbDate(from), lt: isoToDbDate(to) },
+      booking: { status: { not: BookingStatus.cancelled }, cleaningTasks: { none: { taskType: TURNOVER_TASK_TYPE } } },
+      room: { isActive: true },
+    },
+    select: { bookingId: true, roomId: true, endDate: true },
+  });
+  for (const a of missing) {
+    await prisma.$transaction((tx) =>
+      ensureTurnoverCleaningTask(tx, { bookingId: a.bookingId, roomId: a.roomId, checkoutDate: a.endDate }),
+    );
+  }
+  return missing.length;
+}
+
 /** Cleanings planned from `from` for `days` days, with the guest who leaves and the one who comes next. */
 export async function loadTurnovers(
   from: IsoDate,
@@ -70,6 +94,7 @@ export async function loadTurnovers(
   now = new Date(),
 ): Promise<TurnoverList> {
   const to = addDays(from, days);
+  await ensureTurnoversBetween(from, to);
   const where: Prisma.CleaningTaskWhereInput = { plannedStart: { gte: dayStart(from), lt: dayStart(to) } };
 
   const [rows, cancelledCount] = await Promise.all([
