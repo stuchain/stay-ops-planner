@@ -6,10 +6,11 @@
  *   corepack pnpm --filter @stay-ops/web exec tsx --tsconfig tsconfig.json scripts/migrate-ledger-entries.ts --apply  # write
  *
  * Safe to run again: rows already copied (same legacy id) are updated, rows corrected in the
- * new page since are left alone. Afterwards every corrected cell is compared, old page vs new,
- * and the yearly totals of both are printed side by side.
+ * new page since are left alone. Every corrected cell is then compared, old page vs new, and the
+ * yearly totals of both are printed side by side. Without --apply the same writes and checks run
+ * inside a transaction that is rolled back, so the report is real and nothing is kept.
  */
-import { PrismaClient, type Prisma } from "@stay-ops/db";
+import { Prisma, PrismaClient } from "@stay-ops/db";
 import { centsToEuros, type Cents } from "@stay-ops/domain";
 import { convertLegacyOverrides } from "@/server/money/legacyOverrides";
 import { buildLedger } from "@/server/useCases/buildLedger";
@@ -41,7 +42,7 @@ async function main() {
   const byLegacyId = new Map(existing.filter((e) => e.legacyEntryId).map((e) => [e.legacyEntryId!, e]));
   const byBooking = new Map(existing.filter((e) => e.bookingId).map((e) => [e.bookingId!, e]));
 
-  const writes: Prisma.PrismaPromise<unknown>[] = [];
+  const writes: ((tx: Prisma.TransactionClient) => Promise<unknown>)[] = [];
   const report: string[] = [];
   const chosenForBooking = new Map<string, (typeof legacy)[number]>();
 
@@ -69,40 +70,61 @@ async function main() {
         report.push(`booking ${row.bookingId}: already corrected on the new page, left alone`);
         continue;
       }
-      writes.push(
-        prisma.ledgerEntry.upsert({
-          where: { bookingId: row.bookingId },
-          create: { ...data, bookingId: row.bookingId, version: 1 },
+      const bookingId = row.bookingId;
+      writes.push((tx) =>
+        tx.ledgerEntry.upsert({
+          where: { bookingId },
+          create: { ...data, bookingId, version: 1 },
           update: data,
         }),
       );
     } else {
       const manual = { ...data, year: row.year, month: row.manualMonth ?? 1, label: row.manualName ?? "" };
-      writes.push(
-        byLegacyId.has(row.id)
-          ? prisma.ledgerEntry.update({ where: { legacyEntryId: row.id }, data: manual })
-          : prisma.ledgerEntry.create({ data: { ...manual, version: 1 } }),
+      const known = byLegacyId.has(row.id);
+      writes.push((tx) =>
+        known
+          ? tx.ledgerEntry.update({ where: { legacyEntryId: row.id }, data: manual })
+          : tx.ledgerEntry.create({ data: { ...manual, version: 1 } }),
       );
     }
     copied += 1;
   }
 
-  console.log(`${legacy.length} old entries, ${copied} to copy${apply ? "" : " (report only; pass --apply to write)"}`);
+  console.log(
+    `${legacy.length} old entries, ${copied} to copy or refresh${apply ? "" : " (dry run: nothing is kept; pass --apply to write)"}`,
+  );
   for (const line of report) console.log(`  ${line}`);
-  if (!apply) return;
 
-  await prisma.$transaction(writes);
+  let mismatches = 0;
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        for (const write of writes) await write(tx);
+        mismatches = await verify(tx, legacy);
+        if (!apply) throw new DryRun();
+      },
+      { timeout: 120_000, maxWait: 10_000 },
+    );
+  } catch (err) {
+    if (!(err instanceof DryRun)) throw err;
+  }
+  console.log(mismatches === 0 ? "Every corrected cell matches." : `${mismatches} corrected cells differ.`);
+  if (!apply) console.log("Dry run finished: nothing was written.");
+  if (mismatches > 0) process.exitCode = 1;
+}
 
-  // Verify: every corrected amount reads the same on the old and the new page, and compare totals.
+class DryRun extends Error {}
+
+/** Every corrected amount reads the same on the old and the new page; prints both yearly totals. */
+async function verify(tx: Prisma.TransactionClient, legacy: { year: number }[]): Promise<number> {
   const years = [...new Set(legacy.map((r) => r.year))].sort();
   let mismatches = 0;
   for (const year of years) {
-    const [oldRows, ledger] = await Promise.all([loadLedgerRowsForYear(prisma, year), buildLedger(year, prisma)]);
+    const [oldRows, ledger] = await Promise.all([loadLedgerRowsForYear(prisma, year), buildLedger(year, tx)]);
     const newByKey = new Map(ledger.rows.map((r) => [r.bookingId ?? r.entryId, r]));
     for (const old of oldRows) {
       if (!old.overrides) continue;
-      const key =
-        old.bookingId ?? (await prisma.ledgerEntry.findUnique({ where: { legacyEntryId: old.entryId! } }))?.id;
+      const key = old.bookingId ?? (await tx.ledgerEntry.findUnique({ where: { legacyEntryId: old.entryId! } }))?.id;
       const fresh = key ? newByKey.get(key) : undefined;
       if (!fresh) continue; // a booking that moved to another year: checked in that year's pass
       const shownOld = displayedRow(old) as unknown as Record<string, number | null>;
@@ -119,11 +141,11 @@ async function main() {
     const oldTotals = computeTotals(oldRows.filter((r) => r.status !== "cancelled").map(displayedRow));
     console.log(
       `${year}: old page total ${oldTotals.grandTotal.toFixed(2)} €, new page total ${euros(ledger.totals.totalCents)} €` +
-        ` (expected differences: corrected prices now reach the apartment columns, cancellation payouts count, direct bookings count for their apartment, pending requests do not)`,
+        ` (expected differences: corrected prices now reach the apartment columns, cancellation payouts count,` +
+        ` direct bookings count only their deposit, pending requests do not)`,
     );
   }
-  console.log(mismatches === 0 ? "Every corrected cell matches." : `${mismatches} corrected cells differ.`);
-  if (mismatches > 0) process.exitCode = 1;
+  return mismatches;
 }
 
 main()
