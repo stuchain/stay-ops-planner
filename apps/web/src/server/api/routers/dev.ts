@@ -14,10 +14,24 @@ import {
   resetRecommenderConfig,
   saveRecommenderConfig,
 } from "@/server/useCases/recommenderConfig";
+import {
+  getGuestMessageTemplates,
+  MAX_TEMPLATE_LENGTH,
+  resetGuestMessageTemplate,
+  saveGuestMessageTemplate,
+} from "@/server/useCases/guestMessageTemplates";
+import { MESSAGE_KINDS, MESSAGE_LANGUAGES } from "@/i18n/guestMessages/defaults";
 import { listBookingsForDebug } from "@/server/useCases/recommenderDebug";
 import { listApartments, reorderApartments, updateApartment } from "@/server/useCases/apartments";
 import { adminProcedure, createTRPCRouter } from "../trpc";
 import { historyRouter, systemRouter, usersRouter } from "./devSystem";
+
+const messageSlot = z.object({
+  kind: z.enum(MESSAGE_KINDS),
+  lang: z.enum(MESSAGE_LANGUAGES),
+  /** An apartment's id, or null for all apartments. */
+  roomId: z.string().min(1).nullable(),
+});
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
@@ -72,6 +86,17 @@ export const devRouter = createTRPCRouter({
 
     resetCursor: adminProcedure.mutation(({ ctx }) => resetHosthubCursor({ actorUserId: ctx.user.userId })),
   }),
+
+  /** Guest message texts (P4-10): the saved ones and the built-in ones. */
+  messageTemplates: adminProcedure.query(() => getGuestMessageTemplates()),
+
+  saveMessageTemplate: adminProcedure
+    .input(messageSlot.extend({ text: z.string().trim().min(1).max(MAX_TEMPLATE_LENGTH) }))
+    .mutation(({ ctx, input }) => saveGuestMessageTemplate({ ...input, actorUserId: ctx.user.userId })),
+
+  resetMessageTemplate: adminProcedure
+    .input(messageSlot)
+    .mutation(({ ctx, input }) => resetGuestMessageTemplate({ ...input, actorUserId: ctx.user.userId })),
 
   recommender: createTRPCRouter({
     /** The saved rule order and weights (today's behaviour until something is saved). */

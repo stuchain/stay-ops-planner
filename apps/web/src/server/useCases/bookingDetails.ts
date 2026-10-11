@@ -25,6 +25,8 @@ export type BookingDetails = BookingSlice & {
   children: number | null;
   infants: number | null;
   notes: string | null;
+  phone: string | null;
+  email: string | null;
   price: BookingPrice | null;
   /** For each field the person changed: what Hosthub says. Null when the field is not changed. */
   local: Record<EditableField, { hosthub: string | number | null } | null>;
@@ -37,6 +39,8 @@ export async function getBookingDetails(bookingId: string): Promise<BookingDetai
     select: {
       ...bookingSliceSelect,
       ...editSelect,
+      guestPhone: true,
+      guestEmail: true,
       totalAmountCents: true,
       totalValueCents: true,
       payoutAmountCents: true,
@@ -63,6 +67,8 @@ export async function getBookingDetails(bookingId: string): Promise<BookingDetai
     children: row.guestChildren,
     infants: row.guestInfants,
     notes: row.notes,
+    phone: row.guestPhone?.trim() || null,
+    email: row.guestEmail?.trim() || null,
     price: hasMoney
       ? {
           kind: income.kind,

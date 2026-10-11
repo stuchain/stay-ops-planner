@@ -20,6 +20,7 @@ import { Skeleton } from "@/ui/Skeleton";
 import { BookingEdit } from "./BookingEdit";
 import { BookingHistory } from "./BookingHistory";
 import { BookingPrice } from "./BookingPrice";
+import { GuestMessage } from "./GuestMessage";
 import { ReturningGuest } from "./ReturningGuest";
 import { recommendationText } from "./recommendation";
 import type { MoveRequest } from "./useMoveBooking";
@@ -183,6 +184,15 @@ export function BookingPanel({
             <IdCard size={24} aria-hidden="true" />
             {t("arrivalCards.open")}
           </Link>
+
+          {details.data ? (
+            <GuestMessage
+              key={booking.id}
+              booking={booking}
+              roomName={booking.assignment ? roomName(booking.assignment.roomId) : null}
+              phone={details.data.phone}
+            />
+          ) : null}
 
           {confirm && confirm.booking.id === booking.id ? (
             <div

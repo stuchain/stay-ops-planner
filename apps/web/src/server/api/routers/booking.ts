@@ -3,6 +3,7 @@ import { EDITABLE_FIELDS, resetBookingField, updateBookingDetails } from "@/serv
 import { bookingHistory } from "@/server/useCases/bookingHistory";
 import { getBookingDetails } from "@/server/useCases/bookingDetails";
 import { bookingSuggestions } from "@/server/useCases/bookingSuggestions";
+import { getGuestMessageTemplates } from "@/server/useCases/guestMessageTemplates";
 import { getArrivalCards } from "@/server/useCases/arrivalCards";
 import { getPreviousStays } from "@/server/useCases/previousStays";
 import { moveBooking } from "@/server/useCases/moveBooking";
@@ -35,6 +36,9 @@ export const bookingRouter = createTRPCRouter({
   arrivalCards: userProcedure
     .input(z.object({ ids: z.array(z.string().min(1)).min(1).max(30) }))
     .query(({ input }) => getArrivalCards(input.ids)),
+
+  /** The guest message texts (saved and built-in) for the booking panel. Anyone signed in may read them. */
+  messageTemplates: userProcedure.query(() => getGuestMessageTemplates()),
 
   /** Every apartment for this booking, best first, with reasons. */
   suggestions: userProcedure

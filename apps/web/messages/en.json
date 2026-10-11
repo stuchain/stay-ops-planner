@@ -317,7 +317,8 @@
       "recommender": "Suggestions",
       "history": "History",
       "users": "Users",
-      "system": "System"
+      "system": "System",
+      "messages": "Messages"
     },
     "noAccess": {
       "title": "You don't have access",
@@ -659,6 +660,35 @@
         "testFailed": "Sending failed. Check the logs.",
         "notConfigured": "Nowhere to send it yet: set RESEND_API_KEY and REMINDER_EMAIL_TO (or ALERT_EMAIL_TO) or Telegram in Vercel."
       }
+    },
+    "messages": {
+      "title": "Messages",
+      "subtitle": "The texts you send to guests from the booking panel.",
+      "kind": "Which message",
+      "language": "Language",
+      "scope": "For which apartment",
+      "scopeAll": "All apartments",
+      "text": "Text of the message",
+      "placeholders": "Click to put into the text",
+      "placeholderHelp": {
+        "guest": "Guest name",
+        "checkin": "Check-in date",
+        "checkout": "Check-out date",
+        "apartment": "Apartment",
+        "nights": "Number of nights",
+        "people": "Number of people"
+      },
+      "insert": "Insert {name}",
+      "preview": "How it looks (with a sample booking)",
+      "usingDefault": "No text of yours is saved here. The built-in text is shown.",
+      "usingShared": "This apartment has no text of its own. The text for all apartments is shown.",
+      "usingOwn": "This is your saved text.",
+      "unsaved": "You have changes that are not saved yet.",
+      "save": "Save",
+      "saved": "Saved",
+      "reset": "Restore the built-in text",
+      "resetDone": "The built-in text is back",
+      "loading": "Loading the message texts"
     }
   },
   "settingsScreen": {
@@ -933,5 +963,27 @@
     "noIdsText": "Open this page from the Today screen or from a booking.",
     "noneFoundTitle": "Bookings not found",
     "noneFoundText": "These bookings may have been removed. Go back and try again."
+  },
+  "guestMessage": {
+    "title": "Message to the guest",
+    "kindLabel": "Which message",
+    "languageLabel": "Language",
+    "kind": {
+      "welcome": "Welcome",
+      "directions": "Directions",
+      "wifi": "Wi-Fi",
+      "checkin": "Check-in"
+    },
+    "lang": {
+      "el": "Ελληνικά",
+      "en": "English"
+    },
+    "textLabel": "The message",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Could not copy. Select the text and copy it.",
+    "whatsapp": "Open in WhatsApp",
+    "noPhone": "This booking has no phone number. WhatsApp will ask you whom to send it to.",
+    "loadFailed": "The message texts did not load."
   }
 }
