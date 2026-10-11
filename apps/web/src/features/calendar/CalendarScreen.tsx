@@ -9,8 +9,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, Wand2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { ChevronLeft, ChevronRight, Printer, Wand2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { canPlace, type IsoDate, type Occupant } from "@stay-ops/domain";
@@ -23,6 +23,7 @@ import { ErrorState } from "@/ui/ErrorState";
 import { IconButton } from "@/ui/IconButton";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
+import { sheetStart } from "@/features/print/layout";
 import { ArrangeMonthPanel } from "./ArrangeMonthPanel";
 import { BookingPanel } from "./BookingPanel";
 import { useUnsavedGuard } from "./useUnsavedGuard";
@@ -78,6 +79,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const t = useTranslations();
   const errorText = useErrorText();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const span = useMemo(() => spanAround(today), [today]);
   const [zoom, setZoom] = useState<Zoom>("month");
   const dayWidth = DAY_WIDTH[zoom];
@@ -210,6 +212,9 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     void move({ booking, roomId });
   }
 
+  // The paper copy of what is on screen: the week of the first visible day, or its month.
+  const openPrint = () => router.push(`/app/calendar/print?view=${zoom}&from=${sheetStart(zoom, anchor.current)}`);
+
   const openArrange = () =>
     run(() => {
       setSelectedId(null);
@@ -256,7 +261,10 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 </button>
               ))}
             </div>
-            <Button icon={Wand2} onClick={openArrange} className="ml-2">
+            <Button icon={Printer} onClick={openPrint} className="ml-2">
+              {t("calendar.print")}
+            </Button>
+            <Button icon={Wand2} onClick={openArrange}>
               {t("calendar.arrangeButton")}
             </Button>
           </div>

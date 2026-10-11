@@ -129,7 +129,8 @@
       "apply": "{count, plural, one {Apply (# booking)} other {Apply (# bookings)}}",
       "cancel": "Cancel",
       "applied": "{count, plural, one {# booking placed} other {# bookings placed}}"
-    }
+    },
+    "print": "Print"
   },
   "booking": {
     "title": "Booking",
@@ -985,5 +986,25 @@
     "whatsapp": "Open in WhatsApp",
     "noPhone": "This booking has no phone number. WhatsApp will ask you whom to send it to.",
     "loadFailed": "The message texts did not load."
+  },
+  "printSheet": {
+    "back": "Back to the calendar",
+    "previous": "‹ Previous",
+    "next": "Next ›",
+    "view": "View",
+    "week": "Week",
+    "month": "Month",
+    "print": "Print",
+    "loading": "Loading the sheet…",
+    "weekTitle": "Week {range}",
+    "printedAt": "Printed: {when}",
+    "apartment": "Apartment",
+    "arrival": "→ Arrival",
+    "departure": "Departure →",
+    "closed": "Closed",
+    "pending": "Pending",
+    "unplaced": "No apartment yet",
+    "noUnplaced": "Every booking has an apartment.",
+    "noStays": "No stays this month."
   }
 }

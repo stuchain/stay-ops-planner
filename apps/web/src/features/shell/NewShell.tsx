@@ -85,6 +85,7 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
       <Sidebar
         items={items}
         linkComponent={Link}
+        className="print:hidden"
         footer={
           <div className="flex flex-col gap-3">
             <SyncIndicator />
@@ -94,7 +95,7 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
         }
         {...(secondary ? { secondary } : {})}
       />
-      <main className="ml-sidebar min-h-screen print:ml-0 max-[759px]:ml-0 max-[759px]:pb-20">
+      <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20 print:m-0 print:min-h-0 print:pb-0">
         <HosthubBanner />
         {children}
       </main>
