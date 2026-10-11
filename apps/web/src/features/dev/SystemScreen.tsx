@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
+import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
@@ -110,6 +111,64 @@ function FlagsCard() {
   );
 }
 
+function ReminderCard() {
+  const t = useTranslations("dev.system.reminder");
+  const errorText = useErrorText();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const reminder = useQuery(trpc.dev.system.reminder.queryOptions());
+  const toggle = useMutation({
+    ...trpc.dev.system.setReminder.mutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: trpc.dev.system.reminder.queryKey() });
+      showToast({ message: t("saved"), tone: "success" });
+    },
+    onError: (error) => showToast({ message: errorText(error), tone: "danger" }),
+  });
+  const test = useMutation({
+    ...trpc.dev.system.testReminder.mutationOptions(),
+    onSuccess: ({ status }) =>
+      showToast(
+        status === "sent"
+          ? { message: t("testSent"), tone: "success" }
+          : { message: status === "unconfigured" ? t("notConfigured") : t("testFailed"), tone: "danger" },
+      ),
+    onError: (error) => showToast({ message: errorText(error), tone: "danger" }),
+  });
+
+  return (
+    <Card title={t("title")}>
+      <p className="text-text-muted">{t("text")}</p>
+      {reminder.isPending ? (
+        <Skeleton variant="block" className="h-24" />
+      ) : reminder.error ? (
+        <ErrorState message={errorText(reminder.error)} onRetry={() => void reminder.refetch()} />
+      ) : (
+        <div className="flex flex-col gap-4">
+          <label className="min-h-target flex items-center gap-3">
+            <input
+              type="checkbox"
+              className="size-6"
+              checked={reminder.data.enabled}
+              disabled={toggle.isPending}
+              onChange={(e) => toggle.mutate({ enabled: e.target.checked })}
+            />
+            <span>{t("enabled")}</span>
+          </label>
+          {reminder.data.configured ? null : (
+            <p role="status" className="bg-warning-soft text-warning-text rounded-card p-3 font-medium">
+              {t("notConfigured")}
+            </p>
+          )}
+          <Button className="self-start" loading={test.isPending} onClick={() => test.mutate()}>
+            {t("sendTest")}
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /** Dev mode: app version, database status, the Sentry link and the per-user feature flags. */
 export function SystemScreen() {
   const t = useTranslations("dev.system");
@@ -119,6 +178,7 @@ export function SystemScreen() {
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <SystemCard />
         <FlagsCard />
+        <ReminderCard />
       </div>
     </div>
   );

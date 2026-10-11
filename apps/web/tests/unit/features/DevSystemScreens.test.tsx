@@ -43,7 +43,12 @@ vi.mock("@/api/client", () => ({
         signOutEverywhere: mutation("users.signOutEverywhere"),
         updateFlags: mutation("users.updateFlags"),
       },
-      system: { info: query("system.info") },
+      system: {
+        info: query("system.info"),
+        reminder: query("system.reminder"),
+        setReminder: mutation("system.setReminder"),
+        testReminder: mutation("system.testReminder"),
+      },
     },
   }),
 }));
@@ -281,6 +286,9 @@ describe("SystemScreen", () => {
       flagKeys: ["newUi"],
     });
     results["users.updateFlags"] = () => ({ newUi: true });
+    results["system.reminder"] = () => ({ enabled: true, configured: true });
+    results["system.setReminder"] = () => ({ enabled: false, lastSentOn: null });
+    results["system.testReminder"] = () => ({ status: "sent" });
     render(
       <Wrap>
         <SystemScreen />
@@ -297,11 +305,17 @@ describe("SystemScreen", () => {
 
     await u.click(await screen.findByRole("checkbox", { name: "Νέα εμφάνιση της εφαρμογής" }));
     await waitFor(() => expect(calls["users.updateFlags"]).toEqual([{ userId: "u1", patch: { newUi: true } }]));
+
+    await u.click(screen.getByRole("checkbox", { name: "Αποστολή κάθε πρωί" }));
+    await waitFor(() => expect(calls["system.setReminder"]).toEqual([{ enabled: false }]));
+    await u.click(screen.getByRole("button", { name: "Στείλε το τώρα για δοκιμή" }));
+    await waitFor(() => expect(calls["system.testReminder"]).toHaveLength(1));
   });
 
   it("says when the database does not answer and there is no Sentry link", async () => {
     results["system.info"] = () => ({ version: "0.1.0", commit: null, database: { ok: false }, sentryUrl: null });
     results["users.list"] = () => ({ users: [], flagKeys: ["newUi"] });
+    results["system.reminder"] = () => ({ enabled: true, configured: false });
     render(
       <Wrap>
         <SystemScreen />
@@ -310,5 +324,6 @@ describe("SystemScreen", () => {
     expect(await screen.findByText("Δεν απαντά")).toBeInTheDocument();
     expect(screen.getByText("Τοπική εκτέλεση")).toBeInTheDocument();
     expect(screen.getByText("Δεν έχει οριστεί σύνδεσμος")).toBeInTheDocument();
+    expect(await screen.findByText(/Δεν έχει ρυθμιστεί πού να σταλεί/)).toBeInTheDocument();
   });
 });

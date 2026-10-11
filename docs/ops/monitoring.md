@@ -53,6 +53,16 @@ The app stores what it last reported (table `alert_states`), so the same problem
 a "recovered" note is sent when it clears. Logic: `apps/web/src/server/monitoring/syncHealth.ts`.
 Test manually: Actions > "Sync health alerts" > Run workflow.
 
+## 3b. Daily reminder (P4-3)
+
+`.github/workflows/daily-reminders.yml` calls `/api/cron/daily-reminders` at 05:00 UTC (08:00 Athens in summer,
+07:00 in winter) with the same `PRODUCTION_URL` and `CRON_SECRET` secrets. The app sends, in Greek, today's
+arrivals and departures, tomorrow's arrivals and how many bookings have no apartment, at most once a day and only
+when there is something to say. It uses the same Resend or Telegram setup as the alerts; set `REMINDER_EMAIL_TO`
+(comma-separated, for example the father's address) or `REMINDER_TELEGRAM_CHAT_ID` in Vercel to send it somewhere
+else. Switch it off or send a test from Dev mode > System. The "Στείλε στον Στέλιο" help button (P4-11) also
+mails `ALERT_EMAIL_TO`.
+
 ## 4. Uptime
 
 `.github/workflows/health-check.yml` also runs every 15 minutes against `${PRODUCTION_URL}/api/health`.

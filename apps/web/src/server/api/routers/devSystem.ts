@@ -9,6 +9,12 @@ import {
   updateUserFlags,
 } from "@/server/useCases/devUsers";
 import { FLAG_KEYS } from "@/server/flags";
+import {
+  loadReminderSetting,
+  reminderNotifiersFromEnv,
+  runDailyReminder,
+  setReminderEnabled,
+} from "@/server/reminders/dailyReminder";
 import { adminProcedure, createTRPCRouter } from "../trpc";
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -52,4 +58,14 @@ export const usersRouter = createTRPCRouter({
 /** Dev mode System (P2-6): version, database and Sentry. Admin only. */
 export const systemRouter = createTRPCRouter({
   info: adminProcedure.query(() => systemInfo()),
+  /** The daily reminder (P4-3): on or off, and whether anywhere is set up to receive it. */
+  reminder: adminProcedure.query(async () => ({
+    enabled: (await loadReminderSetting()).enabled,
+    configured: reminderNotifiersFromEnv().length > 0,
+  })),
+  setReminder: adminProcedure
+    .input(z.object({ enabled: z.boolean() }))
+    .mutation(({ ctx, input }) => setReminderEnabled(input.enabled, ctx.user.userId)),
+  /** Send today's reminder now (or a test line when there is nothing to say), without counting it as sent. */
+  testReminder: adminProcedure.mutation(() => runDailyReminder({ notifiers: reminderNotifiersFromEnv(), test: true })),
 });

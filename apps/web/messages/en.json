@@ -647,6 +647,16 @@
       "flagSaved": "The change was saved.",
       "flags": {
         "newUi": "New look of the app"
+      },
+      "reminder": {
+        "title": "Daily reminder",
+        "text": "Every morning (08:00 in summer, 07:00 in winter) it sends who arrives and leaves and which bookings have no apartment. It is only sent when there is something to say.",
+        "enabled": "Send every morning",
+        "saved": "Saved",
+        "sendTest": "Send it now as a test",
+        "testSent": "Sent",
+        "testFailed": "Sending failed. Check the logs.",
+        "notConfigured": "Nowhere to send it yet: set RESEND_API_KEY and REMINDER_EMAIL_TO (or ALERT_EMAIL_TO) or Telegram in Vercel."
       }
     }
   },
@@ -859,5 +869,22 @@
   },
   "polish": {
     "loading": "Loading…"
+  },
+  "reminders": {
+    "noName": "No name",
+    "noRoom": "no apartment",
+    "people": "{count, plural, one {# person} other {# people}}",
+    "needsApartment": "{count, plural, one {# booking without an apartment} other {# bookings without an apartment}}",
+    "arrivalsToday": "{count, plural, one {# guest arrives today} other {# guests arrive today}}",
+    "arrivalsTomorrow": "{count, plural, one {# guest arrives tomorrow} other {# guests arrive tomorrow}}",
+    "departuresToday": "{count, plural, one {# guest leaves today} other {# guests leave today}}",
+    "needsApartmentLine": "{count, plural, one {Note: # booking has no apartment yet. Open the Calendar to place it.} other {Note: # bookings have no apartment yet. Open the Calendar to place them.}}",
+    "departuresTitle": "Leaving today ({count}):",
+    "arrivalsTitle": "Arriving today ({count}):",
+    "tomorrowTitle": "Arriving tomorrow ({count}):",
+    "subject": "Stay Ops: {summary}",
+    "footer": "Have a good day! Stay Ops sends this message every morning.",
+    "testSubject": "Stay Ops: test message",
+    "testBody": "This is a test message. Reminders arrive correctly. There is nothing to report today."
   }
 }
