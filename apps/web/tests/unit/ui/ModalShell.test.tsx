@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { ModalShell } from "@/modules/ui/ModalShell";
@@ -65,7 +65,8 @@ describe("ModalShell", () => {
     );
     const first = screen.getByRole("button", { name: "First" });
     const second = screen.getByRole("button", { name: "Second" });
-    first.focus();
+    // The dialog moves focus to its first control on the next frame; wait for that so it cannot land after a Tab.
+    await waitFor(() => expect(first).toHaveFocus());
     await user.tab();
     expect(second).toHaveFocus();
     await user.tab();
