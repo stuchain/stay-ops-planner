@@ -51,7 +51,7 @@ function NavList({
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <li key={item.href} className={compact ? undefined : "max-[759px]:flex-1"}>
+          <li key={item.href} className={compact ? undefined : "max-[759px]:min-w-0 max-[759px]:flex-1"}>
             <Link
               href={item.href}
               aria-current={item.current ? "page" : undefined}
@@ -59,12 +59,13 @@ function NavList({
                 "flex items-center gap-3 rounded-sm px-4 font-medium",
                 compact
                   ? "text-sm h-11"
-                  : "text-base h-14 max-[759px]:h-16 max-[759px]:flex-col max-[759px]:justify-center max-[759px]:gap-0.5 max-[759px]:px-1 max-[759px]:text-xs",
+                  : "text-base h-14 max-[759px]:h-16 max-[759px]:flex-col max-[759px]:justify-center max-[759px]:gap-0.5 max-[759px]:px-0.5 max-[759px]:text-[11px] max-[759px]:tracking-tight",
                 item.current ? "bg-accent-soft text-accent" : "text-text hover:bg-surface-muted",
               )}
             >
               <Icon size={compact ? 20 : 24} strokeWidth={2} aria-hidden="true" />
-              <span>{item.label}</span>
+              {/* Six tabs share a phone's width, so a long label shrinks instead of pushing the last tab off screen. */}
+              <span className="max-w-full truncate">{item.label}</span>
             </Link>
           </li>
         );

@@ -91,7 +91,6 @@ describe("FreeScreen", () => {
     const free = within(screen.getByRole("region", { name: "Ελεύθερα" }));
     const items = free.getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("Cosmos");
-    expect(items[0]).toHaveTextContent("Προτείνεται");
     expect(items[0]).toHaveTextContent("Προτείνεται: χωράει 2 άτομα");
     expect(items[1]).toHaveTextContent("Iris");
     expect(items[1]).toHaveTextContent("Ελεύθερο");

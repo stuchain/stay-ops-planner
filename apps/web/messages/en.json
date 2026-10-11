@@ -861,7 +861,6 @@
     "noneFree": "No apartment is free on these days.",
     "freeSection": "Free",
     "busySection": "Taken",
-    "recommendedBadge": "Recommended",
     "small": "{guests, plural, one {Small for # person (fits {capacity})} other {Small for # people (fits {capacity})}}",
     "unassigned": "{count, plural, one {Careful: # booking on these days has no apartment yet} other {Careful: # bookings on these days have no apartment yet}}",
     "unassignedHint": "Once they get an apartment, one of the free ones may fill up.",

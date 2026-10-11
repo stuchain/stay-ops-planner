@@ -60,11 +60,6 @@ function RoomRow({ room, guests }: { room: AvailabilityRoom; guests: number | nu
       )}
     >
       <ApartmentChip name={room.name} color={room.color ?? NEUTRAL} inactive={!room.isActive} className="text-base" />
-      {room.available && room.recommended ? (
-        <span className="bg-accent rounded-pill px-3 py-1 text-sm font-semibold text-white dark:text-bg">
-          {t("recommendedBadge")}
-        </span>
-      ) : null}
       <span
         className={cn(
           "min-w-0 flex-1 text-base",
