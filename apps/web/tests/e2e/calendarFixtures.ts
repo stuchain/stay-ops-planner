@@ -168,3 +168,44 @@ export async function resetCalendarFixtures(): Promise<CalendarFixtures> {
     },
   };
 }
+
+/** Guests added by `addScrollFixtures`, for the scrolling and past-stays specs. */
+export const SCROLL_GUEST = {
+  longStay: "Lena Long",
+  twentyMonthsAgo: "Olga Old",
+  farAhead: "Fiona Future",
+  pastPlaced: "Paula Past",
+  pastUnplacedA: "Ursula Unplaced",
+  pastUnplacedB: "Victor Unplaced",
+} as const;
+
+/** Day offsets (from today) of the scroll fixtures, so specs can scroll to them. */
+export const SCROLL_FROM = {
+  longStay: -110,
+  twentyMonthsAgo: -600,
+  farAhead: 480,
+  pastPlaced: -20,
+  pastUnplacedA: -32,
+  pastUnplacedB: -30,
+} as const;
+
+/**
+ * Extra stays far from today for the scrolling specs: a 60-night stay, one 20 months back, one 16 months ahead,
+ * a finished stay with an apartment and two overlapping finished stays that never got one.
+ * Call after `resetCalendarFixtures`, which also removes them.
+ */
+export async function addScrollFixtures(): Promise<void> {
+  const room = async (key: string) =>
+    (await db().room.findUniqueOrThrow({ where: { code: `${ROOM_PREFIX}${key}` } })).id;
+  const alpha = await room("alpha");
+  const beta = await room("beta");
+  const bookings: NewBooking[] = [
+    { key: "lena", guest: SCROLL_GUEST.longStay, from: SCROLL_FROM.longStay, nights: 60, roomId: alpha },
+    { key: "olga", guest: SCROLL_GUEST.twentyMonthsAgo, from: SCROLL_FROM.twentyMonthsAgo, nights: 3, roomId: beta },
+    { key: "fiona", guest: SCROLL_GUEST.farAhead, from: SCROLL_FROM.farAhead, nights: 3, roomId: beta },
+    { key: "paula", guest: SCROLL_GUEST.pastPlaced, from: SCROLL_FROM.pastPlaced, nights: 2, roomId: beta },
+    { key: "ursula", guest: SCROLL_GUEST.pastUnplacedA, from: SCROLL_FROM.pastUnplacedA, nights: 4 },
+    { key: "victor", guest: SCROLL_GUEST.pastUnplacedB, from: SCROLL_FROM.pastUnplacedB, nights: 3 },
+  ];
+  for (const b of bookings) await createBooking(b);
+}
