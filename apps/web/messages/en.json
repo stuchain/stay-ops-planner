@@ -71,7 +71,9 @@
     "SYNC_RUNNING": "An update from Hosthub is already running. Please wait a moment.",
     "HOSTHUB_TOKEN_REJECTED": "Hosthub did not accept this key. Check that you copied all of it. The old key is kept.",
     "HOSTHUB_UNREACHABLE": "Could not reach Hosthub to test the key. Try again in a moment. The old key is kept.",
-    "TOO_MANY_REQUESTS": "Too many tries in a short time. Please try again in a while."
+    "TOO_MANY_REQUESTS": "Too many tries in a short time. Please try again in a while.",
+    "TASK_CLOSED": "This cleaning is closed and cannot be changed.",
+    "CLEANING_DOES_NOT_FIT": "That time does not fit. It has to be after the guest leaves and before the next guest arrives."
   },
   "nav": {
     "label": "Main navigation",
@@ -79,7 +81,8 @@
     "calendar": "Calendar",
     "free": "Free",
     "income": "Income",
-    "settings": "Settings"
+    "settings": "Settings",
+    "cleaning": "Cleaning"
   },
   "sync": {
     "loading": "Updating from Hosthub…",
@@ -1054,5 +1057,93 @@
     "colAmount": "Amount",
     "monthTotal": "Total: {month}",
     "excluded": "{count, plural, one {# request or unpaid cancellation is} other {# requests or unpaid cancellations are}} not shown in the list, because they do not count in the totals."
+  },
+  "turnovers": {
+    "title": "Cleaning",
+    "subtitle": "What needs cleaning and when",
+    "loading": "Loading the cleaning schedule",
+    "todayTag": "Today",
+    "tomorrowTag": "Tomorrow",
+    "nothingThisDay": "Nothing to clean on this day.",
+    "previousDays": "Earlier days",
+    "nextDays": "Next days",
+    "showCancelled": "Show cancelled ({count})",
+    "hideCancelled": "Hide cancelled",
+    "leaving": "Leaving",
+    "leavingAt": "{guest} · at {time}",
+    "nextArrival": "Next arrival",
+    "sameDayAt": "Same day at {time}",
+    "onDayAt": "{date} at {time}",
+    "nobodyComing": "Nobody is coming",
+    "partyUnknown": "Number of guests unknown",
+    "adults": "{count, plural, one {# adult} other {# adults}}",
+    "children": "{count, plural, one {# child} other {# children}}",
+    "infants": "{count, plural, one {# infant} other {# infants}}",
+    "window": "Cleaning time",
+    "windowRange": "{start} – {end}",
+    "serviceTag": "Cleaning in between",
+    "status": {
+      "todo": "Not done",
+      "in_progress": "In progress",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "markStarted": "Start",
+    "markDone": "Done",
+    "reopen": "Not done yet",
+    "assignee": "Who cleans",
+    "assigneeNone": "Not set",
+    "assigneePlaceholder": "Name",
+    "change": "Change",
+    "save": "Save",
+    "cancel": "Cancel",
+    "editTime": "Change time",
+    "timeFrom": "From",
+    "timeTo": "To",
+    "conflict": "{name}: another cleaning at the same time.",
+    "notes": "Note",
+    "print": "Print",
+    "link": {
+      "create": "Link for the cleaner",
+      "creating": "Creating the link",
+      "ready": "Send this link to the cleaner. It shows this day only and works until {date}.",
+      "field": "Link for the cleaner",
+      "copy": "Copy link",
+      "copied": "The link was copied.",
+      "copyFailed": "It was not copied. Select the link and copy it.",
+      "whatsapp": "Open in WhatsApp",
+      "whatsappText": "Cleaning schedule for {date}: {url}",
+      "close": "Close"
+    }
+  },
+  "cleanerLink": {
+    "title": "Cleaning schedule",
+    "documentTitle": "Cleaning schedule {date}",
+    "readOnly": "Read only",
+    "empty": "Nothing to clean on this day.",
+    "leaving": "Guests leave",
+    "window": "Cleaning time",
+    "windowRange": "{start} – {end}",
+    "nextArrival": "Next arrival",
+    "sameDayAt": "Same day at {time}",
+    "onDayAt": "{date} at {time}",
+    "nobodyComing": "Nobody is coming",
+    "partyUnknown": "Number of guests unknown",
+    "adults": "{count, plural, one {# adult} other {# adults}}",
+    "children": "{count, plural, one {# child} other {# children}}",
+    "infants": "{count, plural, one {# infant} other {# infants}}",
+    "cleaner": "Cleaner",
+    "notes": "Note",
+    "serviceTag": "Cleaning in between",
+    "done": "Done",
+    "print": "Print",
+    "invalid": {
+      "title": "This link does not work",
+      "text": "Ask for a new link."
+    },
+    "expired": {
+      "title": "This link has expired",
+      "text": "Ask for a new link."
+    }
   }
 }

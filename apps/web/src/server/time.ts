@@ -17,6 +17,13 @@ export function todayIso(now: Date = new Date(), timeZone: string = appTimeZone(
   return isoDate(parts);
 }
 
+/** The wall-clock time of an instant in the business time zone, as `HH:MM`. */
+export function clockTime(instant: Date, timeZone: string = appTimeZone()): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(
+    instant,
+  );
+}
+
 /** A Postgres DATE read by Prisma (UTC midnight) as `YYYY-MM-DD`. */
 export function dbDateToIso(date: Date): IsoDate {
   return isoDate(date.toISOString().slice(0, 10));
