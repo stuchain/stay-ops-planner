@@ -71,10 +71,11 @@ describe("Έσοδα widgets", () => {
   it("explains the tax in Greek, bracket by bracket", () => {
     const { container } = render(<TaxCard ledger={fakeLedger()} />);
     expect(screen.getByText("15% μέχρι 12.000 €")).toBeTruthy();
-    expect(screen.getByText("35% από 12.000 € έως 35.000 €")).toBeTruthy();
+    expect(screen.getByText("25% από 12.000 € έως 24.000 €")).toBeTruthy();
+    expect(screen.getByText("35% από 24.000 € έως 35.000 €")).toBeTruthy();
     expect(screen.getByText("45% πάνω από 35.000 €")).toBeTruthy();
-    // 84,000 €: 1,800 + 8,050 + 49,000 × 45% = 31,900 €
-    expect(screen.getAllByText("31.900 €").length).toBeGreaterThan(0);
+    // 84,000 €: 1,800 + 3,000 + 3,850 + 49,000 × 45% = 30,700 €
+    expect(screen.getAllByText("30.700 €").length).toBeGreaterThan(0);
     expect(screen.getByText("Τα κλιμάκια δεν έχουν επιβεβαιωθεί ακόμα από τον λογιστή.")).toBeTruthy();
     expect(screen.getByText("Πώς υπολογίζεται;")).toBeTruthy();
     expect(latinWords(screenText(container))).toEqual([]);

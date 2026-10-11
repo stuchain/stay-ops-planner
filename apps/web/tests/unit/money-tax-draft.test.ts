@@ -25,6 +25,7 @@ describe("tax bracket draft", () => {
     const draft = draftFromBrackets(SPREADSHEET_BRACKETS);
     expect(draft).toEqual([
       { limit: "12.000", rate: "15" },
+      { limit: "24.000", rate: "25" },
       { limit: "35.000", rate: "35" },
       { limit: "", rate: "45" },
     ]);
@@ -35,16 +36,17 @@ describe("tax bracket draft", () => {
   it("adds before the open bracket and keeps the last one open on removal", () => {
     const draft = draftFromBrackets(SPREADSHEET_BRACKETS);
     const added = addBracket(draft);
-    expect(added).toHaveLength(4);
-    expect(added[2]).toEqual({ limit: "", rate: "45" });
+    expect(added).toHaveLength(5);
     expect(added[3]).toEqual({ limit: "", rate: "45" });
+    expect(added[4]).toEqual({ limit: "", rate: "45" });
     expect(addBracket([])).toEqual([
       { limit: "", rate: "" },
       { limit: "", rate: "" },
     ]);
-    const removed = removeBracket(draft, 2);
+    const removed = removeBracket(draft, 3);
     expect(removed).toEqual([
       { limit: "12.000", rate: "15" },
+      { limit: "24.000", rate: "25" },
       { limit: "", rate: "35" },
     ]);
     expect(removeBracket([{ limit: "", rate: "10" }], 0)).toEqual([{ limit: "", rate: "10" }]);

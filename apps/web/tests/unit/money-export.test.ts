@@ -43,7 +43,12 @@ function row(key: string, month: number, values: Partial<LedgerValues>, kind: In
 function ledger(rules: TaxRules): LedgerYear {
   const rows = [
     row("anna", 1, { airbnbCents: cents(2_000_000), payoutCents: cents(1_800_000), rentalIndex: 1 }),
-    row("bob", 7, { soloCents: cents(1_500_050), payoutCents: cents(1_500_050), rentalIndex: 2 }),
+    row("bob", 7, {
+      soloCents: cents(1_500_050),
+      prepaymentCents: cents(1_500_050),
+      payoutCents: cents(1_500_050),
+      rentalIndex: 2,
+    }),
     row("carl", 8, { airbnbCents: cents(10_000), payoutCents: cents(10_000), rentalIndex: 2 }, "cancelled_paid"),
     row("dina", 8, { airbnbCents: cents(99_900), payoutCents: cents(90_000), rentalIndex: 3 }, "pending"),
   ];
@@ -101,7 +106,7 @@ describe("Excel export", () => {
   });
 
   it("writes totals as formulas whose cached results match the app", async () => {
-    const l = ledger(defaultTaxRules(2025));
+    const l = ledger({ ...defaultTaxRules(2025), scope: "total" });
     const ws = (await read(await buildLedgerWorkbook(l))).getWorksheet(LEDGER_SHEET)!;
     const totals = findRow(ws, "N", "ΣΥΝΟΛΑ");
     expect(formula(totals.getCell("O"))).toMatch(/^SUM\(O2:O\d+\)$/);
@@ -110,16 +115,18 @@ describe("Excel export", () => {
     expect(result(grand.getCell("R"))).toBe(35_100.5);
     const tax = findRow(ws, "Q", "ΦΟΡΟΣ (κλίμακα)");
     expect(formula(tax.getCell("R"))).toBe(
-      `ROUND(MAX(0,MIN(R${grand.number},12000)-0)*0.15,2)+ROUND(MAX(0,MIN(R${grand.number},35000)-12000)*0.35,2)+ROUND(MAX(0,R${grand.number}-35000)*0.45,2)`,
+      `ROUND(MAX(0,MIN(R${grand.number},12000)-0)*0.15,2)+ROUND(MAX(0,MIN(R${grand.number},24000)-12000)*0.25,2)+` +
+        `ROUND(MAX(0,MIN(R${grand.number},35000)-24000)*0.35,2)+ROUND(MAX(0,R${grand.number}-35000)*0.45,2)`,
     );
-    expect(result(tax.getCell("R"))).toBe(9895.23); // 9,850 + 100.50 × 45% = 45.225 → 45.23
+    expect(result(tax.getCell("R"))).toBe(8695.23); // 8,650 + 100.50 × 45% = 45.225 → 45.23
     const sums = findRow(ws, "K", "ΣΥΝ J");
     expect(result(sums.getCell("L"))).toBe(15_000.5);
     expect(result(sums.getCell("N"))).toBe(18_000 + 15_000.5 + 100);
   });
 
   it("adds a summary sheet with apartments and the bracket calculation", async () => {
-    const ws = (await read(await buildLedgerWorkbook(ledger(defaultTaxRules(2025))))).getWorksheet(SUMMARY_SHEET)!;
+    const rules: TaxRules = { ...defaultTaxRules(2025), scope: "total" };
+    const ws = (await read(await buildLedgerWorkbook(ledger(rules)))).getWorksheet(SUMMARY_SHEET)!;
     expect(ws.getCell("A1").value).toBe("Έσοδα 2025");
     expect(ws.getCell("A4").value).toBe("Onar");
     expect(formula(ws.getCell("B4"))).toMatch(/^'Φύλλο3'!O\d+$/);
@@ -127,18 +134,18 @@ describe("Excel export", () => {
     const unconfirmed = findRow(ws, "A", "Οι συντελεστές δεν έχουν επιβεβαιωθεί από τον λογιστή.");
     expect(unconfirmed).toBeDefined();
     const total = findRow(ws, "A", "Εκτιμώμενος φόρος");
-    expect(result(total.getCell(6))).toBe(9895.23);
+    expect(result(total.getCell(6))).toBe(8695.23);
   });
 
   it("taxes each apartment when the rules say so", async () => {
-    const rules: TaxRules = { ...defaultTaxRules(2025), scope: "per_apartment", confirmed: true };
+    const rules: TaxRules = { ...defaultTaxRules(2025), confirmed: true };
     const wb = await read(await buildLedgerWorkbook(ledger(rules)));
     const ws = wb.getWorksheet(LEDGER_SHEET)!;
     const perRental = findRow(ws, "N", "ΦΟΡΟΣ / ενοίκιο");
-    expect(result(perRental.getCell("O"))).toBe(4600); // 20,000 €
-    expect(result(perRental.getCell("P"))).toBe(2885.18); // 1,800 + 3,100.50 × 35% = 1,085.175 → 1,085.18
-    expect(result(findRow(ws, "Q", "ΦΟΡΟΣ").getCell("R"))).toBe(7485.18);
+    expect(result(perRental.getCell("O"))).toBe(3800); // 20,000 €: 1,800 + 8,000 × 25%
+    expect(result(perRental.getCell("P"))).toBe(2575.13); // 1,800 + 3,100.50 × 25% = 775.125 → 775.13
+    expect(result(findRow(ws, "Q", "ΦΟΡΟΣ").getCell("R"))).toBe(6375.13);
     const summary = wb.getWorksheet(SUMMARY_SHEET)!;
-    expect(result(findRow(summary, "A", "Εκτιμώμενος φόρος").getCell(6))).toBe(7485.18);
+    expect(result(findRow(summary, "A", "Εκτιμώμενος φόρος").getCell(6))).toBe(6375.13);
   });
 });

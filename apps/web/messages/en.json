@@ -205,7 +205,7 @@
     "how": {
       "title": "How is this worked out?",
       "year": "Each booking counts in the year of check-in.",
-      "gross": "For each booking we count what the guest paid.",
+      "gross": "We count what the guest paid on Airbnb and Booking.com. From direct bookings only the deposit counts, as in the spreadsheet.",
       "payout": "For each booking we count what you received, after the Airbnb and Booking.com fees.",
       "cancelled": "Cancelled bookings count only if you were paid something, and only what you were paid. Requests that are not confirmed do not count.",
       "total": "Tax is worked out in brackets on the year's total: each slice of income is taxed at its own bracket's rate.",
@@ -272,7 +272,8 @@
       "deleteRow": "Delete: {name}",
       "deleteConfirm": "Delete the entry “{name}”?",
       "deleteYes": "Yes, delete",
-      "deleted": "Entry deleted"
+      "deleted": "Entry deleted",
+      "manualApartmentHint": "With an apartment, the amount goes in its column and counts for tax. Without one it goes in the ΜΟΝΟΙ column only."
     },
     "taxEditor": {
       "title": "Tax brackets",

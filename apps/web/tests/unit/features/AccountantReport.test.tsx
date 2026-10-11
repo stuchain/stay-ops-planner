@@ -83,12 +83,12 @@ function fakeLedger(confirmed: boolean): LedgerYearData {
     row(
       "m",
       8,
-      { name: "CASH GUEST", soloCents: cents(10_000), rentalIndex: 3 },
+      { name: "CASH GUEST", prepaymentCents: cents(10_000), rentalIndex: 3 },
       { manual: true, channel: null, kind: "manual" },
     ),
     row("p", 8, { name: "REQUEST", airbnbCents: cents(99_000), rentalIndex: 1 }, { counts: false, kind: "pending" }),
   ];
-  const rules = { ...defaultTaxRules(2030), confirmed };
+  const rules = { ...defaultTaxRules(2030), scope: "total" as const, confirmed };
   const totals = ledgerTotals(rows, rules.incomeBasis);
   return {
     year: 2030,

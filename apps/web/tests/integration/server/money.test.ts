@@ -118,13 +118,26 @@ describe("money ledger", () => {
     expect(cancelledPaid!.shown.airbnbCents).toBe(5000);
     expect(cancelledUnpaid).toMatchObject({ kind: "cancelled_unpaid", counts: false });
 
-    expect(l.totals.byRentalCents).toEqual([0, 30_000 + 40_000 + 5000, 0, 0]);
-    expect(l.totals.totalCents).toBe(75_000);
-    expect(l.rules).toMatchObject({ year: YEAR, confirmed: false, scope: "total" });
-    expect(l.tax.taxCents).toBe(11_250); // 15% of 750 €
+    // A direct booking's price stays out of the apartment column, like the spreadsheet; only a deposit goes in.
+    expect(direct!.shown.rentalCents).toEqual([null, null, null, null]);
+    expect(l.totals.byRentalCents).toEqual([0, 30_000 + 5000, 0, 0]);
+    expect(l.totals.totalCents).toBe(35_000);
+    expect(l.rules).toMatchObject({ year: YEAR, confirmed: false, scope: "per_apartment" });
+    expect(l.tax.taxCents).toBe(5250); // 15% of 350 €
     expect(l.years).toEqual([2030, 2031]);
     expect(l.apartments[0]).toEqual({ index: 1, label: "Onar", color: "#123456" });
     expect(l.apartments[3]).toMatchObject({ index: 4, color: null });
+
+    const { updateLedgerRow } = await edits();
+    await updateLedgerRow({
+      target: { bookingId: direct!.bookingId! },
+      expectedVersion: 0,
+      patch: { prepaymentCents: cents(10_000) },
+      actorUserId,
+    });
+    const withDeposit = await ledger();
+    expect(withDeposit.rows[1]!.shown).toMatchObject({ soloCents: 30_000, prepaymentCents: 10_000 });
+    expect(withDeposit.totals.byRentalCents).toEqual([0, 45_000, 0, 0]);
   });
 
   it("flags rows that count but have no apartment", async () => {
@@ -192,7 +205,7 @@ describe("money ledger", () => {
       year: YEAR,
       month: 3,
       label: " cash guest ",
-      patch: { soloCents: 20_000 as never, rentalIndex: 3 },
+      patch: { rental3Cents: cents(20_000), rentalIndex: 3 },
       actorUserId,
     });
     let row = (await ledger()).rows[0]!;
@@ -210,7 +223,7 @@ describe("money ledger", () => {
     const corrected = await updateLedgerRow({
       target: { entryId: added.entryId },
       expectedVersion: edited.version,
-      patch: { soloCents: -5000 as never },
+      patch: { rental3Cents: cents(-5000) },
       actorUserId,
     });
     row = (await ledger()).rows[0]!;

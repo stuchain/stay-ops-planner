@@ -70,12 +70,13 @@ function has(o: LedgerOverrides, key: LedgerField): boolean {
 }
 
 /**
- * The amount that goes in the apartment column: what the guest paid (the first
- * filled channel column) or the payout, depending on the year's income basis.
+ * The amount that goes in the apartment column: what the guest paid on Airbnb or Booking.com
+ * (or under a contract), or the payout, depending on the year's income basis. For a direct
+ * booking only the deposit (ΠΡΟΚ/ΛΗ) goes in, as in the spreadsheet; the rest (ΜΟΝΟΙ) does not.
  */
 export function bucketAmount(row: LedgerValues, basis: IncomeBasis): Cents | null {
   if (basis === "payout") return row.payoutCents;
-  return row.airbnbCents ?? row.bookingCents ?? row.contractCents ?? row.soloCents;
+  return row.airbnbCents ?? row.bookingCents ?? row.contractCents ?? row.prepaymentCents;
 }
 
 /**
@@ -95,6 +96,12 @@ export function applyLedgerOverrides(
     overridden.add(key);
     return o[key] as LedgerValues[K];
   };
+  // A typed deposit comes out of the automatic ΜΟΝΟΙ (the full price), unless ΜΟΝΟΙ was corrected itself.
+  const prepaid = pick("prepaymentCents");
+  const solo =
+    has(o, "soloCents") || !has(o, "prepaymentCents") || auto.soloCents === null || prepaid === null
+      ? pick("soloCents")
+      : cents(auto.soloCents - prepaid);
   const values: LedgerValues = {
     name: pick("name") ?? "",
     guestCount: pick("guestCount"),
@@ -105,8 +112,8 @@ export function applyLedgerOverrides(
     airbnbCents: pick("airbnbCents"),
     bookingCents: pick("bookingCents"),
     contractCents: pick("contractCents"),
-    soloCents: pick("soloCents"),
-    prepaymentCents: pick("prepaymentCents"),
+    soloCents: solo,
+    prepaymentCents: prepaid,
     payoutCents: pick("payoutCents"),
     rentalIndex: pick("rentalIndex"),
   };

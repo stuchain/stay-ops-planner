@@ -7,26 +7,28 @@ const euros = (value: number) => cents(Math.round(value * 100));
 const taxOn = (value: number) => taxFor(euros(value), SPREADSHEET_BRACKETS).taxCents;
 
 describe("taxFor with the spreadsheet brackets", () => {
-  // Hand-calculated: 15% of the first 12,000, 35% of the next 23,000, 45% above.
+  // Hand-calculated: 15% of the first 12,000, 25% of the next 12,000, 35% up to 35,000, 45% above.
   it.each([
     [0, 0],
     [1000, 150],
     [11_999.99, 1800], // 1,799.9985 rounds to 1,800.00
     [12_000, 1800],
-    [12_000.01, 1800], // 1,800 + 0.0035
-    [12_000.02, 1800.01], // 1,800 + 0.007
-    [20_000, 4600],
-    [35_000, 9850],
-    [100_000, 39_100], // 9,850 + 65,000 × 45%
+    [12_000.01, 1800], // 1,800 + 0.0025
+    [12_000.02, 1800.01], // 1,800 + 0.005, half a cent rounds up
+    [20_000, 3800],
+    [24_000, 4800],
+    [35_000, 8650],
+    [100_000, 37_900], // 8,650 + 65,000 × 45%
   ])("at %d € owes %d €", (income, tax) => {
     expect(taxOn(income)).toBe(euros(tax));
   });
 
-  it("matches the old spreadsheet shortcuts where those are valid", () => {
-    // 9850 + (total - 35000) × 0.45 above 35,000.
-    expect(taxOn(50_000)).toBe(euros(9850 + 15_000 * 0.45));
-    // 1800 + (x - 12000) × 0.35 between 12,000 and 35,000.
-    expect(taxOn(30_000)).toBe(euros(1800 + 18_000 * 0.35));
+  it("matches the 2026 spreadsheet formulas", () => {
+    // Φύλλο3 S173: 8650 + (total - 35000) × 0.45 above 35,000.
+    expect(taxOn(51_621)).toBe(euros(8650 + 16_621 * 0.45));
+    // Φύλλο3 N175: 1800 + (apartment - 12000) × 0.25 between 12,000 and 24,000.
+    expect(taxOn(13_725)).toBe(euros(2231.25));
+    expect(taxOn(11_919)).toBe(euros(1787.85));
   });
 
   it("owes nothing on zero or negative income", () => {
@@ -37,10 +39,11 @@ describe("taxFor with the spreadsheet brackets", () => {
     const calc = taxFor(euros(40_000), SPREADSHEET_BRACKETS);
     expect(calc.lines).toEqual([
       { fromCents: 0, upToCents: 1_200_000, rateBps: 1500, taxedCents: 1_200_000, taxCents: 180_000 },
-      { fromCents: 1_200_000, upToCents: 3_500_000, rateBps: 3500, taxedCents: 2_300_000, taxCents: 805_000 },
+      { fromCents: 1_200_000, upToCents: 2_400_000, rateBps: 2500, taxedCents: 1_200_000, taxCents: 300_000 },
+      { fromCents: 2_400_000, upToCents: 3_500_000, rateBps: 3500, taxedCents: 1_100_000, taxCents: 385_000 },
       { fromCents: 3_500_000, upToCents: null, rateBps: 4500, taxedCents: 500_000, taxCents: 225_000 },
     ]);
-    expect(calc.taxCents).toBe(1_210_000);
+    expect(calc.taxCents).toBe(1_090_000);
   });
 
   it("stops at the last limit when no bracket is open-ended", () => {
@@ -65,7 +68,7 @@ describe("tax rules", () => {
     expect(defaultTaxRules(2026)).toEqual({
       year: 2026,
       brackets: SPREADSHEET_BRACKETS,
-      scope: "total",
+      scope: "per_apartment",
       incomeBasis: "gross",
       confirmed: false,
     });

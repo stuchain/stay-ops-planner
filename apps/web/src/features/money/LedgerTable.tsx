@@ -338,10 +338,16 @@ function ManualRowPanel({
             ))}
           </select>
         </Field>
-        <Field id="apartment" error={errors.apartment} label={t("income.ledger.manualApartment")}>
+        <Field
+          id="apartment"
+          error={errors.apartment}
+          label={t("income.ledger.manualApartment")}
+          hint={t("income.ledger.manualApartmentHint")}
+        >
           <select
             id="manual-apartment"
             className={field}
+            aria-describedby={described("apartment", true)}
             value={apartment}
             onChange={(e) => setApartment(e.target.value)}
           >
@@ -605,11 +611,16 @@ export function LedgerTable({ ledger }: { ledger: LedgerYearData }) {
             year: ledger.year,
             month: input.month,
             label: input.label,
-            patch: {
-              soloCents: input.amount,
-              payoutCents: input.payout ?? input.amount,
-              ...(input.rentalIndex !== null ? { rentalIndex: input.rentalIndex } : {}),
-            },
+            // With an apartment the amount goes in its column and counts for tax, like a typed cell in the
+            // spreadsheet; without one it is ΜΟΝΟΙ only, which the spreadsheet leaves out of the tax.
+            patch:
+              input.rentalIndex !== null
+                ? {
+                    rentalIndex: input.rentalIndex,
+                    [`rental${input.rentalIndex}Cents`]: input.amount,
+                    payoutCents: input.payout ?? input.amount,
+                  }
+                : { soloCents: input.amount, payoutCents: input.payout ?? input.amount },
           };
           const key = JSON.stringify(row);
           if (lastAdd.current?.key !== key) lastAdd.current = { key, requestId: newRequestId() };

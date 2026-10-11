@@ -50,12 +50,14 @@ export const TaxBracketsSchema = z
 /** The brackets the current spreadsheet implies: 15% up to 12,000 €, 35% up to 35,000 €, 45% above. To be confirmed with the accountant. */
 export const SPREADSHEET_BRACKETS: readonly TaxBracket[] = [
   { upToCents: 1_200_000, rateBps: 1500 },
+  { upToCents: 2_400_000, rateBps: 2500 },
   { upToCents: 3_500_000, rateBps: 3500 },
   { upToCents: null, rateBps: 4500 },
 ];
 
+/** As the 2026 spreadsheet does it: each apartment taxed on its own, on what the guest paid. */
 export function defaultTaxRules(year: number): TaxRules {
-  return { year, brackets: SPREADSHEET_BRACKETS, scope: "total", incomeBasis: "gross", confirmed: false };
+  return { year, brackets: SPREADSHEET_BRACKETS, scope: "per_apartment", incomeBasis: "gross", confirmed: false };
 }
 
 export interface TaxBracketLine {
