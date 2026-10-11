@@ -1,0 +1,45 @@
+# Change one user's role on the production database (e.g. make an account admin).
+# Trigger manually only — uses the `production` environment secret DATABASE_URL.
+
+name: Set user role
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: Email of the account
+        required: true
+        type: string
+      role:
+        description: New role
+        required: true
+        type: choice
+        options: [admin, operator, viewer]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: set-user-role
+  cancel-in-progress: false
+
+jobs:
+  set-role:
+    name: set user role
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SET_ROLE_EMAIL: ${{ inputs.email }}
+      SET_ROLE: ${{ inputs.role }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Generate Prisma client
+        run: pnpm --filter @stay-ops/db generate
+
+      - name: Set role
+        run: pnpm --filter @stay-ops/db run set-user-role
