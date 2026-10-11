@@ -7,6 +7,7 @@ import { useErrorText } from "@/api/errors";
 import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
+import { HosthubTokenCard } from "@/features/dev/HosthubScreen";
 import { DevModeCard } from "./DevModeCard";
 import { HosthubCard } from "./HosthubCard";
 import { LanguageCard } from "./LanguageCard";
@@ -37,6 +38,7 @@ export function SettingsScreen() {
           <LanguageCard locale={me.data.locale === "en" ? "en" : "el"} />
           <TextSizeCard textSize={toTextSize(me.data.textSize)} />
           <HosthubCard canRefresh={me.data.role !== "viewer"} />
+          {me.data.role === "admin" ? <HosthubTokenCard /> : null}
           <PasswordCard />
           {me.data.role === "admin" ? <DevModeCard enabled={me.data.devMode} /> : null}
         </>

@@ -382,7 +382,7 @@
       "subtitle": "Connection key, sync history, import errors and the webhook.",
       "never": "Never",
       "token": {
-        "title": "Connection key",
+        "title": "Hosthub key",
         "configured": "A key is stored (changed {when}).",
         "missing": "No key is stored.",
         "named": "Name: {name}",

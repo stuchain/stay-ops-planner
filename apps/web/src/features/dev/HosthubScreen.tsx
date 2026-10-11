@@ -34,7 +34,8 @@ function useWhen() {
       : null;
 }
 
-function TokenCard() {
+/** The Hosthub key: when it was saved, and a box to test and save a new one. Also on Settings for admins. */
+export function HosthubTokenCard() {
   const t = useTranslations("dev.hosthub");
   const errorText = useErrorText();
   const trpc = useTRPC();
@@ -432,7 +433,7 @@ export function HosthubScreen() {
   return (
     <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <TokenCard />
+      <HosthubTokenCard />
       <ActionsCard />
       <WebhookCard />
       <RunsCard />
