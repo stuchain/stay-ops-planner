@@ -14,7 +14,7 @@
  *   SCRATCH_DATABASE_URL   EMPTY scratch database or Neon branch to restore into. Required with --execute.
  *                          Never the same database as the source (the script refuses).
  *
- * Requires pg_dump / pg_restore / psql version 16 or newer on PATH (or run inside the postgres:16 image).
+ * Requires pg_dump / pg_restore / psql version 17 or newer on PATH (or run inside the postgres:17 image).
  *
  * Neon point-in-time restore: create a branch from a past moment in the Neon console
  * (Branches > Create branch > "Past data"), then run

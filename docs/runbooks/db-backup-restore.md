@@ -16,9 +16,9 @@
 ## Production daily backup (GitHub Actions, Neon)
 - Workflow: `.github/workflows/daily-backup.yml`, runs every day at `01:30 UTC` and can be started by hand (Actions > Daily database backup > Run workflow).
 - Secret: `DATABASE_URL` in the GitHub Environment `production` (the same one "Migrate production DB" uses). Use Neon's **direct, non-pooled** connection string (host without `-pooler`, with `sslmode=require`); pg_dump does not work reliably through the pooler. The workflow fails with `::error::Missing secret DATABASE_URL in the production environment` if it is not set, and never prints the value.
-- Output: custom-format dump `stay-ops-YYYY-MM-DD.dump` (UTC date), made with `pg_dump -Fc --no-owner --no-privileges` using the `postgres:16` docker image (matches Neon's Postgres 16). The job fails if the file is empty or `pg_restore --list` cannot read it.
+- Output: custom-format dump `stay-ops-YYYY-MM-DD.dump` (UTC date), made with `pg_dump -Fc --no-owner --no-privileges` using the `postgres:17` docker image (matches Neon's Postgres 17; pg_dump refuses a newer server). The job fails if the file is empty or `pg_restore --list` cannot read it.
 - Where: Actions > Daily database backup > the run > Artifacts (artifact `stay-ops-db-YYYY-MM-DD`, a zip; unzip to get the `.dump`). Artifacts are kept for 30 days. A red run means no backup was made that day; check it the same day.
-- Use a `pg_restore` of version 16 or newer for the commands below.
+- Use a `pg_restore` of version 17 or newer for the commands below.
 
 ### Restore a dump into a new Neon branch
 1. Download the artifact from the run and unzip it to get `stay-ops-YYYY-MM-DD.dump`.
