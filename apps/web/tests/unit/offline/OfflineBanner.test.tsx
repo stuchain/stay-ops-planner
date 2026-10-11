@@ -56,7 +56,9 @@ describe("useOnline", () => {
     const client = makeQueryClient();
     const { result } = renderHook(() => useOnline());
     await act(async () => {
-      await client.fetchQuery({ queryKey: ["a"], queryFn: () => Promise.reject(new Error("boom")), retry: false }).catch(() => {});
+      await client
+        .fetchQuery({ queryKey: ["a"], queryFn: () => Promise.reject(new Error("boom")), retry: false })
+        .catch(() => {});
     });
     expect(result.current).toBe(true);
     await act(async () => {

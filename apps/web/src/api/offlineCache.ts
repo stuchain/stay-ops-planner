@@ -104,3 +104,11 @@ export function clearOfflineCache(queryClient?: QueryClient) {
   queryClient?.clear();
   removeKeys();
 }
+
+/**
+ * Kept answers are only a stand-in until the server answers: after a reload they count as old, so every screen asks
+ * the server again (a change made just before the reload may not have been written to storage yet).
+ */
+export function refreshRestored(queryClient: QueryClient): Promise<void> {
+  return queryClient.invalidateQueries({ predicate: (query) => shouldPersistQuery(query) });
+}

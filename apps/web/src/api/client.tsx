@@ -13,6 +13,7 @@ import {
   dropOtherUsersCache,
   OFFLINE_BUSTER,
   OFFLINE_MAX_AGE_MS,
+  refreshRestored,
   shouldPersistQuery,
 } from "./offlineCache";
 import { makeQueryClient } from "./queryClient";
@@ -88,6 +89,7 @@ export function ApiProvider({ children, userId }: { children: ReactNode; userId?
         buster: OFFLINE_BUSTER,
         dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
       }}
+      onSuccess={() => refreshRestored(queryClient)}
     >
       {inner}
     </PersistQueryClientProvider>

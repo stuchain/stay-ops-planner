@@ -7,6 +7,7 @@ import {
   dropOtherUsersCache,
   offlineKey,
   procedureOf,
+  refreshRestored,
   shouldPersistQuery,
 } from "@/api/offlineCache";
 
@@ -29,7 +30,12 @@ describe("which answers are kept for offline reading", () => {
   });
 
   it("keeps Today, Calendar and the small queries they need", () => {
-    for (const path of [["today", "summary"], ["calendar", "range"], ["sync", "status"], ["me", "get"]]) {
+    for (const path of [
+      ["today", "summary"],
+      ["calendar", "range"],
+      ["sync", "status"],
+      ["me", "get"],
+    ]) {
       expect(shouldPersistQuery(query(path))).toBe(true);
     }
   });
@@ -54,6 +60,15 @@ describe("which answers are kept for offline reading", () => {
 });
 
 describe("the kept copy in this browser", () => {
+  it("counts restored answers as old after a reload, so the screens ask the server again", async () => {
+    const client = new QueryClient();
+    client.setQueryData([["calendar", "range"], { type: "query" }], { rooms: [] });
+    client.setQueryData([["money", "summary"], { type: "query" }], { total: 1 });
+    await refreshRestored(client);
+    expect(client.getQueryState([["calendar", "range"], { type: "query" }])?.isInvalidated).toBe(true);
+    expect(client.getQueryState([["money", "summary"], { type: "query" }])?.isInvalidated).toBe(false);
+  });
+
   it("is stored under a key of the user", async () => {
     const persister = createOfflinePersister("user-1");
     persister.persistClient({ timestamp: 1, buster: "x", clientState: { mutations: [], queries: [] } });
