@@ -82,6 +82,11 @@ export async function saveHosthubToken(input: {
   if (!token) throw new DomainError("VALIDATION");
   await checkHosthubToken(token, input.source);
   const status = await setHosthubToken({ token, name: input.name });
+  // Hosthub just accepted this key, so a "key refused / unreadable" problem from earlier no longer holds.
+  await prisma.syncState.updateMany({
+    where: { id: 1, lastError: { startsWith: "HOSTHUB_AUTH_FAILED" } },
+    data: { lastError: null },
+  });
   await writeAuditSnapshot(prisma, {
     actorUserId: input.actorUserId,
     entityType: "integration_secret",

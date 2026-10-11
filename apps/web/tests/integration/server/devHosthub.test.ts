@@ -139,6 +139,31 @@ describe("saving the Hosthub token (E2-8)", () => {
   });
 });
 
+describe("a stored key that cannot be read", () => {
+  it("stops sync with the renew-key problem instead of crashing, and Settings asks for the key again", async () => {
+    // Saved under another encryption key: GCM refuses to decrypt it.
+    await prisma.integrationSecret.create({
+      data: {
+        provider: "hosthub",
+        secretKey: "apiToken",
+        ciphertext: Buffer.from("not-the-key").toString("base64"),
+        iv: Buffer.alloc(12, 1).toString("base64"),
+        tag: Buffer.alloc(16, 2).toString("base64"),
+      },
+    });
+    const before = process.env.HOSTHUB_API_TOKEN;
+    delete process.env.HOSTHUB_API_TOKEN;
+    try {
+      expect(await resolveHosthubApiToken()).toBeNull();
+      const state = await prisma.syncState.findUniqueOrThrow({ where: { id: 1 } });
+      expect(state.lastError).toMatch(/^HOSTHUB_AUTH_FAILED/);
+      expect((await getHosthubOverview()).token.configured).toBe(false);
+    } finally {
+      if (before !== undefined) process.env.HOSTHUB_API_TOKEN = before;
+    }
+  });
+});
+
 describe("reset cursor", () => {
   it("clears sync_state.cursor, audits it and leaves the other fields", async () => {
     await prisma.syncState.create({ data: { id: 1, cursor: "1700000000", lastSuccessAt: new Date() } });
