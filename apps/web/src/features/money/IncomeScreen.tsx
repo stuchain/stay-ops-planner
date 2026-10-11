@@ -18,6 +18,7 @@ import { Skeleton } from "@/ui/Skeleton";
 import { incomeView, type IncomeView } from "./incomeView";
 import { LedgerTable } from "./LedgerTable";
 import { apartmentColor, MonthlyChart } from "./MonthlyChart";
+import { OccupancyCard } from "./OccupancyCard";
 import { EstimatePill, TaxCard } from "./TaxCard";
 
 export type IncomeScreenProps = {
@@ -198,6 +199,8 @@ function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate 
           </p>
         ) : null}
       </Card>
+
+      <OccupancyCard year={ledger.year} />
 
       <Card
         title={

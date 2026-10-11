@@ -6,4 +6,5 @@ export * from "./money.js";
 export * from "./tax.js";
 export * from "./income.js";
 export * from "./ledger.js";
+export * from "./occupancy.js";
 export * from "./errors.js";

@@ -1,6 +1,7 @@
 import { TaxBracketsSchema } from "@stay-ops/domain";
 import { z } from "zod";
 import { buildLedger } from "@/server/useCases/buildLedger";
+import { buildOccupancy } from "@/server/useCases/occupancy";
 import { saveTaxRules, taxRulesForEditing } from "@/server/useCases/taxRules";
 import {
   addManualLedgerRow,
@@ -9,7 +10,7 @@ import {
   LedgerPatchSchema,
   updateLedgerRow,
 } from "@/server/useCases/updateLedger";
-import { adminProcedure, createTRPCRouter, operatorProcedure } from "../trpc";
+import { adminProcedure, createTRPCRouter, operatorProcedure, userProcedure } from "../trpc";
 
 const year = z.number().int().min(2000).max(2100);
 const month = z.number().int().min(1).max(12);
@@ -19,6 +20,9 @@ const label = z.string().trim().min(1).max(120);
 export const moneyRouter = createTRPCRouter({
   /** The year's ledger, totals and tax estimate. */
   year: operatorProcedure.input(z.object({ year })).query(({ input }) => buildLedger(input.year)),
+
+  /** Occupancy and price per night by apartment and month, for the year and the one before. */
+  occupancy: userProcedure.input(z.object({ year })).query(({ input }) => buildOccupancy(input.year)),
 
   /** Correct cells on one row (a booking's, or a manual row's). */
   updateRow: operatorProcedure

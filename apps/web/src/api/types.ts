@@ -20,6 +20,7 @@ export type BookingDetails = RouterOutputs["booking"]["details"];
 export type ArrivalCardData = RouterOutputs["booking"]["arrivalCards"][number];
 export type MessageTemplatesData = RouterOutputs["booking"]["messageTemplates"];
 export type PreviousStays = RouterOutputs["booking"]["previousStays"];
+export type OccupancyData = RouterOutputs["money"]["occupancy"];
 export type LedgerYearData = RouterOutputs["money"]["year"];
 export type LedgerRowData = LedgerYearData["rows"][number];
 export type LedgerApartmentData = LedgerYearData["apartments"][number];

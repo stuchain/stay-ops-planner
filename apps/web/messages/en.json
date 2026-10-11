@@ -306,6 +306,18 @@
       "saved": "The brackets for {year} were saved.",
       "fixErrors": "Some boxes need correcting before saving.",
       "actions": "Actions"
+    },
+    "occupancy": {
+      "title": "Occupancy and prices",
+      "note": "{year}, including future bookings. In each cell: the % of nights with guests, and below it the average price per night.",
+      "colApartment": "Apartment",
+      "percent": "{value}%",
+      "none": "—",
+      "points": "{points}",
+      "up": "Occupancy up {points} percentage points on last year",
+      "down": "Occupancy down {points} percentage points on last year",
+      "legend": "▲ and ▼: how many percentage points occupancy is above or below the same month last year. Only confirmed bookings placed in an apartment count.",
+      "empty": "There are no apartments."
     }
   },
   "dev": {
