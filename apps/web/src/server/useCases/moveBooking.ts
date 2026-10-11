@@ -68,7 +68,10 @@ async function moveInTransaction(
   if (booking.version !== input.expectedVersion) throw new DomainError("BOOKING_CHANGED");
   if (!PLACEABLE.includes(booking.status)) throw new DomainError("NOT_CONFIRMED");
 
-  if (checkout <= today) throw new DomainError("STAY_ENDED");
+  // A finished stay keeps its apartment. One that never had one can still be given the apartment the guest
+  // stayed in, so the past calendar and the income per apartment are complete.
+  const ended = checkout <= today;
+  if (ended && (current || input.roomId === null)) throw new DomainError("STAY_ENDED");
   if (current && checkin <= today && !input.confirmStarted) {
     throw new DomainError("STAY_STARTED", { guestName: booking.guestName ?? "", roomName: roomName(current.room) });
   }
@@ -119,11 +122,13 @@ async function moveInTransaction(
         },
       });
     }
-    await ensureTurnoverCleaningTask(tx, {
-      bookingId: booking.id,
-      roomId: room.id,
-      checkoutDate: booking.checkoutDate,
-    });
+    if (!ended) {
+      await ensureTurnoverCleaningTask(tx, {
+        bookingId: booking.id,
+        roomId: room.id,
+        checkoutDate: booking.checkoutDate,
+      });
+    }
 
     const party = partyOf(booking);
     if (party !== null && room.maxGuests !== null && partySize(party) > room.maxGuests) warnings.push("OVER_CAPACITY");

@@ -228,10 +228,20 @@ export function BookingPanel({
 
           {booking.status === "pending" ? (
             <p className="bg-surface-muted rounded-card text-text-muted p-4">{t("booking.pendingNote")}</p>
-          ) : booking.checkout <= today ? (
+          ) : booking.checkout <= today && booking.assignment ? (
             <p className="bg-surface-muted rounded-card text-text-muted p-4">
               {t("booking.endedNote", { date: formatDay(booking.checkout, locale) })}
             </p>
+          ) : booking.checkout <= today ? (
+            <section aria-labelledby="move-title" className="flex flex-col gap-3">
+              <h3 id="move-title" className="text-base font-semibold">
+                {t("booking.whereStayed")}
+              </h3>
+              <p className="text-sm text-text-muted">
+                {t("booking.whereStayedNote", { date: formatDay(booking.checkout, locale) })}
+              </p>
+              <MoveButtons booking={booking} rooms={rooms} moving={moving} onMove={onMove} />
+            </section>
           ) : (
             <section aria-labelledby="move-title" className="flex flex-col gap-3">
               <h3 id="move-title" className="text-base font-semibold">

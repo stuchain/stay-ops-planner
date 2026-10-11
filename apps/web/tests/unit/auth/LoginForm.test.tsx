@@ -81,7 +81,7 @@ describe("LoginForm", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
     render(<LoginForm />);
     await submit();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Δεν υπάρχει σύνδεση στο internet");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Δεν υπάρχει σύνδεση στο ίντερνετ");
   });
 
   it("says there is no internet at once when the browser is offline, without trying", async () => {
@@ -89,10 +89,10 @@ describe("LoginForm", () => {
     vi.stubGlobal("fetch", fetchMock);
     setOnline(false);
     render(<LoginForm />);
-    expect(await screen.findByTestId("login-offline")).toHaveTextContent("Δεν υπάρχει σύνδεση στο internet");
+    expect(await screen.findByTestId("login-offline")).toHaveTextContent("Δεν υπάρχει σύνδεση στο ίντερνετ");
     await submit();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Δεν υπάρχει σύνδεση στο internet");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Δεν υπάρχει σύνδεση στο ίντερνετ");
   });
 });
 

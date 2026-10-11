@@ -84,7 +84,7 @@ describe("TodayScreen", () => {
     expect(screen.getByText("Καμία άφιξη αύριο.")).toBeInTheDocument();
     expect(screen.getByText("Καμία αναχώρηση αύριο.")).toBeInTheDocument();
     expect(screen.getByText("Όλες οι κρατήσεις έχουν διαμέρισμα.")).toBeInTheDocument();
-    expect(await screen.findByText("Τελευταία ενημέρωση από Hosthub: πριν από 5 λεπτά")).toBeInTheDocument();
+    expect(await screen.findByText("Τελευταία ενημέρωση από το Hosthub: πριν από 5 λεπτά")).toBeInTheDocument();
     expect(latinWords(spokenText(container))).toEqual([]);
   });
 
@@ -109,7 +109,7 @@ describe("TodayScreen", () => {
     expect(maria).toHaveTextContent("Onar");
     expect(arrivals.getByRole("link", { name: /John Smith/ })).toHaveTextContent("1 άτομο · 1 νύχτα");
     expect(arrivals.getByRole("link", { name: /John Smith/ })).toHaveTextContent("Χρειάζεται διαμέρισμα");
-    expect(arrivals.getByRole("link", { name: /Pam Pending/ })).toHaveTextContent("Αναμένει επιβεβαίωση");
+    expect(arrivals.getByRole("link", { name: /Pam Pending/ })).toHaveTextContent("Περιμένει επιβεβαίωση");
 
     const departures = within(screen.getByRole("region", { name: "Αναχωρήσεις σήμερα" }));
     expect(departures.getByRole("link", { name: /Nikos Leaving/ })).toHaveTextContent("Έμειναν 7 νύχτες");

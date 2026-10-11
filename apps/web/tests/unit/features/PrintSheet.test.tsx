@@ -181,7 +181,7 @@ describe("PrintSheetView", () => {
     expect(within(screen.getByRole("row", { name: /Cosmos/ })).getAllByText("Κλειστό")).toHaveLength(2);
     const unplaced = screen.getByRole("region", { name: "Χωρίς διαμέρισμα" });
     expect(within(unplaced).getByText("Waiting Guest")).toBeTruthy();
-    expect(within(unplaced).getByText(/Εκκρεμεί/)).toBeTruthy();
+    expect(within(unplaced).getByText(/Περιμένει επιβεβαίωση/)).toBeTruthy();
   });
 
   it("draws the month sheet with a section per apartment", () => {

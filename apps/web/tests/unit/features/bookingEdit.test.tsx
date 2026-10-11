@@ -67,7 +67,7 @@ describe("BookingEdit", () => {
     expect(screen.getByLabelText("Όνομα επισκέπτη")).toBeTruthy();
     expect(screen.getByRole("spinbutton", { name: "Άτομα" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Αποθήκευση" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Ακύρωση" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Άκυρο" })).toBeTruthy();
     expect(latinWords(container.textContent ?? "")).toEqual([]);
   });
 
@@ -96,7 +96,7 @@ describe("BookingEdit", () => {
   it("shows «Από Hosthub» under a changed field and restores it with Επαναφορά", async () => {
     const user = userEvent.setup();
     renderEdit(details({ local: { guestName: { hosthub: "Maria P." }, partySize: null, notes: null } }));
-    expect(screen.getByText("Από Hosthub: Maria P.")).toBeTruthy();
+    expect(screen.getByText("Από το Hosthub: Maria P.")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Επαναφορά: Όνομα επισκέπτη" }));
     await waitFor(() => expect(calls.reset).toHaveBeenCalled());
     expect(calls.reset.mock.calls[0]![0]).toEqual({ bookingId: "b1", field: "guestName", expectedVersion: 3 });
@@ -110,7 +110,7 @@ describe("BookingEdit", () => {
     expect(onDirty).toHaveBeenLastCalledWith(false);
     await user.type(screen.getByLabelText("Σημειώσεις"), " ξανά");
     expect(onDirty).toHaveBeenLastCalledWith(true);
-    await user.click(screen.getByRole("button", { name: "Ακύρωση" }));
+    await user.click(screen.getByRole("button", { name: "Άκυρο" }));
     expect(onDirty).toHaveBeenLastCalledWith(false);
   });
 });
@@ -176,7 +176,7 @@ describe("unsaved changes guard", () => {
     expect(screen.getByText("Έχετε αλλαγές που δεν αποθηκεύτηκαν")).toBeTruthy();
     expect(document.body.dataset.went).toBeUndefined();
 
-    await user.click(screen.getByRole("button", { name: "Μένω εδώ" }));
+    await user.click(screen.getByRole("button", { name: "Να μείνω εδώ" }));
     expect(document.body.dataset.went).toBeUndefined();
     expect(screen.queryByText("Έχετε αλλαγές που δεν αποθηκεύτηκαν")).toBeNull();
 

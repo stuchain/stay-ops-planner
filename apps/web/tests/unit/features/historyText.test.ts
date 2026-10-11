@@ -33,7 +33,7 @@ describe("history sentences", () => {
 
   it("describes a move in a sentence", () => {
     const text = historySentence(entry({ kind: "moved", from: "Onar", to: "Cosmos" }), translator(el), "el", NOW);
-    expect(text).toBe("Μετακινήθηκε από Onar σε Cosmos, Τρίτη 10:42");
+    expect(text).toBe("Μετακινήθηκε από το Onar στο Cosmos, Τρίτη 10:42");
   });
 
   it("describes edits, resets, placing and taking out", () => {

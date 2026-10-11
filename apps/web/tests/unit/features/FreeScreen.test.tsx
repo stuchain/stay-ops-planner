@@ -99,7 +99,7 @@ describe("FreeScreen", () => {
     const busy = within(screen.getByRole("region", { name: "Κλεισμένα" }));
     expect(busy.getByText("Κλεισμένο: Nikos P")).toBeInTheDocument();
     expect(busy.getByText("Κλειστό εκείνες τις μέρες")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Δες στο ημερολόγιο" })).toHaveAttribute("href", "/app/calendar");
+    expect(screen.getByRole("link", { name: "Δείτε στο ημερολόγιο" })).toHaveAttribute("href", "/app/calendar");
   });
 
   it("keeps nights and departure in sync and re-asks when guests change", async () => {

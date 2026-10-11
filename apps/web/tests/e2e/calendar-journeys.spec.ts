@@ -21,7 +21,7 @@ const VIEWPORTS = [
   { width: 1920, height: 1080 },
 ] as const;
 
-const ROOM_TAKEN_BY_CAROL = `Το διαμέρισμα είναι πιασμένο από ${GUEST.late} αυτές τις ημέρες.`;
+const ROOM_TAKEN_BY_CAROL = `Το διαμέρισμα είναι πιασμένο αυτές τις μέρες (${GUEST.late}).`;
 
 async function login(page: Page): Promise<void> {
   await page.goto("/login");
@@ -309,7 +309,7 @@ for (const viewport of VIEWPORTS) {
       await page.getByRole("button", { name: "Σήμερα" }).click();
       await expect(bar(room(page, ROOM.alpha), GUEST.trayClick)).toBeVisible();
       await openPanel(page, bar(room(page, ROOM.alpha), GUEST.trayClick));
-      await panel(page).getByRole("button", { name: "Βγάλε την από το διαμέρισμα" }).click();
+      await panel(page).getByRole("button", { name: "Βγάλτε την από το διαμέρισμα" }).click();
       await expectInTray(page, GUEST.trayClick);
 
       await reload(page);

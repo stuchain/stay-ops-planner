@@ -53,7 +53,7 @@ for (const viewport of [{ width: 1366, height: 768 }] as const) {
       // The cards still add up: the "needs an apartment" count includes the fixtures' tray bookings.
       await expect(page.getByRole("region", { name: "Χρειάζονται διαμέρισμα" })).toContainText(/κρατήσ/);
       await expect(
-        page.getByRole("main").getByText(/Τελευταία ενημέρωση από Hosthub|Δεν έχει γίνει ακόμα ενημέρωση/),
+        page.getByRole("main").getByText(/Τελευταία ενημέρωση από το Hosthub|Δεν έχει γίνει ακόμα ενημέρωση/),
       ).toBeVisible();
 
       // Clicking the guest opens the calendar with their booking selected.

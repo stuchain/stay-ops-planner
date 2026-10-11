@@ -109,6 +109,8 @@
     "overbooked": "More bookings than apartments",
     "closed": "Closed",
     "closedReason": "Closed: {reason}",
+    "pastUnplaced": "No apartment",
+    "pastUnplacedHint": "Past bookings",
     "tray": {
       "title": "Need an apartment",
       "dropHere": "Drop the booking here to take it out of its apartment.",
@@ -159,6 +161,8 @@
     "recommendedNoGap": "Recommended: leaves no empty night",
     "pendingNote": "This booking is not confirmed yet, so it cannot go into an apartment.",
     "endedNote": "The stay ended {date}, so it cannot be moved.",
+    "whereStayed": "Which apartment did they stay in?",
+    "whereStayedNote": "This stay ended {date} without an apartment in the plan. Choose where the guest stayed so the calendar and income show it correctly.",
     "confirmStarted": "{guest} has been staying in {room} since {date}.",
     "confirmRemove": "Take them out of the apartment?",
     "confirmMove": "Move them to {room} for the remaining nights?",

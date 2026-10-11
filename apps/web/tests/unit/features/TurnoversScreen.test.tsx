@@ -157,7 +157,7 @@ describe("TurnoversScreen", () => {
     show();
     const toggle = await screen.findByRole("button", { name: "Εμφάνιση ακυρωμένων (2)" });
     expect(listInputs[0]).toEqual({ page: 0, showCancelled: false });
-    expect(screen.getAllByRole("button", { name: "Προηγούμενες" })[0]).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "Προηγούμενες μέρες" })[0]).toBeDisabled();
     await userEvent.click(toggle);
     expect(await screen.findByRole("button", { name: "Απόκρυψη ακυρωμένων" })).toBeInTheDocument();
     await userEvent.click(screen.getAllByRole("button", { name: "Επόμενες μέρες" })[0]!);

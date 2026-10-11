@@ -6,7 +6,7 @@ export type Zoom = keyof typeof DAY_WIDTH;
 
 /** Data loads in blocks of this many months; the blocks near the visible part are fetched. */
 export const BLOCK_MONTHS = 3;
-const MONTHS_BEFORE = 6;
+const MONTHS_BEFORE = 24;
 const MONTHS_AFTER = 18;
 
 export function monthStart(date: IsoDate): IsoDate {
@@ -21,7 +21,7 @@ export function addMonths(date: IsoDate, months: number): IsoDate {
   return isoDate(`${String(year).padStart(4, "0")}-${String(month + 1).padStart(2, "0")}-01`);
 }
 
-/** The scrollable span: 6 months back to 18 months ahead of this month. */
+/** The scrollable span: 2 years back (past stays stay visible) to 18 months ahead of this month. */
 export type Span = { origin: IsoDate; end: IsoDate; days: number; blocks: { from: IsoDate; to: IsoDate }[] };
 
 export function spanAround(today: IsoDate): Span {

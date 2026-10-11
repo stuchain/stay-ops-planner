@@ -36,8 +36,8 @@ describe("HelpButton", () => {
         <HelpButton />
       </Wrap>,
     );
-    await u.click(screen.getByRole("button", { name: "Στείλε στον Στέλιο" }));
-    expect(screen.getByText("Τελευταίο σφάλμα: Η κράτηση άλλαξε στο μεταξύ.")).toBeInTheDocument();
+    await u.click(screen.getByRole("button", { name: "Στείλτε στον Στέλιο" }));
+    expect(screen.getByText("Τελευταίο πρόβλημα: Η κράτηση άλλαξε στο μεταξύ.")).toBeInTheDocument();
     await u.type(screen.getByLabelText("Τι συμβαίνει; (προαιρετικό)"), "Βοήθεια");
     await u.click(screen.getByRole("button", { name: "Αποστολή" }));
     await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ tone: "success" })));
@@ -60,7 +60,7 @@ describe("HelpButton", () => {
         <HelpButton />
       </Wrap>,
     );
-    await u.click(screen.getByRole("button", { name: "Στείλε στον Στέλιο" }));
+    await u.click(screen.getByRole("button", { name: "Στείλτε στον Στέλιο" }));
     await u.click(screen.getByRole("button", { name: "Αποστολή" }));
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith({ message: "Δεν στάλθηκε. Πάρτε τηλέφωνο τον Στέλιο.", tone: "danger" }),

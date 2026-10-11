@@ -190,10 +190,17 @@ describe("calendar range and move command", () => {
     });
     expect(moved.booking.assignment?.roomId).toBe(cosmos.id);
 
-    const past = await booking("Past", "2030-06-01", "2030-06-10");
-    expect((await errorCode(move({ bookingId: past.id, roomId: onar.id, expectedVersion: 0 }))).code).toBe(
-      "STAY_ENDED",
-    );
+    // A finished stay without an apartment can be given one (no cleaning is planned); after that it stays put.
+    const past = await booking("Past", "2030-06-01", "2030-06-08");
+    const recorded = await move({ bookingId: past.id, roomId: cosmos.id, expectedVersion: 0 });
+    expect(recorded.booking.assignment?.roomId).toBe(cosmos.id);
+    expect(await prisma.cleaningTask.count({ where: { bookingId: past.id } })).toBe(0);
+    expect(
+      (await errorCode(move({ bookingId: past.id, roomId: onar.id, expectedVersion: recorded.booking.version }))).code,
+    ).toBe("STAY_ENDED");
+    expect(
+      (await errorCode(move({ bookingId: past.id, roomId: null, expectedVersion: recorded.booking.version }))).code,
+    ).toBe("STAY_ENDED");
   });
 
   it("allows a party bigger than the room with a warning, and clears needs_reassignment", async () => {

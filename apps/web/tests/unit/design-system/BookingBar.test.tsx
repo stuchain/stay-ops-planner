@@ -71,8 +71,8 @@ describe("BookingBar", () => {
     const bar = screen.getByRole("button");
     expect(bar).toHaveAttribute("data-draggable", "false");
     expect(bar).toHaveAttribute("data-state", "pending");
-    expect(bar).toHaveAccessibleName(/Εκκρεμεί/);
-    expect(screen.getByText(/4 νύχτες · Εκκρεμεί/)).toBeInTheDocument();
+    expect(bar).toHaveAccessibleName(/Περιμένει επιβεβαίωση/);
+    expect(screen.getByText(/4 νύχτες · Περιμένει επιβεβαίωση/)).toBeInTheDocument();
     await expectNoViolations(container);
   });
 

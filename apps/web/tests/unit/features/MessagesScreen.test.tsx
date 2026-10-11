@@ -76,7 +76,7 @@ describe("MessagesScreen", () => {
     await user.clear(text);
     await user.type(text, "Γεια  τώρα");
     text.setSelectionRange(5, 5);
-    await user.click(screen.getByRole("button", { name: "Βάλε το Αριθμός νυχτών" }));
+    await user.click(screen.getByRole("button", { name: "Προσθήκη: Αριθμός νυχτών" }));
     expect(text.value).toBe("Γεια {nights} τώρα");
     expect(screen.getByTestId("preview")).toHaveTextContent("Γεια 4 νύχτες τώρα");
     expect(screen.getByText("Έχετε αλλαγές που δεν έχουν αποθηκευτεί ακόμα.")).toBeInTheDocument();

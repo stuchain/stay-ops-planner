@@ -204,13 +204,82 @@ function RoomTrack({
   );
 }
 
+/** Spreads stays over as few lanes as possible so overlapping ones sit one under the other. */
+export function laneOf(bookings: CalendarBooking[]): Map<string, number> {
+  const ends: IsoDate[] = [];
+  const out = new Map<string, number>();
+  const sorted = [...bookings].sort((a, b) => (a.checkin < b.checkin ? -1 : a.checkin > b.checkin ? 1 : 0));
+  for (const b of sorted) {
+    let lane = ends.findIndex((end) => end <= b.checkin);
+    if (lane === -1) lane = ends.length;
+    ends[lane] = b.checkout;
+    out.set(b.id, lane);
+  }
+  return out;
+}
+
+const LANE_HEIGHT = 64;
+
+/** "Χωρίς διαμέρισμα": finished stays that were never put in an apartment, under the apartment rows. */
+function PastUnplacedRow({ props, rowBookings }: { props: CalendarGridProps; rowBookings: CalendarBooking[] }) {
+  const t = useTranslations("calendar");
+  const { span, dayWidth, firstDay, lastDay, selectedId, onOpen } = props;
+  const lanes = laneOf(rowBookings);
+  const laneCount = Math.max(1, ...[...lanes.values()].map((l) => l + 1));
+  const visible = (start: IsoDate, end: IsoDate) => dayIndex(span, end) >= firstDay && dayIndex(span, start) <= lastDay;
+  return (
+    <div
+      role="group"
+      aria-label={t("pastUnplaced")}
+      className="border-border bg-surface-muted relative flex border-b"
+      style={{ height: laneCount * LANE_HEIGHT + 24 }}
+      data-testid="past-unplaced-row"
+    >
+      <div
+        className="border-border bg-surface-muted sticky left-0 z-10 flex w-52 flex-none flex-col justify-center gap-0.5 border-r px-4"
+        style={{ width: LABEL_WIDTH }}
+      >
+        <span className="text-base font-semibold">{t("pastUnplaced")}</span>
+        <span className="text-text-muted text-xs">{t("pastUnplacedHint")}</span>
+      </div>
+      <div className="relative min-w-0 flex-1">
+        <div className="relative h-full" style={{ width: span.days * dayWidth }}>
+          {rowBookings
+            .filter((b) => visible(b.checkin, b.checkout))
+            .map((b) => (
+              <DraggableBar
+                key={b.id}
+                booking={b}
+                color={null}
+                selected={b.id === selectedId}
+                needsRoom
+                onOpen={onOpen}
+                className="absolute"
+                style={{
+                  top: 12 + (lanes.get(b.id) ?? 0) * LANE_HEIGHT,
+                  left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2,
+                  width: Math.max(
+                    dayWidth - 4,
+                    (dayIndex(span, b.checkout) - dayIndex(span, b.checkin)) * dayWidth - 4,
+                  ),
+                }}
+              />
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** The day header and one row per apartment; only the visible days are drawn. */
 export function CalendarGrid(props: CalendarGridProps) {
   const byRoom = new Map<string, CalendarBooking[]>();
   const proposedByRoom = new Map<string, CalendarBooking[]>();
+  const pastUnplaced: CalendarBooking[] = [];
   for (const b of props.bookings) {
     const proposedRoom = b.assignment ? undefined : props.proposed?.get(b.id);
     if (proposedRoom) proposedByRoom.set(proposedRoom, [...(proposedByRoom.get(proposedRoom) ?? []), b]);
+    else if (!b.assignment && b.checkout <= props.today && b.status !== "pending") pastUnplaced.push(b);
     if (!b.assignment) continue;
     byRoom.set(b.assignment.roomId, [...(byRoom.get(b.assignment.roomId) ?? []), b]);
   }
@@ -227,6 +296,7 @@ export function CalendarGrid(props: CalendarGridProps) {
           rowProposed={proposedByRoom.get(room.id) ?? []}
         />
       ))}
+      {pastUnplaced.length > 0 ? <PastUnplacedRow props={props} rowBookings={pastUnplaced} /> : null}
     </div>
   );
 }

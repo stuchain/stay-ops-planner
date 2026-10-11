@@ -134,7 +134,7 @@ describe("HistoryScreen", () => {
         entityId: "hash",
       }),
     ]);
-    expect(await screen.findByText(/Μετακινήθηκε από Onar σε Cosmos/)).toBeInTheDocument();
+    expect(await screen.findByText(/Μετακινήθηκε από το Onar στο Cosmos/)).toBeInTheDocument();
     expect(screen.getByText("Αποτυχημένη προσπάθεια σύνδεσης (λάθος κωδικός)")).toBeInTheDocument();
     expect(screen.getByText("Το σύστημα")).toBeInTheDocument();
     expect(screen.getByText("2 αλλαγές", { exact: false })).toBeInTheDocument();
@@ -301,7 +301,7 @@ describe("SystemScreen", () => {
 
     await u.click(await screen.findByRole("checkbox", { name: "Αποστολή κάθε πρωί" }));
     await waitFor(() => expect(calls["system.setReminder"]).toEqual([{ enabled: false }]));
-    await u.click(screen.getByRole("button", { name: "Στείλε το τώρα για δοκιμή" }));
+    await u.click(screen.getByRole("button", { name: "Δοκιμαστική αποστολή τώρα" }));
     await waitFor(() => expect(calls["system.testReminder"]).toHaveLength(1));
   });
 

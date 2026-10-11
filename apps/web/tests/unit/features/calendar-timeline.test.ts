@@ -5,16 +5,18 @@ import { addMonths, blocksToLoad, dateAt, dayIndex, monthsBetween, spanAround } 
 import { createTranslator } from "next-intl";
 import { recommendationText } from "@/features/calendar/recommendation";
 import { agoParts } from "@/features/shell/SyncIndicator";
+import type { CalendarBooking } from "@/api/types";
+import { laneOf } from "@/features/calendar/CalendarGrid";
 import el from "../../../messages/el.json";
 
 describe("calendar timeline", () => {
   const span = spanAround(isoDate("2026-10-10"));
 
-  it("spans 6 months back to 18 ahead in 3-month blocks", () => {
-    expect(span.origin).toBe("2026-04-01");
+  it("spans 2 years back to 18 months ahead in 3-month blocks", () => {
+    expect(span.origin).toBe("2024-10-01");
     expect(span.end).toBe("2028-04-01");
-    expect(span.blocks).toHaveLength(8);
-    expect(span.blocks[2]).toEqual({ from: "2026-10-01", to: "2027-01-01" });
+    expect(span.blocks).toHaveLength(14);
+    expect(span.blocks[8]).toEqual({ from: "2026-10-01", to: "2027-01-01" });
   });
 
   it("maps dates to columns and back", () => {
@@ -26,7 +28,7 @@ describe("calendar timeline", () => {
 
   it("loads the blocks on screen and their neighbours", () => {
     const today = dayIndex(span, isoDate("2026-10-10"));
-    expect(blocksToLoad(span, today, today + 20)).toEqual([1, 2]);
+    expect(blocksToLoad(span, today, today + 20)).toEqual([7, 8]);
     expect(blocksToLoad(span, 0, 20)).toEqual([0]);
   });
 
@@ -61,5 +63,19 @@ describe("calendar text", () => {
     expect(agoText("2026-10-10T11:59:50Z", now)).toBe("μόλις τώρα");
     expect(agoText("2026-10-10T09:00:00Z", now)).toBe("πριν από 3 ώρες");
     expect(agoText("2026-10-08T12:00:00Z", now)).toBe("πριν από 2 μέρες");
+  });
+});
+
+describe("past stays without an apartment", () => {
+  const stay = (id: string, checkin: string, checkout: string) =>
+    ({ id, checkin: isoDate(checkin), checkout: isoDate(checkout) }) as CalendarBooking;
+
+  it("puts overlapping stays on separate lanes and reuses a lane once it is free", () => {
+    const lanes = laneOf([
+      stay("a", "2026-05-01", "2026-05-05"),
+      stay("b", "2026-05-03", "2026-05-08"),
+      stay("c", "2026-05-05", "2026-05-07"),
+    ]);
+    expect(Object.fromEntries(lanes)).toEqual({ a: 0, b: 1, c: 0 });
   });
 });

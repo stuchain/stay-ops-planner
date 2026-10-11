@@ -107,7 +107,7 @@ describe("client error text", () => {
     const tEl = createTranslator({ locale: "el", messages: el, namespace: "errors" });
     const tEn = createTranslator({ locale: "en", messages: en, namespace: "errors" });
     expect(translateError(err, (code, params) => tEl(code, params))).toBe(
-      "Το διαμέρισμα είναι πιασμένο από Maria αυτές τις ημέρες.",
+      "Το διαμέρισμα είναι πιασμένο αυτές τις μέρες (Maria).",
     );
     expect(translateError(err, (code, params) => tEn(code, params))).toBe(
       "The apartment is taken by Maria on these days.",
