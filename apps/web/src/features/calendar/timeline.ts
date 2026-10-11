@@ -68,3 +68,55 @@ export function monthsBetween(
   }
   return out;
 }
+
+/** Drawn days move in steps of this many days, so scrolling redraws the grid only now and then. */
+export const DRAW_STEP_DAYS = 14;
+/** Days drawn beyond each edge of the screen, so a quick scroll never shows an empty edge. */
+export const DRAW_OVERSCAN_DAYS = 42;
+
+/**
+ * The day columns to draw for a scroll position: what is on screen, rounded out to whole steps, plus the overscan.
+ * The answer only changes every `DRAW_STEP_DAYS`, which keeps scrolling smooth.
+ */
+export function drawnDays(
+  scrollLeft: number,
+  viewWidth: number,
+  dayWidth: number,
+  labelWidth: number,
+): { firstDay: number; lastDay: number } {
+  const firstVisible = Math.floor(scrollLeft / dayWidth);
+  const lastVisible = Math.ceil((scrollLeft + Math.max(0, viewWidth - labelWidth)) / dayWidth);
+  return {
+    firstDay: Math.floor(firstVisible / DRAW_STEP_DAYS) * DRAW_STEP_DAYS - DRAW_OVERSCAN_DAYS,
+    lastDay: Math.ceil(lastVisible / DRAW_STEP_DAYS) * DRAW_STEP_DAYS + DRAW_OVERSCAN_DAYS,
+  };
+}
+
+export type DrawnDays = { firstDay: number; lastDay: number };
+
+/**
+ * The drawn days, kept outside React state: the grid subscribes to it, so a new step redraws only the grid
+ * (not the whole screen, whose drag-and-drop context would redraw every booking bar).
+ */
+export type DrawnDaysStore = {
+  get: () => DrawnDays;
+  set: (next: DrawnDays) => void;
+  subscribe: (listener: () => void) => () => void;
+};
+
+export function createDrawnDaysStore(initial: DrawnDays): DrawnDaysStore {
+  let value = initial;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => value,
+    set(next) {
+      if (next.firstDay === value.firstDay && next.lastDay === value.lastDay) return;
+      value = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}

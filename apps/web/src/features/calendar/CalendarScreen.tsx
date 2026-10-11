@@ -12,7 +12,7 @@ import {
 import { ChevronLeft, ChevronRight, Printer, Wand2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { canPlace, type IsoDate, type Occupant } from "@stay-ops/domain";
 import { useErrorText } from "@/api/errors";
 import { useOnline } from "@/api/online";
@@ -30,7 +30,18 @@ import { BookingPanel } from "./BookingPanel";
 import { useUnsavedGuard } from "./useUnsavedGuard";
 import { CalendarGrid, LABEL_WIDTH, type DropState } from "./CalendarGrid";
 import { Tray } from "./Tray";
-import { addMonths, blocksToLoad, DAY_WIDTH, dateAt, dayIndex, monthStart, spanAround, type Zoom } from "./timeline";
+import {
+  addMonths,
+  blocksToLoad,
+  DAY_WIDTH,
+  dateAt,
+  dayIndex,
+  createDrawnDaysStore,
+  drawnDays,
+  monthStart,
+  spanAround,
+  type Zoom,
+} from "./timeline";
 import { useCalendarData } from "./useCalendarData";
 import { useMoveBooking, type MoveRequest } from "./useMoveBooking";
 
@@ -85,7 +96,13 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const [zoom, setZoom] = useState<Zoom>("month");
   const dayWidth = DAY_WIDTH[zoom];
   const scroller = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState({ left: 0, width: 1200 });
+  // The day columns drawn; changes only every couple of weeks of scrolling (see drawnDays). The grid reads it
+  // directly; this screen only follows which blocks of data to load.
+  const [drawn] = useState(() =>
+    createDrawnDaysStore(
+      drawnDays(Math.max(0, dayIndex(span, today) - 2) * DAY_WIDTH.month, 1200, DAY_WIDTH.month, LABEL_WIDTH),
+    ),
+  );
   // /app/calendar?booking=<id> (from the Today screen) opens that booking's panel.
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams?.get("booking") || null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -107,9 +124,12 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     [run, selectedId],
   );
 
-  const firstDay = Math.floor(view.left / dayWidth) - 7;
-  const lastDay = Math.ceil((view.left + view.width - LABEL_WIDTH) / dayWidth) + 7;
-  const blockIndexes = useMemo(() => blocksToLoad(span, firstDay, lastDay), [span, firstDay, lastDay]);
+  const blocksKey = useCallback(() => {
+    const { firstDay, lastDay } = drawn.get();
+    return blocksToLoad(span, firstDay, lastDay).join(",");
+  }, [drawn, span]);
+  const blockList = useSyncExternalStore(drawn.subscribe, blocksKey, blocksKey);
+  const blockIndexes = useMemo(() => blockList.split(",").filter(Boolean).map(Number), [blockList]);
   const data = useCalendarData(span, blockIndexes);
   const askToConfirm = useCallback((request: MoveRequest) => {
     setSelectedId(request.booking.id);
@@ -120,6 +140,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   // Without internet the move buttons in the panel are off, like while a move is running.
   const moving = movingNow || !online;
 
+  const bookingList = useMemo(() => [...data.bookings.values()], [data.bookings]);
   const selected = selectedId ? (data.bookings.get(selectedId) ?? null) : null;
   const dragging = draggingId ? (data.bookings.get(draggingId) ?? null) : null;
   const roomIds = useMemo(() => data.rooms.filter((r) => r.isActive).map((r) => r.id), [data.rooms]);
@@ -152,11 +173,12 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const onScroll = useCallback(() => {
     const el = scroller.current;
     if (!el) return;
-    setView({ left: el.scrollLeft, width: el.clientWidth });
+    // Only a new step of drawn days re-renders the calendar; plain scrolling is left to the browser.
+    drawn.set(drawnDays(el.scrollLeft, el.clientWidth, dayWidth, LABEL_WIDTH));
     if (!positioned.current) return;
     const first = Math.max(0, Math.floor(el.scrollLeft / dayWidth) + 2);
     anchor.current = first < span.days ? dateAt(span, first) : today;
-  }, [dayWidth, span, today]);
+  }, [drawn, dayWidth, span, today]);
 
   useEffect(() => {
     onScroll();
@@ -311,11 +333,10 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
               <CalendarGrid
                 span={span}
                 dayWidth={dayWidth}
-                firstDay={firstDay}
-                lastDay={lastDay}
+                drawn={drawn}
                 today={data.today ?? today}
                 rooms={data.rooms}
-                bookings={[...data.bookings.values()]}
+                bookings={bookingList}
                 blocks={data.blocks}
                 overbooked={data.overbooked}
                 selectedId={selectedId}

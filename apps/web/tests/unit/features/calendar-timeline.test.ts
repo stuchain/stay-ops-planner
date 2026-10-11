@@ -1,7 +1,18 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { isoDate } from "@stay-ops/domain";
-import { addMonths, blocksToLoad, dateAt, dayIndex, monthsBetween, spanAround } from "@/features/calendar/timeline";
+import {
+  addMonths,
+  blocksToLoad,
+  createDrawnDaysStore,
+  dateAt,
+  dayIndex,
+  drawnDays,
+  DRAW_OVERSCAN_DAYS,
+  DRAW_STEP_DAYS,
+  monthsBetween,
+  spanAround,
+} from "@/features/calendar/timeline";
 import { createTranslator } from "next-intl";
 import { recommendationText } from "@/features/calendar/recommendation";
 import { agoParts } from "@/features/shell/SyncIndicator";
@@ -77,5 +88,31 @@ describe("past stays without an apartment", () => {
       stay("c", "2026-05-05", "2026-05-07"),
     ]);
     expect(Object.fromEntries(lanes)).toEqual({ a: 0, b: 1, c: 0 });
+  });
+});
+
+describe("drawn days while scrolling", () => {
+  it("covers the screen plus the overscan and only changes every step", () => {
+    const at = (left: number) => drawnDays(left, 1060, 44, 208);
+    const first = at(700 * 44);
+    expect(first.firstDay).toBeLessThanOrEqual(700 - DRAW_OVERSCAN_DAYS);
+    expect(first.lastDay).toBeGreaterThanOrEqual(700 + Math.ceil(852 / 44) + DRAW_OVERSCAN_DAYS);
+    // A few days of scrolling inside the same step draws the same days.
+    expect(at(700 * 44 + 3 * 44)).toEqual(at(700 * 44 + 1));
+    expect(at(700 * 44 + DRAW_STEP_DAYS * 44).firstDay).toBe(first.firstDay + DRAW_STEP_DAYS);
+  });
+
+  it("tells subscribers only when the drawn days change", () => {
+    const store = createDrawnDaysStore({ firstDay: 0, lastDay: 70 });
+    let calls = 0;
+    const stop = store.subscribe(() => calls++);
+    store.set({ firstDay: 0, lastDay: 70 });
+    expect(calls).toBe(0);
+    store.set({ firstDay: 14, lastDay: 84 });
+    expect(calls).toBe(1);
+    expect(store.get()).toEqual({ firstDay: 14, lastDay: 84 });
+    stop();
+    store.set({ firstDay: 28, lastDay: 98 });
+    expect(calls).toBe(1);
   });
 });

@@ -201,7 +201,9 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
     [data-ui="new"] *::before,
     [data-ui="new"] *::after {
       animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
+      /* 0s, not a tiny duration: every element transitions "all" by default, so any duration would turn every
+         width change into a transition and, e.g., stop the calendar from scrolling to the right day. */
+      transition-duration: 0s !important;
     }
   }
 }

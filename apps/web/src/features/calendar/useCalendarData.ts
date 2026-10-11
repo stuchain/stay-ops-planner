@@ -20,9 +20,9 @@ export type CalendarData = {
   refetch: () => void;
 };
 
-function merge(
-  results: Pick<UseQueryResult<CalendarRangeData, unknown>, "data" | "isPending" | "error">[],
-): Omit<CalendarData, "refetch"> {
+type MergeInput = Pick<UseQueryResult<CalendarRangeData, unknown>, "data" | "isPending" | "error">;
+
+function merge(results: MergeInput[]): Omit<CalendarData, "refetch"> {
   const bookings = new Map<string, CalendarBooking>();
   const blocks = new Map<string, CalendarBlock>();
   const overbooked = new Set<IsoDate>();
@@ -54,9 +54,27 @@ function merge(
 /** Loads the given blocks of the span (one `calendar.range` call each) and merges them. */
 export function useCalendarData(span: Span, blockIndexes: number[]): CalendarData {
   const trpc = useTRPC();
+  // A refetch that brings back the same data (or a block coming back into view) keeps the same merged
+  // maps, so the calendar is not redrawn while scrolling.
+  const last = useRef<{ inputs: MergeInput[]; value: Omit<CalendarData, "refetch"> } | null>(null);
+  const combine = useCallback((results: MergeInput[]) => {
+    const prev = last.current;
+    if (
+      prev &&
+      prev.inputs.length === results.length &&
+      prev.inputs.every(
+        (r, i) => r.data === results[i]!.data && r.isPending === results[i]!.isPending && r.error === results[i]!.error,
+      )
+    ) {
+      return prev.value;
+    }
+    const value = merge(results);
+    last.current = { inputs: results.map((r) => ({ data: r.data, isPending: r.isPending, error: r.error })), value };
+    return value;
+  }, []);
   const merged = useQueries({
     queries: blockIndexes.map((i) => trpc.calendar.range.queryOptions(span.blocks[i]!)),
-    combine: merge,
+    combine,
   });
   const queryClient = useQueryClient();
   const refetch = useCallback(() => {

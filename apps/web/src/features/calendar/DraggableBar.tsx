@@ -3,7 +3,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { motion as m, useReducedMotion, type MotionStyle } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import { useOnline } from "@/api/online";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
@@ -22,8 +22,24 @@ export type DraggableBarProps = {
   onOpen: (bookingId: string) => void;
 };
 
-/** A booking bar that opens the panel on click and can be dragged onto an apartment row. */
-export function DraggableBar({
+function shallowEqual(a: object | undefined, b: object | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const ka = Object.keys(a) as (keyof typeof a)[];
+  return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
+}
+
+/**
+ * A booking bar that opens the panel on click and can be dragged onto an apartment row. Memoised (style compared
+ * by value), so redrawing the calendar while scrolling only renders the bars that came into view.
+ */
+export const DraggableBar = memo(DraggableBarInner, (prev, next) => {
+  const { style: ps, ...pr } = prev;
+  const { style: ns, ...nr } = next;
+  return shallowEqual(pr, nr) && shallowEqual(ps, ns);
+});
+
+function DraggableBarInner({
   booking,
   color,
   selected,
