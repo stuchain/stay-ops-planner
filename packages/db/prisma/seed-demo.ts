@@ -3,8 +3,6 @@
  * realistic bookings around today. Never run against production.
  *
  *   DATABASE_URL=... pnpm --filter @stay-ops/db seed:demo
- *
- * Set DEMO_NEW_UI_EMAIL to turn the new UI on for that user.
  */
 import "./load-env.js";
 import { BookingStatus, Channel, PrismaClient } from "@prisma/client";
@@ -186,10 +184,6 @@ async function main() {
     data: { roomId: rooms[2]!.id, startDate: dayFromToday(16), endDate: dayFromToday(19), reason: "demo: συντήρηση" },
   });
 
-  const email = process.env.DEMO_NEW_UI_EMAIL;
-  if (email) {
-    await prisma.user.update({ where: { email }, data: { flags: { newUi: true } } });
-  }
   console.log(`Demo data: ${ROOMS.length} apartments, ${BOOKINGS.length} bookings.`);
 }
 

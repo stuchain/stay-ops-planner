@@ -40,20 +40,18 @@ export async function loginAsStaff(page: Page): Promise<void> {
   await page.getByTestId("login-email").fill(c.email);
   await page.getByTestId("login-password").fill(c.password);
   await page.getByTestId("login-submit").click();
-  // Login lands on /app, which redirects to the calendar for the old UI. Waiting only for the URL (not the
-  // full page load) keeps the first, compile-heavy dev-server run inside the test timeout.
-  await page.waitForURL(/\/app\/calendar/, { waitUntil: "commit", timeout: 60_000 });
+  // Login lands on Today. Waiting only for the URL (not the full page load) keeps the first, compile-heavy
+  // dev-server run inside the test timeout.
+  await page.waitForURL(/\/app\/today/, { waitUntil: "commit", timeout: 120_000 });
 }
 
-/** Opens calendar route and waits for stable controls to render across desktop/mobile layouts. */
+/** Heading names, in Greek or English: the seeded E2E admin's language is not fixed. */
+export const TODAY_HEADING = /^(Σήμερα|Today)$/;
+export const CALENDAR_HEADING = /^(Ημερολόγιο|Calendar)$/;
+export const SETTINGS_HEADING = /^(Ρυθμίσεις|Settings)$/;
+
+/** Opens the calendar and waits for its heading. */
 export async function gotoCalendarAndWaitReady(page: Page): Promise<void> {
   await page.goto("/app/calendar");
-  await expect(page.locator('input[type="month"]').first()).toBeVisible({ timeout: 15_000 });
-  // Month data loads after the controls render; wait for the first apartment row so callers can count lanes
-  // without racing the load (specs skip themselves when seeded rooms are genuinely missing).
-  await page
-    .locator('[data-testid^="ops-room-lane-"]')
-    .first()
-    .waitFor({ state: "visible", timeout: 30_000 })
-    .catch(() => undefined);
+  await expect(page.getByRole("heading", { level: 1, name: CALENDAR_HEADING })).toBeVisible({ timeout: 30_000 });
 }

@@ -22,7 +22,7 @@ The app grew screen by screen: REST routes, services and UI live together under 
 | `ui/` | design tokens, `theme.css`, presentational components | `ui`, `i18n`, `@stay-ops/domain` |
 | `features/<feature>/` | screens and their hooks | `ui`, `api`, `i18n`, other features, `@stay-ops/domain` |
 | `api/` | tRPC client, query defaults, error text | types only from `server` |
-| `server/` | use cases (`server/useCases`), tRPC routers (`server/api`), flags | `server`, old `modules`/`lib` while they are replaced, `@stay-ops/domain`, `@stay-ops/db` |
+| `server/` | use cases (`server/useCases`), tRPC routers (`server/api`), user preferences (`server/userPreferences.ts`) | `server`, old `modules`/`lib` while they are replaced, `@stay-ops/domain`, `@stay-ops/db` |
 | `app/` | Next.js routes and layouts | anything |
 | `modules/`, `lib/` | the old app | (unchanged; deleted as screens move) |
 
@@ -30,9 +30,9 @@ The app grew screen by screen: REST routes, services and UI live together under 
 
 **TypeScript.** `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` for the whole workspace, in `tsconfig.base.json`.
 
-**Styling.** Tailwind v4 through `@tailwindcss/postcss`, with the theme in `ui/theme.css` built from `ui/tokens.ts` (a unit test keeps them in step). Tailwind's global reset is not loaded: the new UI's reset and colours apply inside `[data-ui="new"]` only, and utilities are generated only from `ui/` and `features/`, so the old screens are untouched. Radix primitives (Dialog), Sonner toasts and Lucide icons. Font: Commissioner, self-hosted through `@fontsource-variable/commissioner`.
+**Styling.** Tailwind v4 through `@tailwindcss/postcss`, with the theme in `ui/theme.css` built from `ui/tokens.ts` (a unit test keeps them in step). Tailwind's global reset is not loaded: the reset and colours apply inside `[data-ui="new"]` only, and utilities are generated only from `ui/`, `features/` and the Dev mode cleaning board. Radix primitives (Dialog), Sonner toasts and Lucide icons. Font: Commissioner, self-hosted through `@fontsource-variable/commissioner`.
 
-**Feature flag.** `users.flags` (JSON) holds per-user flags, read on the server by `server/flags.ts`. `newUi` selects the new shell; it is off for everyone until the new Calendar is accepted.
+**Feature flag (removed).** `users.flags` (JSON) held a per-user `newUi` flag during the migration. The old UI and the flag are gone (P2-10); the column stays in the database (additive-only rule) and is no longer read.
 
 **Formatting.** Prettier for new code (`pnpm format`, `pnpm format:check`); the old code keeps its style until it is replaced.
 

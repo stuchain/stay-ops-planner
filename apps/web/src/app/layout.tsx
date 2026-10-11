@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
-import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Stay Ops Planner",

@@ -2,14 +2,8 @@
  * Hosthub sync must not undo what the user changed in the app (P0-6).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { NextRequest } from "next/server";
-import bcrypt from "bcryptjs";
 import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
 import { applyHosthubBooking } from "../../../src/server/sync/applyBooking";
-import { CookieJar } from "../cookieJar";
-
-const email = "sync-local-edits@example.com";
-const password = "password1234";
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
 process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops_test";
@@ -54,13 +48,8 @@ async function truncate() {
 }
 
 describe("sync keeps the user's edits", () => {
-  let POST_LOGIN: (request: Request) => Promise<Response>;
-  let PATCH_BOOKING: (request: NextRequest, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
-
   beforeAll(async () => {
     await prisma.$connect();
-    POST_LOGIN = (await import("../../../src/app/api/auth/login/route")).POST;
-    PATCH_BOOKING = (await import("../../../src/app/api/bookings/[id]/route")).PATCH;
   });
 
   afterAll(async () => {
@@ -69,52 +58,23 @@ describe("sync keeps the user's edits", () => {
 
   beforeEach(async () => {
     await truncate();
-    const passwordHash = await bcrypt.hash(password, 12);
-    await prisma.user.create({ data: { email, passwordHash, isActive: true, role: "operator" } });
   });
 
-  async function loginJar(): Promise<CookieJar> {
-    const jar = new CookieJar();
-    const res = await POST_LOGIN(
-      new Request("http://localhost/api/auth/login", {
-        method: "POST",
-        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
-        body: JSON.stringify({ email, password }),
+  /** What cancelling in the app records, so the next sync can tell whether Hosthub changed its mind. */
+  async function cancelInApp(bookingId: string) {
+    const existing = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    await prisma.$transaction([
+      prisma.assignment.deleteMany({ where: { bookingId } }),
+      prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.cancelled,
+          hosthubStatus: existing.hosthubStatus ?? existing.status,
+          localOverrides: { status: true },
+        },
       }),
-    );
-    expect(res.status).toBe(200);
-    jar.applySetCookieHeader(res);
-    return jar;
+    ]);
   }
-
-  it("guest name and guest count edited in the app survive the next sync", async () => {
-    await applyHosthubReservation(prisma, reservation, { ...reservation });
-    const booking = await prisma.booking.findFirstOrThrow({ where: { externalBookingId: "local-edit-b1" } });
-
-    const jar = await loginJar();
-    const res = await PATCH_BOOKING(
-      new NextRequest(`http://localhost/api/bookings/${booking.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
-        body: JSON.stringify({ editable: { guestName: "Corrected Name", totalGuests: 4 } }),
-      }),
-      { params: Promise.resolve({ id: booking.id }) },
-    );
-    expect(res.status).toBe(200);
-
-    const edited = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
-    expect(edited.localOverrides).toEqual({ guestName: true, guestTotal: true });
-    expect(edited.rawPayload).toEqual(booking.rawPayload);
-
-    await applyHosthubReservation(prisma, { ...reservation, guestAdults: 3 }, { ...reservation });
-
-    const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
-    expect(after.guestName).toBe("Corrected Name");
-    expect(after.guestTotal).toBe(4);
-    // Fields the user did not touch still follow Hosthub, and the change bumps the version.
-    expect(after.guestAdults).toBe(3);
-    expect(after.version).toBe(edited.version + 1);
-  });
 
   it("an unchanged sync does not bump the booking version", async () => {
     await applyHosthubReservation(prisma, reservation, { ...reservation });
@@ -157,16 +117,7 @@ describe("sync keeps the user's edits", () => {
       },
     });
 
-    const jar = await loginJar();
-    const res = await PATCH_BOOKING(
-      new NextRequest(`http://localhost/api/bookings/${booking.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
-        body: JSON.stringify({ status: BookingStatus.cancelled }),
-      }),
-      { params: Promise.resolve({ id: booking.id }) },
-    );
-    expect(res.status).toBe(200);
+    await cancelInApp(booking.id);
 
     await applyHosthubReservation(prisma, reservation, { ...reservation, updated: 1_500 });
     const after = await prisma.booking.findUniqueOrThrow({
@@ -180,16 +131,7 @@ describe("sync keeps the user's edits", () => {
   it("Hosthub wins again once its own status changes after an app cancel", async () => {
     await applyHosthubReservation(prisma, { ...reservation, status: "pending" }, { ...reservation });
     const booking = await prisma.booking.findFirstOrThrow({ where: { externalBookingId: "local-edit-b1" } });
-    const jar = await loginJar();
-    const res = await PATCH_BOOKING(
-      new NextRequest(`http://localhost/api/bookings/${booking.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
-        body: JSON.stringify({ status: BookingStatus.cancelled }),
-      }),
-      { params: Promise.resolve({ id: booking.id }) },
-    );
-    expect(res.status).toBe(200);
+    await cancelInApp(booking.id);
 
     await applyHosthubReservation(prisma, reservation, { ...reservation });
     const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });

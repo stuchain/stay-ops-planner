@@ -203,8 +203,7 @@ describe("Users", () => {
     await prisma.loginAttempt.createMany({
       data: Array.from({ length: 5 }, () => ({ email: "admin@example.com", ip: "1.1.1.1", succeeded: false })),
     });
-    const { users, flagKeys } = await (await api(admin.id)).dev.users.list();
-    expect(flagKeys).toEqual(["newUi"]);
+    const { users } = await (await api(admin.id)).dev.users.list();
     const byEmail = Object.fromEntries(users.map((u) => [u.email, u]));
     expect(byEmail["Op@Example.com"]!.lastLoginAt).not.toBeNull();
     expect(byEmail["Op@Example.com"]!.lockedForSeconds).toBeNull();
@@ -273,34 +272,10 @@ describe("Users", () => {
   });
 });
 
-describe("Flags and System", () => {
-  it("changes a user's flags and keeps unknown keys", async () => {
-    const admin = await makeUser("admin@example.com", "admin", { newUi: true });
-    const op = await makeUser("op@example.com", "operator", { somethingElse: 1 });
-    const caller = await api(admin.id);
-
-    expect(await caller.dev.users.updateFlags({ userId: op.id, patch: { newUi: true } })).toEqual({ newUi: true });
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: op.id } })).flags).toEqual({
-      somethingElse: 1,
-      newUi: true,
-    });
-    expect(await caller.dev.users.updateFlags({ userId: op.id, patch: { newUi: false } })).toEqual({ newUi: false });
-    expect(await prisma.auditEvent.count({ where: { action: "user.flags_update" } })).toBe(2);
-  });
-
-  it("does not let an admin switch the new UI off for themselves", async () => {
-    const admin = await makeUser("admin@example.com", "admin", { newUi: true });
-    const caller = await api(admin.id);
-    expect(await codeOf(caller.dev.users.updateFlags({ userId: admin.id, patch: { newUi: false } }))).toBe(
-      "VALIDATION",
-    );
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: admin.id } })).flags).toEqual({ newUi: true });
-  });
-
-  it("refuses flags for operators", async () => {
+describe("System", () => {
+  it("refuses the user tools for operators", async () => {
     const op = await makeUser("op@example.com", "operator");
     const caller = await api(op.id, "operator");
-    expect(await codeOf(caller.dev.users.updateFlags({ userId: op.id, patch: { newUi: true } }))).toBe("FORBIDDEN");
     expect(await codeOf(caller.dev.users.setPassword({ userId: op.id, newPassword: "long-enough-1" }))).toBe(
       "FORBIDDEN",
     );

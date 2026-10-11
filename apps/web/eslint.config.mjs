@@ -30,7 +30,7 @@ const eslintConfig = [
   /**
    * Layer rules for the new code (docs/adr/0001-architecture.md):
    * ui is presentation only; features use ui and the api client; server never imports
-   * the browser layers; nothing new imports the old `modules` UI.
+   * the browser layers; `modules` now holds only server-side logic (auth, sync, cleaning, ledger), so the browser layers do not import it.
    */
   {
     files: ["src/**/*.{ts,tsx}"],

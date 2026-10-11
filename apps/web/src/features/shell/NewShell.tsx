@@ -113,7 +113,7 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
   );
 }
 
-/** The redesigned app shell, shown to users with the `newUi` flag. */
+/** The app shell: sidebar, banners and the signed-in layout. */
 export function NewShell({ textSize, devMode, userId, children }: NewShellProps) {
   return (
     <div id="new-ui-root" data-ui="new" data-text-size={textSize}>

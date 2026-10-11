@@ -1,14 +1,7 @@
 import { z } from "zod";
 import { auditCsv, auditFilterOptions, listAuditEvents } from "@/server/useCases/auditLog";
 import { systemInfo } from "@/server/useCases/devSystem";
-import {
-  listUsers,
-  setUserPassword,
-  signOutUserEverywhere,
-  unlockUser,
-  updateUserFlags,
-} from "@/server/useCases/devUsers";
-import { FLAG_KEYS } from "@/server/flags";
+import { listUsers, setUserPassword, signOutUserEverywhere, unlockUser } from "@/server/useCases/devUsers";
 import {
   loadReminderSetting,
   reminderNotifiersFromEnv,
@@ -38,9 +31,9 @@ export const historyRouter = createTRPCRouter({
   exportCsv: adminProcedure.input(z.object({ filters })).mutation(({ input }) => auditCsv(input.filters)),
 });
 
-/** Dev mode Users (P2-6): passwords, sign-outs, lockouts and per-user flags. Admin only. */
+/** Dev mode Users (P2-6): passwords, sign-outs and lockouts. Admin only. */
 export const usersRouter = createTRPCRouter({
-  list: adminProcedure.query(async () => ({ users: await listUsers(), flagKeys: [...FLAG_KEYS] })),
+  list: adminProcedure.query(async () => ({ users: await listUsers() })),
   setPassword: adminProcedure
     .input(z.object({ userId: z.string().min(1), newPassword: z.string().min(1).max(200) }))
     .mutation(({ ctx, input }) => setUserPassword({ actorUserId: ctx.user.userId, ...input })),
@@ -50,9 +43,6 @@ export const usersRouter = createTRPCRouter({
   signOutEverywhere: adminProcedure
     .input(z.object({ userId: z.string().min(1) }))
     .mutation(({ ctx, input }) => signOutUserEverywhere({ actorUserId: ctx.user.userId, userId: input.userId })),
-  updateFlags: adminProcedure
-    .input(z.object({ userId: z.string().min(1), patch: z.object({ newUi: z.boolean().optional() }) }))
-    .mutation(({ ctx, input }) => updateUserFlags({ actorUserId: ctx.user.userId, ...input })),
 });
 
 /** Dev mode System (P2-6): version, database and Sentry. Admin only. */

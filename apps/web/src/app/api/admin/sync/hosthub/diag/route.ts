@@ -6,7 +6,7 @@ import { apiError, respondAuthError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { AuthError } from "@/modules/auth/errors";
 import { requireAdminSession, requireOperatorOrAdmin } from "@/modules/auth/guard";
-import { bookingOverlapsUtcCalendarYearWhere } from "@/app/api/excel/listings/bookingOverlapYearWhere";
+import { bookingOverlapsUtcCalendarYearWhere } from "@/modules/excel/bookingOverlapYearWhere";
 import { getHosthubTokenStatus, resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
 
 type DistinctListing = { channel: string; listingId: string; title: string | null };

@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { DomainError } from "@stay-ops/domain";
 import { comparePassword, hashPassword, isAcceptablePasswordLength } from "@/modules/auth/password";
 import { adminProcedure, createTRPCRouter, userProcedure } from "../trpc";
-import { readFlags } from "@/server/flags";
 
 /** Text size choices, saved in `users.text_size`. */
 export const TEXT_SIZES = ["normal", "large", "xlarge"] as const;
@@ -13,14 +12,13 @@ export const meRouter = createTRPCRouter({
   get: userProcedure.query(async ({ ctx }) => {
     const user = await prisma.user.findUnique({
       where: { id: ctx.user.userId },
-      select: { email: true, role: true, uiLocale: true, flags: true, devMode: true, textSize: true },
+      select: { email: true, role: true, uiLocale: true, devMode: true, textSize: true },
     });
     if (!user) throw new DomainError("UNAUTHORIZED");
     return {
       email: user.email,
       role: user.role,
       locale: user.uiLocale,
-      flags: readFlags(user.flags),
       devMode: user.devMode,
       textSize: user.textSize,
       /** When the login ends for good (12 hours after signing in), so the app can warn 5 minutes before. */

@@ -64,13 +64,6 @@ async function main() {
 
   await prisma.syncRun.deleteMany({ where: { source: "e2e_seed_calendar_warning" } });
 
-  // The old screens' specs are written against the English UI; the server now renders each
-  // user's own language from the first paint, so the E2E admin is English.
-  const adminEmail = process.env.E2E_ADMIN_EMAIL?.trim().toLowerCase();
-  // The new UI is on by default now; the E2E admin keeps the old screens until they are deleted (P2-10).
-  if (adminEmail)
-    await prisma.user.updateMany({ where: { email: adminEmail }, data: { uiLocale: "en", flags: { newUi: false } } });
-
   await wipeE2eBookings();
   await wipeE2eBlocksAndRooms();
 

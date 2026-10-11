@@ -120,10 +120,6 @@ jobs:
             pnpm --filter @stay-ops/web test:e2e
           fi
 
-      - name: Run calendar regression specs (repeated)
-        if: github.event_name == 'pull_request'
-        run: pnpm --filter @stay-ops/web test:e2e tests/e2e/calendar-regressions.spec.ts --project=desktop-chromium --repeat-each=5
-
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

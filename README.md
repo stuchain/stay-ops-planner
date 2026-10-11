@@ -57,27 +57,15 @@ Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — se
   - `packages/db/prisma/seed.ts` supports idempotent upsert of bootstrap **admin** and **father** accounts via `BOOTSTRAP_ADMIN_*`, `BOOTSTRAP_FATHER_*`, and optional `BOOTSTRAP_FATHER_ROLE` (default `operator`)
 - Recovery documentation: `docs/runbooks/auth-recovery.md`
 
-### Allocation (room assignment)
-- **API** (admin session required)
-  - `POST /api/assignments` — assign an unassigned booking to a room
-  - `PATCH /api/assignments/[id]/reassign` — move an assignment to another room
-  - `POST /api/assignments/[id]/unassign` — return a booking to the unassigned queue
-  - `GET /api/bookings/unassigned` — list bookings not yet assigned to a room (optional `meta.total`)
-- **Domain logic** lives under `apps/web/src/modules/allocation/` (service + error types). Database overlap and uniqueness are enforced in Postgres; concurrent writes map to stable API errors such as `CONFLICT_ASSIGNMENT` and `BOOKING_ALREADY_ASSIGNED`.
-- **Inactive rooms**: `Room.isActive` is honored; assigning or reassigning to an inactive room returns `ROOM_INACTIVE`.
-
-### Manual blocks
-- **API** (admin session required)
-  - `POST /api/blocks` — create a manual block on a room for a date range
-  - `PATCH /api/blocks/[id]` / `DELETE /api/blocks/[id]` — update or remove a block
-- **Service**: `apps/web/src/modules/blocks/service.ts` (facade over shared calendar rules). Overlaps with assignments or other blocks surface as `CONFLICT_ASSIGNMENT` / `CONFLICT_BLOCK` as appropriate.
+### Allocation and blocks
+Assignments, moves and maintenance blocks go through the tRPC routers in `apps/web/src/server/api/routers/` and the use cases in `apps/web/src/server/useCases/`. The old REST routes (`/api/assignments`, `/api/blocks`, `/api/bookings`, `/api/calendar`, ...) were removed with the old UI (P2-10).
 
 ### Cleaning tasks
 - **API** (admin session required)
   - `GET /api/cleaning/tasks` / `POST /api/cleaning/tasks` — list and create service cleaning tasks
   - `PATCH /api/cleaning/tasks/[id]/schedule` — adjust planned window (validates against booking turnover rules)
   - `PATCH /api/cleaning/tasks/[id]/status` — status transitions (`in_progress`, `done`)
-- **Engine** modules under `apps/web/src/modules/cleaning/` (scheduling, state machine, turnover generation).
+- Modules under `apps/web/src/modules/cleaning/` (scheduling, state machine, the Dev mode board).
 
 ### Sync (Hosthub)
 - `POST /api/sync/hosthub/webhook` — ingest webhook events (signature/HMAC when configured)

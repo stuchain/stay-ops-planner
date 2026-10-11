@@ -23,8 +23,7 @@ Authoritative prefix list: `apps/web/src/modules/auth/rbac.ts` → `API_POLICY_R
 | `/api/admin/*` | `admin` |
 | `/api/sync/hosthub/webhook` `POST` | Public (no session); **signature + secret** enforced in handler (`hosthubWebhook.ts`) |
 | `/api/sync/*` (other) | `operator`, `admin` |
-| `/api/assignments/*`, `/api/blocks/*`, `/api/bookings/*`, `/api/calendar/*`, `/api/cleaning/*`, `/api/dashboard/*`, `/api/excel/*`, `/api/rooms/*`, `/api/audit/*` | `operator`, `admin` |
-| `/api/assets/*` | `viewer`, `operator`, `admin` (any signed-in user) |
+| `/api/cleaning/*` | `operator`, `admin` |
 
 **Not in matrix** (handled per-route): `/api/auth/login`, `/api/health/*`, etc.
 

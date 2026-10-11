@@ -1,6 +1,34 @@
 import { z } from "zod";
 import type { Channel } from "@stay-ops/db";
-import { readCentsFromField } from "@/modules/bookings/details";
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+/** Hosthub calendar-event style `{ cents, currency }` on `raw_payload`, read as euros. */
+function readCentsFromField(obj: Dict, field: string): number | null {
+  const v = obj[field];
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" && Number.isFinite(v)) return v / 100;
+  if (typeof v === "string") {
+    const parsed = Number(v.trim());
+    if (Number.isFinite(parsed)) return parsed;
+    return null;
+  }
+  if (typeof v === "object" && !Array.isArray(v)) {
+    const o = v as Dict;
+    const cents = asNumber(o.cents);
+    if (cents !== null) return cents / 100;
+    const amount = asNumber(o.amount ?? o.value);
+    if (amount !== null) return amount;
+  }
+  return null;
+}
 
 const RENTAL_TITLE_KEYS: readonly { key: string; index: number }[] = [
   { key: "onar", index: 1 },

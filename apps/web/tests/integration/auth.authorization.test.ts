@@ -54,8 +54,7 @@ describe("auth.authorization matrix", () => {
     expect(resolveApiPolicy("POST", "/api/sync/hosthub/webhook")).toEqual([]);
     expect(resolveApiPolicy("GET", "/api/sync/runs")).toEqual(["operator", "admin"]);
     expect(resolveApiPolicy("GET", "/api/admin/sync/hosthub/diag")).toEqual(["admin"]);
-    expect(resolveApiPolicy("GET", "/api/audit/export")).toEqual(["operator", "admin"]);
-    expect(resolveApiPolicy("GET", "/api/assets/channel-logo/airbnb")).toEqual(["viewer", "operator", "admin"]);
+    expect(resolveApiPolicy("POST", "/api/cleaning/tasks/bulk")).toEqual(["operator", "admin"]);
   });
 
   it("sync runs: viewer gets FORBIDDEN, operator gets 200", async () => {

@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, type FormEvent } from "react";
+import { Button } from "@/ui/Button";
+import { Card } from "@/ui/Card";
 import { safeNextPath } from "./safeNextPath";
 
 type ApiBody = { error?: { code?: string; details?: { retryAfterSeconds?: number } } } | null;
@@ -83,53 +85,67 @@ export function LoginForm() {
     }
   }
 
+  const field = "border-border bg-surface text-text rounded-sm border px-4 text-base h-button w-full";
   return (
-    <form className="ops-login-form" onSubmit={onSubmit}>
-      <h1>{t("title")}</h1>
-      <p className="ops-muted">{t("subtitle")}</p>
-      {online ? null : (
-        <p className="ops-error" role="status" data-testid="login-offline">
-          {t("offline")}
-        </p>
-      )}
-      <div className="ops-label">
-        <label htmlFor={emailId}>{t("email")}</label>
-        <input
-          id={emailId}
-          data-testid="login-email"
-          className="ops-input"
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(ev) => setEmail(ev.target.value)}
-          required
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-        />
-      </div>
-      <div className="ops-label">
-        <label htmlFor={passwordId}>{t("password")}</label>
-        <input
-          id={passwordId}
-          data-testid="login-password"
-          className="ops-input"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(ev) => setPassword(ev.target.value)}
-          required
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-        />
-      </div>
-      {error ? (
-        <p id={errorId} className="ops-error" role="alert" data-testid="login-error">
-          {error}
-        </p>
-      ) : null}
-      <button type="submit" data-testid="login-submit" className="ops-btn ops-btn-primary" disabled={pending}>
-        {pending ? t("signingIn") : t("signIn")}
-      </button>
-    </form>
+    <Card>
+      <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold">{t("title")}</h1>
+          <p className="text-text-muted text-base">{t("subtitle")}</p>
+        </div>
+        {online ? null : (
+          <p className="bg-warning-soft text-warning-text rounded-sm p-3 text-base" role="status" data-testid="login-offline">
+            {t("offline")}
+          </p>
+        )}
+        <div className="flex flex-col gap-2">
+          <label htmlFor={emailId} className="text-base font-semibold">
+            {t("email")}
+          </label>
+          <input
+            id={emailId}
+            data-testid="login-email"
+            className={field}
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(ev) => setEmail(ev.target.value)}
+            required
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor={passwordId} className="text-base font-semibold">
+            {t("password")}
+          </label>
+          <input
+            id={passwordId}
+            data-testid="login-password"
+            className={field}
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(ev) => setPassword(ev.target.value)}
+            required
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+          />
+        </div>
+        {error ? (
+          <p
+            id={errorId}
+            className="bg-danger-soft text-text rounded-sm p-3 text-base"
+            role="alert"
+            data-testid="login-error"
+          >
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" variant="primary" size="lg" data-testid="login-submit" disabled={pending}>
+          {pending ? t("signingIn") : t("signIn")}
+        </Button>
+      </form>
+    </Card>
   );
 }

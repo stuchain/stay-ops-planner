@@ -1,10 +1,8 @@
-import { Prisma } from "@stay-ops/db";
 import { writeAuditSnapshot } from "@stay-ops/audit";
 import { DomainError } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, isAcceptablePasswordLength } from "@/modules/auth/password";
 import { loginLockSeconds, unlockLogin } from "@/modules/auth/loginThrottle";
-import { FLAG_KEYS, readFlags, type UserFlags } from "@/server/flags";
 
 export type DevUserRow = {
   id: string;
@@ -16,12 +14,11 @@ export type DevUserRow = {
   lastLoginAt: string | null;
   /** Seconds until the sign-in works again when too many wrong passwords blocked it; null when not blocked. */
   lockedForSeconds: number | null;
-  flags: UserFlags;
 };
 
 const norm = (email: string) => email.trim().toLowerCase();
 
-/** Every user, with what the admin needs to help them: last sign-in, lockout and flags. */
+/** Every user, with what the admin needs to help them: last sign-in and lockout. */
 export async function listUsers(now = Date.now()): Promise<DevUserRow[]> {
   const users = await prisma.user.findMany({ orderBy: [{ role: "asc" }, { email: "asc" }] });
   const logins = await prisma.loginAttempt.groupBy({
@@ -41,7 +38,6 @@ export async function listUsers(now = Date.now()): Promise<DevUserRow[]> {
         locale: u.uiLocale,
         lastLoginAt: last ? last.toISOString() : null,
         lockedForSeconds: await loginLockSeconds(norm(u.email), undefined, now),
-        flags: readFlags(u.flags),
       };
     }),
   );
@@ -94,29 +90,4 @@ export async function signOutUserEverywhere(args: { actorUserId: string; userId:
   await prisma.user.update({ where: { id: user.id }, data: { sessionVersion: { increment: 1 } } });
   await audit({ actorUserId: args.actorUserId, userId: user.id, action: "user.sign_out_everywhere" });
   return { ok: true as const };
-}
-
-/** Changes some of a user's flags; the others (and any unknown keys) stay as they are. */
-export async function updateUserFlags(args: {
-  actorUserId: string;
-  userId: string;
-  patch: { [K in keyof UserFlags]?: UserFlags[K] | undefined };
-}) {
-  const user = await requireUser(args.userId);
-  const before = readFlags(user.flags);
-  // An admin who switches the new UI off for themselves could not reach this page again.
-  if (user.id === args.actorUserId && args.patch.newUi === false) throw new DomainError("VALIDATION");
-  const stored =
-    user.flags && typeof user.flags === "object" && !Array.isArray(user.flags)
-      ? (user.flags as Record<string, unknown>)
-      : {};
-  const next: Record<string, unknown> = { ...stored };
-  for (const key of FLAG_KEYS) {
-    const value = args.patch[key];
-    if (value !== undefined) next[key] = value;
-  }
-  await prisma.user.update({ where: { id: user.id }, data: { flags: next as Prisma.InputJsonValue } });
-  const after = readFlags(next);
-  await audit({ actorUserId: args.actorUserId, userId: user.id, action: "user.flags_update", before, after });
-  return after;
 }

@@ -12,7 +12,7 @@ import {
 
 /**
  * Journeys for the new calendar (P1B-12): placing from the tray, moving across a month boundary and undoing,
- * conflicts, pending bookings, reload, and an accessibility scan. The user has `{"newUi": true}`.
+ * conflicts, pending bookings, reload, and an accessibility scan.
  * Run with: pnpm e2e:calendar
  */
 

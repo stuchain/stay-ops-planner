@@ -1,5 +1,5 @@
 import { getRequestConfig } from "next-intl/server";
-import { currentUserPreferences } from "@/server/flags";
+import { currentUserPreferences } from "@/server/userPreferences";
 
 /** The locale comes from the signed-in user (`users.ui_locale`) on the server, so there is no flash of English. */
 export default getRequestConfig(async () => {

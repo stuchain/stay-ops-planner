@@ -116,13 +116,12 @@ export async function resetCalendarFixtures(): Promise<CalendarFixtures> {
 
   await prisma.user.upsert({
     where: { email: CAL_USER.email },
-    update: { isActive: true, flags: { newUi: true } },
+    update: { isActive: true },
     create: {
       email: CAL_USER.email,
       passwordHash: await bcrypt.hash(CAL_USER.password, 4),
       isActive: true,
       role: "admin",
-      flags: { newUi: true },
     },
   });
 

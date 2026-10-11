@@ -19,7 +19,6 @@ import {
   userProcedure,
 } from "@/server/api/trpc";
 import { DOMAIN_ERROR_CODES, DomainError } from "@stay-ops/domain";
-import { readFlags } from "@/server/flags";
 
 const router = createTRPCRouter({
   open: publicProcedure.query(() => "ok"),
@@ -118,16 +117,5 @@ describe("client error text", () => {
   it("treats a failed request as NETWORK and anything else as INTERNAL", () => {
     expect(readClientError(new TRPCClientError("fetch failed")).code).toBe("NETWORK");
     expect(readClientError(new Error("boom")).code).toBe("INTERNAL");
-  });
-});
-
-describe("readFlags", () => {
-  it("has the new UI on unless it was switched off, and ignores anything else", () => {
-    expect(readFlags({ newUi: true, other: 1 })).toEqual({ newUi: true });
-    expect(readFlags({ newUi: false })).toEqual({ newUi: false });
-    expect(readFlags({ newUi: "yes" })).toEqual({ newUi: true });
-    expect(readFlags({})).toEqual({ newUi: true });
-    expect(readFlags(null)).toEqual({ newUi: true });
-    expect(readFlags([])).toEqual({ newUi: true });
   });
 });

@@ -207,12 +207,11 @@ describe("UsersScreen", () => {
     locale: "el",
     lastLoginAt: "2030-06-10T09:30:00.000Z",
     lockedForSeconds: null,
-    flags: { newUi: false },
     ...over,
   });
 
   function setup(users: unknown[]) {
-    results["users.list"] = () => ({ users, flagKeys: ["newUi"] });
+    results["users.list"] = () => ({ users });
     return render(
       <Wrap>
         <UsersScreen />
@@ -262,7 +261,7 @@ describe("UsersScreen", () => {
 });
 
 describe("SystemScreen", () => {
-  it("shows the version, database, Sentry link and saves a flag change", async () => {
+  it("shows the version, database, Sentry link and saves the reminder switch", async () => {
     const u = userEvent.setup();
     results["system.info"] = () => ({
       version: "0.1.0",
@@ -280,12 +279,9 @@ describe("SystemScreen", () => {
           locale: "el",
           lastLoginAt: null,
           lockedForSeconds: null,
-          flags: { newUi: false },
         },
       ],
-      flagKeys: ["newUi"],
     });
-    results["users.updateFlags"] = () => ({ newUi: true });
     results["system.reminder"] = () => ({ enabled: true, configured: true });
     results["system.setReminder"] = () => ({ enabled: false, lastSentOn: null });
     results["system.testReminder"] = () => ({ status: "sent" });
@@ -303,10 +299,7 @@ describe("SystemScreen", () => {
       "https://sentry.io/organizations/x/projects/y/",
     );
 
-    await u.click(await screen.findByRole("checkbox", { name: "Νέα εμφάνιση της εφαρμογής" }));
-    await waitFor(() => expect(calls["users.updateFlags"]).toEqual([{ userId: "u1", patch: { newUi: true } }]));
-
-    await u.click(screen.getByRole("checkbox", { name: "Αποστολή κάθε πρωί" }));
+    await u.click(await screen.findByRole("checkbox", { name: "Αποστολή κάθε πρωί" }));
     await waitFor(() => expect(calls["system.setReminder"]).toEqual([{ enabled: false }]));
     await u.click(screen.getByRole("button", { name: "Στείλε το τώρα για δοκιμή" }));
     await waitFor(() => expect(calls["system.testReminder"]).toHaveLength(1));
@@ -314,7 +307,7 @@ describe("SystemScreen", () => {
 
   it("says when the database does not answer and there is no Sentry link", async () => {
     results["system.info"] = () => ({ version: "0.1.0", commit: null, database: { ok: false }, sentryUrl: null });
-    results["users.list"] = () => ({ users: [], flagKeys: ["newUi"] });
+    results["users.list"] = () => ({ users: [] });
     results["system.reminder"] = () => ({ enabled: true, configured: false });
     render(
       <Wrap>

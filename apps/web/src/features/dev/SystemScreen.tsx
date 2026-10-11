@@ -64,53 +64,6 @@ function SystemCard() {
   );
 }
 
-function FlagsCard() {
-  const t = useTranslations("dev.system");
-  const errorText = useErrorText();
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const users = useQuery(trpc.dev.users.list.queryOptions());
-  const update = useMutation({
-    ...trpc.dev.users.updateFlags.mutationOptions(),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: trpc.dev.users.list.queryKey() });
-      showToast({ message: t("flagSaved"), tone: "success" });
-    },
-    onError: (error) => showToast({ message: errorText(error), tone: "danger" }),
-  });
-
-  return (
-    <Card title={t("flagsTitle")}>
-      <p className="text-text-muted">{t("flagsText")}</p>
-      {users.isPending ? (
-        <Skeleton variant="block" className="h-32" />
-      ) : users.error ? (
-        <ErrorState message={errorText(users.error)} onRetry={() => void users.refetch()} />
-      ) : (
-        <div className="flex flex-col gap-5">
-          {users.data.users.map((u) => (
-            <fieldset key={u.id} className="flex flex-col gap-2">
-              <legend className="mb-1 font-semibold break-all">{u.email}</legend>
-              {users.data.flagKeys.map((key) => (
-                <label key={key} className="min-h-target flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    className="size-6"
-                    checked={u.flags[key]}
-                    disabled={update.isPending}
-                    onChange={(e) => update.mutate({ userId: u.id, patch: { [key]: e.target.checked } })}
-                  />
-                  <span>{t(`flags.${key}`)}</span>
-                </label>
-              ))}
-            </fieldset>
-          ))}
-        </div>
-      )}
-    </Card>
-  );
-}
-
 function ReminderCard() {
   const t = useTranslations("dev.system.reminder");
   const errorText = useErrorText();
@@ -169,7 +122,7 @@ function ReminderCard() {
   );
 }
 
-/** Dev mode: app version, database status, the Sentry link and the per-user feature flags. */
+/** Dev mode: app version, database status, the Sentry link and the daily reminder. */
 export function SystemScreen() {
   const t = useTranslations("dev.system");
   return (
@@ -177,7 +130,6 @@ export function SystemScreen() {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <SystemCard />
-        <FlagsCard />
         <ReminderCard />
       </div>
     </div>

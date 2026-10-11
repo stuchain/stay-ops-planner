@@ -13,13 +13,8 @@ Authoritative conventions for module boundaries, API errors, data access, and te
 | Area | Responsibility |
 |------|----------------|
 | `src/modules/auth` | Password verification, session creation, route guards |
-| `src/modules/bookings` | Booking queries, direct booking creation (UI-driven), status |
 | `src/modules/sync` | Hosthub client, webhook handler |
-| `src/modules/allocation` | Assignment commands, conflict checks, revalidation |
-| `src/modules/calendar` | Month aggregation for UI |
-| `src/modules/cleaning` | Task generation, scheduling validation, status transitions |
-| `src/modules/blocks` | Maintenance blocks CRUD |
-| `src/modules/suggestions` | Rule-based ranking only |
+| `src/modules/cleaning` | Task scheduling validation, status transitions (and the Dev mode cleaning board) |
 | `src/modules/audit` | Append-only audit writes and queries |
 
 **Rule:** domain invariants (overlap, blocks, cancellation side effects) live in **services** called by route handlers, not only in React components.

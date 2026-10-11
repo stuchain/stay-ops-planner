@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingOverlapsUtcCalendarYearWhere } from "@/app/api/excel/listings/bookingOverlapYearWhere";
+import { bookingOverlapsUtcCalendarYearWhere } from "@/modules/excel/bookingOverlapYearWhere";
 
 describe("bookingOverlapsUtcCalendarYearWhere", () => {
   it("uses half-open interval [yearStart, nextYearStart) for occupied nights", () => {

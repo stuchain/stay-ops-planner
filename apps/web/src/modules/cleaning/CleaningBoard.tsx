@@ -1,5 +1,14 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
+import { cn } from "@/ui/cn";
+
+// Dev mode only: the board keeps its own English text until Phase 4; styled with the new design tokens.
+const BTN = cn(buttonBase, buttonVariants.secondary, buttonSizes.md);
+const BTN_PRIMARY = cn(buttonBase, buttonVariants.primary, buttonSizes.md);
+const INPUT = "min-h-target rounded-sm border border-border bg-surface px-3 text-sm text-text";
+const LABEL = "flex flex-col gap-1 text-sm font-semibold";
+const MUTED = "text-text-muted text-sm";
 
 type TaskRow = {
   id: string;
@@ -149,39 +158,39 @@ export function CleaningBoard() {
   }
 
   return (
-    <main className="ops-cleaning-main" data-testid="ops-cleaning-board">
-      <header className="ops-cleaning-header">
+    <main className="flex flex-col gap-4" data-testid="ops-cleaning-board">
+      <header className="sr-only">
         <h1>Cleaning board</h1>
       </header>
       {flash && (
-        <div className="ops-toast" role="alert">
+        <div className="bg-danger-soft text-text rounded-sm px-4 py-3 text-sm" role="alert">
           {flash}
         </div>
       )}
-      <section className="ops-cleaning-filters">
-        <label className="ops-label">
+      <section className="flex flex-wrap items-end gap-4">
+        <label className={LABEL}>
           Day (planned start)
           <input
-            className="ops-input"
+            className={INPUT}
             type="date"
             value={filterDate}
             onChange={(ev) => setFilterDate(ev.target.value)}
           />
         </label>
-        <label className="ops-label">
+        <label className={LABEL}>
           Assignee (exact)
           <input
-            className="ops-input"
+            className={INPUT}
             type="text"
             value={assignee}
             onChange={(ev) => setAssignee(ev.target.value)}
             placeholder="Name on task"
           />
         </label>
-        <label className="ops-label">
+        <label className={LABEL}>
           Status
           <select
-            className="ops-input"
+            className={INPUT}
             value={statusFilter}
             onChange={(ev) => setStatusFilter(ev.target.value)}
           >
@@ -193,13 +202,13 @@ export function CleaningBoard() {
             ))}
           </select>
         </label>
-        <button type="button" className="ops-btn" onClick={() => void load()}>
+        <button type="button" className={BTN} onClick={() => void load()}>
           Refresh
         </button>
       </section>
-      {loading && <p className="ops-muted">Loading tasks…</p>}
-      {error && <p className="ops-error">{error}</p>}
-      {!loading && !error && tasks.length === 0 && <p className="ops-muted">No tasks match filters.</p>}
+      {loading && <p className={MUTED}>Loading tasks…</p>}
+      {error && <p className="text-danger text-sm font-semibold">{error}</p>}
+      {!loading && !error && tasks.length === 0 && <p className={MUTED}>No tasks match filters.</p>}
       {!loading &&
         !error &&
         tasks.length > 0 &&
@@ -207,30 +216,30 @@ export function CleaningBoard() {
           const list = grouped.get(st) ?? [];
           if (list.length === 0) return null;
           return (
-            <section key={st} className="ops-cleaning-column">
-              <h2 className="ops-cleaning-column-title">{st.replace("_", " ")}</h2>
-              <ul className="ops-cleaning-list">
+            <section key={st} className="flex flex-col gap-2">
+              <h2 className="text-lg font-semibold capitalize">{st.replace("_", " ")}</h2>
+              <ul className="flex flex-col gap-3">
                 {list.map((t) => (
-                  <li key={t.id} className="ops-cleaning-card" data-testid={`ops-cleaning-task-${t.id}`}>
-                    <div className="ops-cleaning-card-head">
-                      <span className="ops-cleaning-type">{t.taskType}</span>
-                      <span className="ops-muted">{t.id.slice(0, 8)}…</span>
+                  <li key={t.id} className="bg-surface border-border rounded-card shadow-card flex flex-col gap-1 border p-4 text-sm" data-testid={`ops-cleaning-task-${t.id}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{t.taskType}</span>
+                      <span className={MUTED}>{t.id.slice(0, 8)}…</span>
                     </div>
-                    <div className="ops-cleaning-meta">
+                    <div className="text-text-muted">
                       Room {t.roomId.slice(0, 8)}… · Booking {t.bookingId.slice(0, 8)}…
                     </div>
                     {t.assigneeName && <div>Assignee: {t.assigneeName}</div>}
                     {t.plannedStart && (
-                      <div className="ops-cleaning-time">
+                      <div className="text-text-muted">
                         {new Date(t.plannedStart).toLocaleString()} →{" "}
                         {t.plannedEnd ? new Date(t.plannedEnd).toLocaleString() : "—"}
                       </div>
                     )}
-                    <div className="ops-cleaning-actions">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {t.status === "todo" && (
                         <button
                           type="button"
-                          className="ops-btn ops-btn-primary"
+                          className={BTN_PRIMARY}
                           data-testid={`ops-cleaning-start-${t.id}`}
                           disabled={pendingId === t.id}
                           onClick={() => void patchStatus(t, "in_progress")}
@@ -241,7 +250,7 @@ export function CleaningBoard() {
                       {t.status === "in_progress" && (
                         <button
                           type="button"
-                          className="ops-btn ops-btn-primary"
+                          className={BTN_PRIMARY}
                           data-testid={`ops-cleaning-complete-${t.id}`}
                           disabled={pendingId === t.id}
                           onClick={() => void patchStatus(t, "done")}
@@ -249,7 +258,7 @@ export function CleaningBoard() {
                           Complete
                         </button>
                       )}
-                      <button type="button" className="ops-btn" onClick={() => openReschedule(t)}>
+                      <button type="button" className={BTN} onClick={() => openReschedule(t)}>
                         Reschedule
                       </button>
                     </div>
@@ -260,44 +269,44 @@ export function CleaningBoard() {
           );
         })}
       {rescheduleTask && (
-        <div className="ops-modal-backdrop" role="presentation" onClick={() => setRescheduleTask(null)}>
-          <div className="ops-modal" onClick={(ev) => ev.stopPropagation()}>
-            <h2>Reschedule task</h2>
-            <form className="ops-modal-form" onSubmit={(ev) => void submitReschedule(ev)}>
-              <label className="ops-label">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onClick={() => setRescheduleTask(null)}>
+          <div className="bg-surface rounded-card shadow-raised flex w-full max-w-md flex-col gap-4 p-6" onClick={(ev) => ev.stopPropagation()}>
+            <h2 className="text-lg font-semibold">Reschedule task</h2>
+            <form className="flex flex-col gap-4" onSubmit={(ev) => void submitReschedule(ev)}>
+              <label className={LABEL}>
                 Planned start
                 <input
-                  className="ops-input"
+                  className={INPUT}
                   type="datetime-local"
                   value={rsStart}
                   onChange={(ev) => setRsStart(ev.target.value)}
                   required
                 />
               </label>
-              <label className="ops-label">
+              <label className={LABEL}>
                 Planned end
                 <input
-                  className="ops-input"
+                  className={INPUT}
                   type="datetime-local"
                   value={rsEnd}
                   onChange={(ev) => setRsEnd(ev.target.value)}
                   required
                 />
               </label>
-              <label className="ops-label">
+              <label className={LABEL}>
                 Assignee name
                 <input
-                  className="ops-input"
+                  className={INPUT}
                   type="text"
                   value={rsAssignee}
                   onChange={(ev) => setRsAssignee(ev.target.value)}
                 />
               </label>
-              <div className="ops-modal-actions">
-                <button type="button" className="ops-btn" onClick={() => setRescheduleTask(null)}>
+              <div className="flex justify-end gap-2">
+                <button type="button" className={BTN} onClick={() => setRescheduleTask(null)}>
                   Cancel
                 </button>
-                <button type="submit" className="ops-btn ops-btn-primary" disabled={pendingId === rescheduleTask.id}>
+                <button type="submit" className={BTN_PRIMARY} disabled={pendingId === rescheduleTask.id}>
                   Save
                 </button>
               </div>

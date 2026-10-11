@@ -1,10 +1,10 @@
 /**
  * Epic 9: automated WCAG 2.x Level A + AA checks (axe) on core routes. Blocking in CI with `@a11y`.
- * Manual keyboard checklist: login → calendar (drawer, mobile sheet) → bookings → settings.
+ * Manual keyboard checklist: login → today → calendar (booking panel) → settings.
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { e2eCredentials, gotoCalendarAndWaitReady, loginAsStaff } from "../helpers";
+import { SETTINGS_HEADING, TODAY_HEADING, e2eCredentials, gotoCalendarAndWaitReady, loginAsStaff } from "../helpers";
 
 type AxeViolation = {
   id: string;
@@ -43,21 +43,19 @@ test.describe("a11y core routes", { tag: "@a11y" }, () => {
     await assertAxeClean(page, "login");
   });
 
-  test("calendar, bookings, settings (authenticated)", async ({ page }) => {
+  test("today, calendar, settings (authenticated)", async ({ page }) => {
     // Visits several routes; the first run pays for the dev server compiling each of them.
-    test.setTimeout(90_000);
+    test.setTimeout(240_000);
     test.skip(!e2eCredentials(), "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.");
     await loginAsStaff(page);
+    await expect(page.getByRole("heading", { level: 1, name: TODAY_HEADING })).toBeVisible({ timeout: 30_000 });
+    await assertAxeClean(page, "today");
+
     await gotoCalendarAndWaitReady(page);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 15_000 });
     await assertAxeClean(page, "calendar");
 
-    await page.goto("/app/bookings");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
-    await assertAxeClean(page, "bookings");
-
     await page.goto("/app/settings");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1, name: SETTINGS_HEADING })).toBeVisible({ timeout: 20_000 });
     await assertAxeClean(page, "settings");
   });
 });

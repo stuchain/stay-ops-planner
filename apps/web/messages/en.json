@@ -650,7 +650,7 @@
     },
     "system": {
       "title": "System",
-      "subtitle": "Version, database, error tracking and per-user feature switches.",
+      "subtitle": "Version, database, error tracking and the daily reminder.",
       "systemTitle": "The app",
       "version": "Version",
       "commit": "Build id",
@@ -662,12 +662,6 @@
       "sentry": "Error tracking",
       "sentryOpen": "Open",
       "sentryNone": "No link is set",
-      "flagsTitle": "Features per user",
-      "flagsText": "Switch a feature on or off for each user separately. The change applies at once.",
-      "flagSaved": "The change was saved.",
-      "flags": {
-        "newUi": "New look of the app"
-      },
       "reminder": {
         "title": "Daily reminder",
         "text": "Every morning (08:00 in summer, 07:00 in winter) it sends who arrives and leaves and which bookings have no apartment. It is only sent when there is something to say.",

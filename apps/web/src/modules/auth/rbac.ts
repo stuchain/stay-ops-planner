@@ -17,16 +17,7 @@ export const API_POLICY_RULES: readonly ApiPolicyEntry[] = [
   { prefix: "/api/admin", methods: "*", roles: ["admin"] },
   { prefix: "/api/sync/hosthub/webhook", methods: ["POST"], roles: [] }, // public; signature enforced in handler
   { prefix: "/api/sync", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/assignments", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/blocks", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/bookings", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/calendar", methods: "*", roles: ["operator", "admin"] },
   { prefix: "/api/cleaning", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/dashboard", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/excel", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/rooms", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/audit", methods: "*", roles: ["operator", "admin"] },
-  { prefix: "/api/assets", methods: "*", roles: ["viewer", "operator", "admin"] },
 ] as const;
 
 function methodMatches(rule: ApiPolicyEntry, method: string): boolean {

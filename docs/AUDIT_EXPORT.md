@@ -1,5 +1,7 @@
 # Audit trail and NDJSON export
 
+> The REST routes `GET /api/audit/events` and `GET /api/audit/export` were removed with the old UI (P2-10). The audit log is read and exported (CSV) from Dev mode, History (`dev.history` tRPC router). The event shape below is unchanged.
+
 ## Coverage inventory
 
 Sensitive mutations should call `writeAuditSnapshot` (from `@stay-ops/audit`) inside the same database transaction as the write when possible. Current coverage:

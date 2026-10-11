@@ -12,6 +12,7 @@
 
 @source "./";
 @source "../features";
+@source "../modules/cleaning";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -136,6 +137,10 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
 
 /* A small reset, scoped to the new shell instead of Tailwind's global preflight. */
 @layer base {
+  body {
+    margin: 0;
+  }
+
   [data-ui="new"] {
     min-height: 100vh;
     background: var(--so-bg);

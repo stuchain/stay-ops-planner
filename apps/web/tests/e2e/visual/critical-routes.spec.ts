@@ -5,7 +5,7 @@
  * Default `pnpm test:e2e` skips this project unless `PLAYWRIGHT_VISUAL=1` (see `playwright.config.ts`).
  */
 import { test, expect } from "@playwright/test";
-import { e2eCredentials, gotoCalendarAndWaitReady, loginAsStaff } from "../helpers";
+import { TODAY_HEADING, e2eCredentials, gotoCalendarAndWaitReady, loginAsStaff } from "../helpers";
 
 test.describe("visual snapshots", { tag: "@visual" }, () => {
   test.beforeEach(() => {
@@ -13,14 +13,19 @@ test.describe("visual snapshots", { tag: "@visual" }, () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.setItem("ops.calendar.month", "2026-06");
-      window.localStorage.setItem("ops.calendar.displayMonths", "1");
-    });
     await loginAsStaff(page);
   });
 
-  test("calendar month view", async ({ page }) => {
+  test("today", async ({ page }) => {
+    await expect(page.getByRole("heading", { level: 1, name: TODAY_HEADING })).toBeVisible({ timeout: 30_000 });
+    await expect(page).toHaveScreenshot("today.png", {
+      fullPage: true,
+      maxDiffPixels: 400,
+      animations: "disabled",
+    });
+  });
+
+  test("calendar", async ({ page }) => {
     await gotoCalendarAndWaitReady(page);
     await expect(page).toHaveScreenshot("calendar.png", {
       fullPage: true,
@@ -29,17 +34,7 @@ test.describe("visual snapshots", { tag: "@visual" }, () => {
     });
   });
 
-  test("bookings list header", async ({ page }) => {
-    await page.goto("/app/bookings");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
-    await expect(page).toHaveScreenshot("bookings.png", {
-      fullPage: true,
-      maxDiffPixels: 400,
-      animations: "disabled",
-    });
-  });
-
-  test("settings language section", async ({ page }) => {
+  test("settings", async ({ page }) => {
     await page.goto("/app/settings");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
     await expect(page).toHaveScreenshot("settings.png", {
