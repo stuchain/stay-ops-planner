@@ -6,19 +6,22 @@ import { SESSION_COOKIE_NAME } from "@/modules/auth/session";
 
 /** Per-user feature flags stored in `users.flags`. Unknown keys are ignored. */
 export type UserFlags = {
-  /** The redesigned app shell and Calendar (Phase 1B). Off until the new UI is accepted. */
+  /**
+   * The redesigned app. On for everyone since the usability session passed (P2-10, 2026-10-11); stored `false`
+   * still brings back the old screens until they are deleted.
+   */
   newUi: boolean;
 };
 
 /** Every flag the Dev mode System page can switch. */
 export const FLAG_KEYS = ["newUi"] as const satisfies ReadonlyArray<keyof UserFlags>;
 
-const DEFAULT_FLAGS: UserFlags = { newUi: false };
+const DEFAULT_FLAGS: UserFlags = { newUi: true };
 
 export function readFlags(raw: unknown): UserFlags {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return { ...DEFAULT_FLAGS };
   const record = raw as Record<string, unknown>;
-  return { newUi: record.newUi === true };
+  return { newUi: record.newUi !== false };
 }
 
 export type UiLocale = "el" | "en";

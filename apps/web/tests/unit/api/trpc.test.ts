@@ -122,10 +122,12 @@ describe("client error text", () => {
 });
 
 describe("readFlags", () => {
-  it("reads newUi and ignores anything else", () => {
+  it("has the new UI on unless it was switched off, and ignores anything else", () => {
     expect(readFlags({ newUi: true, other: 1 })).toEqual({ newUi: true });
-    expect(readFlags({ newUi: "yes" })).toEqual({ newUi: false });
-    expect(readFlags(null)).toEqual({ newUi: false });
-    expect(readFlags([])).toEqual({ newUi: false });
+    expect(readFlags({ newUi: false })).toEqual({ newUi: false });
+    expect(readFlags({ newUi: "yes" })).toEqual({ newUi: true });
+    expect(readFlags({})).toEqual({ newUi: true });
+    expect(readFlags(null)).toEqual({ newUi: true });
+    expect(readFlags([])).toEqual({ newUi: true });
   });
 });
