@@ -34,6 +34,10 @@ jobs:
       SET_ROLE: ${{ inputs.role }}
 
     steps:
+      # The repository is public, so its logs are too: hide the e-mail from every later line of the log.
+      - name: Mask the e-mail in the log
+        run: echo "::add-mask::$SET_ROLE_EMAIL"
+
       - uses: actions/checkout@v4
 
       - uses: ./.github/actions/setup-node-pnpm

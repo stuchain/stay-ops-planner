@@ -23,12 +23,12 @@ try {
   const users = await prisma.user.findMany({ select: { id: true, email: true, role: true } });
   const user = users.find((u) => u.email.trim().toLowerCase() === email);
   if (!user) {
-    console.error(`No user with email ${email}.`);
+    console.error("No user with that email.");
     process.exit(1);
   }
-  console.log(`before: ${user.email} is ${user.role}`);
+  console.log(`before: ${user.role}`);
   const after = await prisma.user.update({ where: { id: user.id }, data: { role }, select: { email: true, role: true } });
-  console.log(`after: ${after.email} is ${after.role}`);
+  console.log(`after: ${after.role}`);
 } finally {
   await prisma.$disconnect();
 }
