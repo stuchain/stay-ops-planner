@@ -37,3 +37,6 @@ export type SearchResultData = RouterOutputs["booking"]["search"]["results"][num
 export type WeekSummaryData = RouterOutputs["today"]["week"];
 export type WeekDayData = WeekSummaryData["days"][number];
 export type FamilyMemberData = RouterOutputs["admin"]["family"]["list"]["members"][number];
+export type StatisticsData = RouterOutputs["stats"]["year"];
+export type ReviewsData = RouterOutputs["stats"]["reviews"];
+export type ReviewSourceData = ReviewsData["sources"][number];

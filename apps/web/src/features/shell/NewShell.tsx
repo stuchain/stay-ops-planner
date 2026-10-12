@@ -6,6 +6,7 @@ import {
   Building2,
   BrushCleaning,
   CalendarDays,
+  ChartNoAxesCombined,
   History,
   MessageSquareText,
   Landmark,
@@ -40,6 +41,8 @@ const NAV = [
   { href: "/app/free", key: "free", icon: SearchCheck },
   { href: "/app/turnovers", key: "cleaning", icon: BrushCleaning },
   { href: "/app/excel", key: "income", icon: Wallet, money: true },
+  // On phones the tab bar has no room for it; the Income screen links to it.
+  { href: "/app/stats", key: "stats", icon: ChartNoAxesCombined, money: true, hideOnPhone: true },
   { href: "/app/settings", key: "settings", icon: Settings },
 ] as const;
 
@@ -72,11 +75,12 @@ function ShellInner({ devMode, role, children }: { devMode: boolean; role: Role;
   const tDev = useTranslations("dev.nav");
   useSyncWhileOpen();
   const nav = role === "viewer" ? NAV.filter((item) => !("money" in item)) : NAV;
-  const items: SidebarItem[] = nav.map(({ href, key, icon }) => ({
-    href,
-    icon,
-    label: t(key),
-    current: pathname?.startsWith(href) ?? false,
+  const items: SidebarItem[] = nav.map((item) => ({
+    href: item.href,
+    icon: item.icon,
+    label: t(item.key),
+    current: pathname?.startsWith(item.href) ?? false,
+    ...("hideOnPhone" in item ? { hideOnPhone: item.hideOnPhone } : {}),
   }));
   const secondary = devMode
     ? {

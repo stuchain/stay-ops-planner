@@ -8,6 +8,7 @@ import { devRouter } from "./routers/dev";
 import { helpRouter } from "./routers/help";
 import { meRouter } from "./routers/me";
 import { moneyRouter } from "./routers/money";
+import { statsRouter } from "./routers/stats";
 import { syncRouter } from "./routers/sync";
 import { todayRouter } from "./routers/today";
 
@@ -20,6 +21,7 @@ export const appRouter = createTRPCRouter({
   sync: syncRouter,
   dev: devRouter,
   money: moneyRouter,
+  stats: statsRouter,
   today: todayRouter,
   help: helpRouter,
   availability: availabilityRouter,

@@ -101,6 +101,7 @@ model Room {
   assignments   Assignment[]
   manualBlocks  ManualBlock[]
   cleaningTasks CleaningTask[]
+  reviewSources ReviewSource[]
 
   @@map("rooms")
 }
@@ -515,4 +516,51 @@ model Setting {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("settings")
+}
+
+enum ReviewPlatform {
+  airbnb
+  booking
+  google
+}
+
+/// A page where guests review us (an Airbnb listing, a Booking.com property, a Google place).
+model ReviewSource {
+  id            String         @id @default(cuid())
+  platform      ReviewPlatform
+  url           String
+  /// What the page is called on the statistics page (e.g. "Onar on Airbnb").
+  label         String?
+  /// The apartment it is for; null for the whole place.
+  roomId        String?        @map("room_id")
+  /// Google only: the place found from the link, so later updates skip the search.
+  googlePlaceId String?        @map("google_place_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  room      Room?            @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  snapshots ReviewSnapshot[]
+
+  @@map("review_sources")
+}
+
+/// The score and number of reviews a page showed on a day (typed in, or read from Google).
+model ReviewSnapshot {
+  id               String   @id @default(cuid())
+  sourceId         String   @map("source_id")
+  takenOn          DateTime @map("taken_on") @db.Date
+  /// The score × 100 on the platform's own scale (Airbnb and Google out of 5, Booking.com out of 10).
+  ratingHundredths Int?     @map("rating_hundredths")
+  reviewCount      Int?     @map("review_count")
+  /// "manual" or "google".
+  origin           String
+  /// Google only: the latest reviews it returned (author, rating, text, time).
+  latestReviews    Json?    @map("latest_reviews")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  source ReviewSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, takenOn])
+  @@map("review_snapshots")
 }

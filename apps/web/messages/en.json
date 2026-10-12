@@ -84,7 +84,8 @@
     "free": "Free",
     "income": "Income",
     "settings": "Settings",
-    "cleaning": "Cleaning"
+    "cleaning": "Cleaning",
+    "stats": "Statistics"
   },
   "sync": {
     "loading": "Updating from Hosthub…",
@@ -329,7 +330,8 @@
       "legend": "▲ and ▼: how many percentage points occupancy is above or below the same month last year. Only confirmed bookings placed in an apartment count.",
       "empty": "There are no apartments."
     },
-    "report": "Report for the accountant"
+    "report": "Report for the accountant",
+    "statistics": "Statistics"
   },
   "dev": {
     "nav": {
@@ -1270,5 +1272,141 @@
     "added": "Added: {email}",
     "fillAll": "Fill in the email and the password.",
     "tooShort": "The password needs at least {min} characters."
+  },
+  "stats": {
+    "title": "Statistics",
+    "subtitle": "Every figure for the year, next to last year's.",
+    "year": "Year",
+    "periodLabel": "Which days count",
+    "toDate": "Up to today",
+    "wholeYear": "Whole year",
+    "periodToDate": "From 1 January to {day}, for both {year} and {lastYear}, so the comparison is fair.",
+    "periodWhole": "All of {year} next to all of {lastYear}. Future bookings count too.",
+    "lastYearWas": "last year {value}",
+    "rules": "Bookings and income count in the month the guest arrives, with the Income page's rules (cancellations count only what was paid). Nights and occupancy count the nights in the period. Corrections typed into the Income table are not used here, so totals can differ a little.",
+    "delta": {
+      "same": "same as last year",
+      "percent": "{value}%",
+      "points": "{value} pts",
+      "number": "{value}",
+      "up": "Up on last year by {change}",
+      "down": "Down on last year by {change}"
+    },
+    "kpi": {
+      "none": "—",
+      "income": "Income",
+      "payout": "Net to the account",
+      "fees": "Platform fees: {amount}",
+      "bookings": "Bookings",
+      "nights": "Nights",
+      "occupancy": "Occupancy",
+      "averageNight": "Average price per night",
+      "perAvailableNight": "Income per available night",
+      "perAvailableNightHint": "Income spread over every night of every apartment, booked or empty.",
+      "averageStay": "Average stay",
+      "leadTime": "How far ahead they book",
+      "leadTimeKnown": "Counts {value}% of bookings; Hosthub does not say when the others were made.",
+      "guests": "Guests",
+      "guestsHint": "{adults} adults, {children} children, {infants} infants · {average} people per booking",
+      "returning": "Guests who came back",
+      "returningHint": "Out of {guests} different guests",
+      "cancellations": "Cancellations",
+      "cancellationsHint": "{percent}% of bookings · {paid} was paid",
+      "percentValue": "{value}%",
+      "daysValue": "{value} days",
+      "nightsValue": "{value} nights"
+    },
+    "months": {
+      "title": "Month by month",
+      "metric": "What the chart shows",
+      "income": "Income",
+      "nights": "Nights",
+      "occupancy": "Occupancy",
+      "bookings": "Bookings",
+      "chartLabel": "{metric} by month, this year and last",
+      "itemLabel": "{month}: {year} {now}, {lastYear} {before}",
+      "note": "Coloured bar: this year. Grey bar: last year."
+    },
+    "channels": {
+      "title": "By channel",
+      "channel": "Channel",
+      "share": "Share of income",
+      "fees": "Fees"
+    },
+    "apartments": {
+      "title": "By apartment",
+      "apartment": "Apartment",
+      "income": "Income of the nights",
+      "note": "Here income is spread over the nights in the period, so it can differ from the Income page. Only bookings placed in an apartment count."
+    },
+    "patterns": {
+      "title": "How guests book",
+      "legend": "Coloured bar: {year}. Grey bar: {lastYear}. In brackets, this year's share.",
+      "stayLength": "Length of stay",
+      "stayBucket": "{bucket, select, 0 {1 night} 1 {2 nights} 2 {3 nights} 3 {4–6 nights} 4 {7–13 nights} other {14+ nights}}",
+      "leadTime": "How far ahead they booked",
+      "leadBucket": "{bucket, select, 0 {up to 6 days} 1 {1–4 weeks} 2 {1–3 months} 3 {3–6 months} other {6+ months}}",
+      "partySize": "People per booking",
+      "partyBucket": "{bucket, select, 0 {1 person} 1 {2 people} 2 {3 people} 3 {4 people} other {5+ people}}",
+      "weekday": "Arrival day"
+    },
+    "distribution": {
+      "itemLabel": "{label}: {year} {now}, {lastYear} {before}"
+    },
+    "records": {
+      "title": "The year's records",
+      "busiestMonth": "Busiest month",
+      "monthNights": "{month} · {nights} nights",
+      "bestMonth": "Month with the most income",
+      "longestStay": "Longest stay",
+      "biggestBooking": "Biggest booking",
+      "pending": "Waiting for confirmation"
+    },
+    "years": {
+      "title": "All years",
+      "year": "Year",
+      "note": "Whole years. This year includes bookings still to come."
+    },
+    "reviews": {
+      "title": "Reviews",
+      "intro": "Add your pages on Airbnb, Booking.com and Google. Google is read automatically once a day. Airbnb and Booking.com do not let apps read their reviews, so open the page and type the score you see here.",
+      "empty": "No review page added yet.",
+      "google": "Google",
+      "open": "Open on {platform}",
+      "remove": "Remove",
+      "removeConfirm": "Yes, remove",
+      "keep": "Cancel",
+      "scoreNow": "Score now",
+      "countNow": "Reviews in total",
+      "newThisYear": "New reviews in {year}",
+      "scoreOf": "{value} / {scale}",
+      "noScore": "—",
+      "noScoreYet": "No score yet.",
+      "readOn": "Read from Google on {day}.",
+      "typedOn": "Typed in on {day}.",
+      "latestReviews": "Latest reviews",
+      "anonymous": "No name",
+      "stars": "{value} stars",
+      "googleAuto": "The score updates by itself.",
+      "googleNoKey": "To be read automatically it needs a Google key on the server. Until then, type the score here.",
+      "googleReading": "Reading reviews from Google…",
+      "score": "Score (out of {scale})",
+      "count": "Number of reviews",
+      "saveScore": "Save",
+      "saving": "Saving…",
+      "saved": "Score saved.",
+      "scoreInvalid": "Type a score from 0 to {scale} (e.g. 4.9) or a number of reviews.",
+      "addTitle": "Add a page",
+      "platform": "Where",
+      "link": "Page link",
+      "label": "Name (optional)",
+      "add": "Add",
+      "linkInvalid": "Paste the page's whole link.",
+      "linkExample": {
+        "airbnb": "https://www.airbnb.com/rooms/…",
+        "booking": "https://www.booking.com/hotel/gr/…",
+        "google": "https://maps.app.goo.gl/…"
+      }
+    }
   }
 }

@@ -1,7 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BedDouble, ChartColumn, ChevronDown, Download, FileText, Table2, TriangleAlert } from "lucide-react";
+import {
+  BedDouble,
+  ChartColumn,
+  ChartNoAxesCombined,
+  ChevronDown,
+  Download,
+  FileText,
+  Table2,
+  TriangleAlert,
+} from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -231,6 +240,10 @@ function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate 
         >
           <FileText size={24} aria-hidden="true" />
           {t("income.report")}
+        </Link>
+        <Link href="/app/stats" className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}>
+          <ChartNoAxesCombined size={24} aria-hidden="true" />
+          {t("income.statistics")}
         </Link>
         <button
           type="button"

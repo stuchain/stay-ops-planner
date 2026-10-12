@@ -8,6 +8,8 @@ export interface SidebarItem {
   label: string;
   icon: LucideIcon;
   current?: boolean;
+  /** Left out of the phone tab bar (reached from another screen there). */
+  hideOnPhone?: boolean;
 }
 
 export type SidebarLinkProps = {
@@ -51,7 +53,13 @@ function NavList({
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <li key={item.href} className={compact ? undefined : "max-[759px]:min-w-0 max-[759px]:flex-1"}>
+          <li
+            key={item.href}
+            className={cn(
+              !compact && "max-[759px]:min-w-0 max-[759px]:flex-1",
+              item.hideOnPhone && "max-[759px]:hidden",
+            )}
+          >
             <Link
               href={item.href}
               aria-current={item.current ? "page" : undefined}
