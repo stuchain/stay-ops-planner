@@ -127,15 +127,20 @@ async function main() {
     }
   }
 
-  // Earlier stays this year, so the money page has a year to show: one every 6 days per apartment,
-  // ending before the hand-written bookings above; summer nights cost more.
+  // Earlier stays this year and last year, so the money and statistics pages have years to show and
+  // compare: one every 6 days per apartment, ending before the hand-written bookings above; summer nights
+  // cost more, and last year a little less.
   const today = dayFromToday(0);
-  const daysIntoYear = Math.round((today.getTime() - Date.UTC(today.getUTCFullYear(), 0, 1)) / 86_400_000);
+  const lastYearStart = Date.UTC(today.getUTCFullYear() - 1, 0, 1);
+  const daysSinceLastYear = Math.round((today.getTime() - lastYearStart) / 86_400_000);
   for (let room = 0; room < ROOMS.length; room += 1) {
-    for (let from = -daysIntoYear + room; from <= -26; from += 6) {
-      const month = dayFromToday(from).getUTCMonth();
-      const nightly = [70, 70, 80, 95, 110, 140, 165, 170, 130, 100, 75, 80][month]! + room * 5;
-      const channel = [Channel.airbnb, Channel.booking, Channel.direct][(from + 400) % 3]!;
+    for (let from = -daysSinceLastYear + room, stay = 0; from <= -26; from += 6, stay += 1) {
+      const day = dayFromToday(from);
+      const lastYear = day.getUTCFullYear() < today.getUTCFullYear();
+      const nightly = Math.round(
+        ([70, 70, 80, 95, 110, 140, 165, 170, 130, 100, 75, 80][day.getUTCMonth()]! + room * 5) * (lastYear ? 0.9 : 1),
+      );
+      const channel = [Channel.airbnb, Channel.booking, Channel.direct][(stay + room) % 3]!;
       BOOKINGS.push({
         guest: `Demo Guest ${room + 1}-${-from}`,
         from,
