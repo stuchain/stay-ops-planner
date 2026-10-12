@@ -3,6 +3,7 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && corepack enable pnpm && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && corepack enable pnpm && sh scripts/vercel-build.sh",
+  "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ] && ! printf %s \"$VERCEL_GIT_COMMIT_MESSAGE\" | grep -q \"\\[preview\\]\"",
   "build": {
     "env": {
       "SKIP_STAYOPS_ENV_VALIDATE": "1"
