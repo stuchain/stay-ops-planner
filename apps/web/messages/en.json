@@ -761,6 +761,29 @@
       "switch": "Developer mode",
       "on": "On",
       "off": "Off"
+    },
+    "calendarFeed": {
+      "title": "Calendar on your phone",
+      "intro": "Arrivals and departures appear in your phone calendar, with a reminder at 9:00 the day before each arrival. It works even when the app is closed.",
+      "create": "Create link",
+      "creating": "Creating the link…",
+      "linkLabel": "Your private link",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "secret": "Anyone with this link can see the bookings. Do not send it to others.",
+      "iphoneTitle": "On iPhone",
+      "iphoneSteps": "Open this page on the iPhone and tap “Add to iPhone”. On the screen that opens, switch off “Remove Alerts”, otherwise the reminder will not go off, and tap “Add”.",
+      "iphoneButton": "Add to iPhone",
+      "googleTitle": "In Google Calendar (Android)",
+      "googleSteps": "Tap “Add to Google Calendar” (easiest from a computer) and confirm. Google does not keep the link's reminders: in the settings of the “Bookings” calendar, set an all-day event notification 1 day before at 9:00. If it does not show on the phone, open Google Calendar and switch “Bookings” on in the menu.",
+      "googleButton": "Add to Google Calendar",
+      "freshness": "The phone checks for changes by itself: iPhone every so often (Settings > Calendar > Accounts > Fetch New Data), Google every few hours or once a day. Each time it checks, the app first brings in new bookings from Hosthub, even if nobody has opened it.",
+      "renew": "New link",
+      "remove": "Switch off",
+      "confirmRenew": "The current link will stop working and you will need to add the new one to the phone again. Continue?",
+      "confirmRemove": "The link will stop working and the bookings will leave the phone calendar. Continue?",
+      "yes": "Yes",
+      "cancel": "Cancel"
     }
   },
   "offline": {
@@ -1148,5 +1171,15 @@
       "title": "This link has expired",
       "text": "Ask for a new link."
     }
+  },
+  "calendarFeed": {
+    "calendarName": "Bookings",
+    "arrival": "Arrival: {guest} · {room}",
+    "departure": "Departure: {guest} · {room}",
+    "noName": "No name",
+    "noRoom": "no apartment",
+    "dates": "From {checkin} to {checkout}",
+    "phone": "Phone: {phone}",
+    "pending": "Waiting for confirmation."
   }
 }

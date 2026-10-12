@@ -8,13 +8,14 @@ import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { HosthubTokenCard } from "@/features/dev/HosthubScreen";
+import { CalendarFeedCard } from "./CalendarFeedCard";
 import { DevModeCard } from "./DevModeCard";
 import { HosthubCard } from "./HosthubCard";
 import { LanguageCard } from "./LanguageCard";
 import { PasswordCard } from "./PasswordCard";
 import { TextSizeCard, toTextSize } from "./TextSizeCard";
 
-/** /app/settings for the new UI: language, text size, Hosthub, password and (admins) Dev mode. */
+/** /app/settings for the new UI: language, text size, Hosthub, phone calendar, password and (admins) Dev mode. */
 export function SettingsScreen() {
   const t = useTranslations("settingsScreen");
   const tp = useTranslations("polish");
@@ -39,6 +40,7 @@ export function SettingsScreen() {
           <TextSizeCard textSize={toTextSize(me.data.textSize)} />
           <HosthubCard canRefresh={me.data.role !== "viewer"} />
           {me.data.role === "admin" ? <HosthubTokenCard /> : null}
+          <CalendarFeedCard />
           <PasswordCard />
           {me.data.role === "admin" ? <DevModeCard enabled={me.data.devMode} /> : null}
         </>

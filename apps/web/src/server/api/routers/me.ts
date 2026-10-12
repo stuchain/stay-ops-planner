@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { DomainError } from "@stay-ops/domain";
+import { createCalendarFeed, getCalendarFeed, removeCalendarFeed } from "@/server/useCases/calendarFeed";
 import { comparePassword, hashPassword, isAcceptablePasswordLength } from "@/modules/auth/password";
 import { adminProcedure, createTRPCRouter, userProcedure } from "../trpc";
 
@@ -58,6 +59,18 @@ export const meRouter = createTRPCRouter({
       });
       return { ok: true as const };
     }),
+
+  /** The private phone calendar address of the signed-in user, or null when there is none. */
+  calendarFeed: userProcedure.query(({ ctx }) => getCalendarFeed(ctx.user.userId)),
+
+  /** Makes a new phone calendar address; the old one stops working. */
+  createCalendarFeed: userProcedure.mutation(({ ctx }) => createCalendarFeed(ctx.user.userId)),
+
+  /** Switches the phone calendar address off. */
+  removeCalendarFeed: userProcedure.mutation(async ({ ctx }) => {
+    await removeCalendarFeed(ctx.user.userId);
+    return { ok: true as const };
+  }),
 
   /** Dev mode switch. Admins only, checked on the server; it only saves the flag. */
   setDevMode: adminProcedure.input(z.object({ enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
