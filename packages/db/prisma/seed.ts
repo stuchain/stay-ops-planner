@@ -40,7 +40,8 @@ async function upsertBootstrapUser(
   const passwordHash = await bcrypt.hash(passwordPlain, cost);
   await prisma.user.upsert({
     where: { email },
-    update: { passwordHash, isActive: true, role },
+    // A new password also ends every existing sign-in of the account (same as "sign out everywhere").
+    update: { passwordHash, isActive: true, role, sessionVersion: { increment: 1 } },
     create: {
       email,
       passwordHash,
