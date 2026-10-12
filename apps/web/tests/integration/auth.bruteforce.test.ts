@@ -8,6 +8,8 @@ const password = "correct-password-123";
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
 process.env.APP_TIMEZONE ??= "Etc/UTC";
+// Unknown e-mails are compared against a hash of this cost (see loginWithEmailPassword); keep the 30-try loops fast.
+process.env.BCRYPT_COST ??= "4";
 process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? "postgresql://stayops:stayops@localhost:5432/stayops_test";
 

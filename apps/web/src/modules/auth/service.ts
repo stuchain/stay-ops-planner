@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Prisma } from "@stay-ops/db";
 import { prisma } from "@/lib/prisma";
 import { AuthError, type AuthErrorCode, jsonError } from "./errors";
-import { comparePassword } from "./password";
+import { comparePassword, hashPassword } from "./password";
 import { createSessionToken, verifySessionToken, type SessionRole } from "./session";
 
 export const LoginBodySchema = z.object({
@@ -81,6 +81,14 @@ function accountDisabled(): AuthError {
   });
 }
 
+let unknownUserHashPromise: Promise<string> | null = null;
+
+/** A real bcrypt hash (same cost as stored ones) that no password matches, compared for e-mails without an account. */
+function unknownUserHash(): Promise<string> {
+  unknownUserHashPromise ??= hashPassword(crypto.randomUUID());
+  return unknownUserHashPromise;
+}
+
 function loginEmailNorm(email: string) {
   return email.trim().toLowerCase();
 }
@@ -109,11 +117,11 @@ export async function loginWithEmailPassword(body: LoginBody) {
   }
 
   const user = userRows[0];
-  if (!user) throw invalidCredentials();
+  // The password is checked before anything else is said about the account, and an unknown e-mail costs the
+  // same bcrypt work, so neither the answer nor its timing tells a stranger which e-mails have accounts.
+  const ok = await comparePassword(body.password, user?.password_hash ?? (await unknownUserHash()));
+  if (!user || !ok) throw invalidCredentials();
   if (!user.is_active) throw accountDisabled();
-
-  const ok = await comparePassword(body.password, user.password_hash);
-  if (!ok) throw invalidCredentials();
 
   const role = toSessionRole(user.role);
   const { token, expiresAt } = createSessionToken(user.id, role, Date.now(), user.session_version ?? 0);
