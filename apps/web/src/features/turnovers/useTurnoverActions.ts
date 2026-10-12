@@ -25,6 +25,7 @@ export function useTurnoverActions(): TurnoverActions {
   const listKey = trpc.cleaning.list.pathKey();
 
   const options = {
+    meta: { handlesErrors: true },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: listKey }),
   };
   const status = useMutation({ ...trpc.cleaning.setStatus.mutationOptions(), ...options });

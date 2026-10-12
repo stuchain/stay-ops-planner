@@ -117,7 +117,7 @@ export function ArrangeMonthPanel({ month, rooms, onPreview, onClose }: ArrangeM
     staleTime: 0,
     gcTime: 0,
   });
-  const apply = useMutation(trpc.calendar.arrangeApply.mutationOptions());
+  const apply = useMutation(trpc.calendar.arrangeApply.mutationOptions({ meta: { handlesErrors: true } }));
 
   const data = month !== null ? preview.data : undefined;
   useEffect(() => {

@@ -40,7 +40,7 @@ export function HelpButton() {
   const ids = useId();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
-  const send = useMutation(trpc.help.send.mutationOptions());
+  const send = useMutation(trpc.help.send.mutationOptions({ meta: { handlesErrors: true } }));
 
   // Crashes that never reached an error message on screen still count as "the last error".
   useEffect(() => {

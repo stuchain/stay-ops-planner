@@ -318,6 +318,8 @@ export function ReviewsCard({ year, today }: { year: number; today: IsoDate }) {
   const refreshed = useRef(false);
   const refresh = useMutation(
     trpc.stats.refreshGoogle.mutationOptions({
+      // A background refresh: when it fails, the stored scores stay on screen and nobody needs a message.
+      meta: { handlesErrors: true },
       onSuccess: (r) => {
         if (r.updated > 0) void queryClient.invalidateQueries({ queryKey: trpc.stats.reviews.pathKey() });
       },

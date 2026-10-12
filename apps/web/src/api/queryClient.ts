@@ -21,3 +21,10 @@ export function makeQueryClient(): QueryClient {
     },
   });
 }
+
+declare module "@tanstack/react-query" {
+  interface Register {
+    /** `handlesErrors: true` marks a save that shows its own error, so the shell's MutationErrorFallback stays quiet. */
+    mutationMeta: { handlesErrors?: boolean };
+  }
+}

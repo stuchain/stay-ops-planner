@@ -35,8 +35,12 @@ export function CalendarFeedCard() {
     setCopied(false);
     void queryClient.invalidateQueries({ queryKey: trpc.me.calendarFeed.queryKey() });
   };
-  const create = useMutation(trpc.me.createCalendarFeed.mutationOptions({ onSuccess: refresh }));
-  const remove = useMutation(trpc.me.removeCalendarFeed.mutationOptions({ onSuccess: refresh }));
+  const create = useMutation(
+    trpc.me.createCalendarFeed.mutationOptions({ onSuccess: refresh, meta: { handlesErrors: true } }),
+  );
+  const remove = useMutation(
+    trpc.me.removeCalendarFeed.mutationOptions({ onSuccess: refresh, meta: { handlesErrors: true } }),
+  );
   const error = create.error ?? remove.error ?? feed.error;
 
   const path = feed.data && typeof feed.data.path === "string" ? feed.data.path : null;

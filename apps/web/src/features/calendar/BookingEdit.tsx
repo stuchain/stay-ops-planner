@@ -124,8 +124,8 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
     onSettled: refresh,
   });
   // Undo sends its own requests so the save and reset toasts above are not shown again.
-  const undoUpdate = useMutation(trpc.booking.updateDetails.mutationOptions());
-  const undoReset = useMutation(trpc.booking.resetField.mutationOptions());
+  const undoUpdate = useMutation(trpc.booking.updateDetails.mutationOptions({ meta: { handlesErrors: true } }));
+  const undoReset = useMutation(trpc.booking.resetField.mutationOptions({ meta: { handlesErrors: true } }));
 
   /** Puts the fields back as they were before the change that left the booking at `version`. */
   async function undo(before: Draft, fields: readonly Field[], version: number) {

@@ -52,7 +52,7 @@ function DaySection({
   const errorText = useErrorText();
   const trpc = useTRPC();
   const [link, setLink] = useState<CleanerLink | null>(null);
-  const createLink = useMutation(trpc.cleaning.createLink.mutationOptions());
+  const createLink = useMutation(trpc.cleaning.createLink.mutationOptions({ meta: { handlesErrors: true } }));
   const headingId = `turnovers-day-${day}`;
 
   async function makeLink() {

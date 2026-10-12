@@ -28,6 +28,7 @@ import { Toaster } from "@/ui/Toast";
 import { HelpButton } from "./HelpButton";
 import { HosthubBanner } from "./HosthubBanner";
 import { LogoutButton } from "./LogoutButton";
+import { MutationErrorFallback } from "./MutationErrorFallback";
 import { OfflineBanner } from "./OfflineBanner";
 import { RoleProvider, type Role } from "./role";
 import { SessionDialog } from "./SessionDialog";
@@ -115,6 +116,7 @@ function ShellInner({ devMode, role, children }: { devMode: boolean; role: Role;
       </main>
       <div className="print:hidden">
         <SessionDialog />
+        <MutationErrorFallback />
         <Toaster />
       </div>
     </>

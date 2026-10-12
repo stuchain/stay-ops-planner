@@ -18,6 +18,7 @@ export function HosthubCard({ canRefresh }: { canRefresh: boolean }) {
   const status = useQuery({ ...trpc.sync.status.queryOptions(), refetchInterval: 15_000 });
   const run = useMutation(
     trpc.sync.run.mutationOptions({
+      meta: { handlesErrors: true },
       onSettled: () => {
         void queryClient.invalidateQueries({ queryKey: trpc.sync.pathKey() });
         void queryClient.invalidateQueries({ queryKey: trpc.calendar.pathKey() });
