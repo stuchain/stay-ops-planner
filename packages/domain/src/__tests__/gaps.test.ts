@@ -10,13 +10,13 @@ const o = (roomId: string, start: string, end: string): Occupied => ({
 });
 
 describe("shortGaps", () => {
-  it("finds one and two empty nights between stays in the same apartment", () => {
+  it("finds single empty nights by default, and longer gaps up to maxNights", () => {
+    expect(shortGaps([o("a", "2026-07-01", "2026-07-05"), o("a", "2026-07-07", "2026-07-09")])).toEqual([]);
     expect(
-      shortGaps([
-        o("a", "2026-07-01", "2026-07-05"),
-        o("a", "2026-07-06", "2026-07-09"),
-        o("a", "2026-07-11", "2026-07-15"),
-      ]),
+      shortGaps(
+        [o("a", "2026-07-01", "2026-07-05"), o("a", "2026-07-06", "2026-07-09"), o("a", "2026-07-11", "2026-07-15")],
+        { maxNights: 2 },
+      ),
     ).toEqual([
       {
         roomId: "a",

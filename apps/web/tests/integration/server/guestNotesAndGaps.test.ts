@@ -122,19 +122,19 @@ describe("guest notes when the guest comes back", () => {
 });
 
 describe("gap nights on Today", () => {
-  it("lists one or two empty nights between stays and closed periods in the coming weeks", async () => {
+  it("lists single empty nights between stays and closed periods in the coming weeks", async () => {
     const onar = await room("Onar");
     const iris = await room("Iris");
-    // Onar: a 1-night gap on 13 June, then back-to-back, then a 3-night gap (too long to flag).
+    // Onar: a 1-night gap on 13 June, then back-to-back, then a 2-night gap (can be booked, not flagged).
     await booking("A", "2030-06-09", "2030-06-13", { roomId: onar.id });
     const next = await booking("B", "2030-06-14", "2030-06-16", { roomId: onar.id });
     await booking("C", "2030-06-16", "2030-06-18", { roomId: onar.id });
-    await booking("D", "2030-06-21", "2030-06-25", { roomId: onar.id });
-    // Iris: a 2-night gap before a closed period; a cancelled stay does not fill it.
+    await booking("D", "2030-06-20", "2030-06-25", { roomId: onar.id });
+    // Iris: a 1-night gap before a closed period; a cancelled stay does not fill it.
     const before = await booking("E", "2030-06-11", "2030-06-15", { roomId: iris.id });
-    await booking("F", "2030-06-15", "2030-06-17", { roomId: iris.id, status: BookingStatus.cancelled });
+    await booking("F", "2030-06-15", "2030-06-16", { roomId: iris.id, status: BookingStatus.cancelled });
     await prisma.manualBlock.create({
-      data: { roomId: iris.id, startDate: new Date("2030-06-17T00:00:00Z"), endDate: new Date("2030-06-20T00:00:00Z") },
+      data: { roomId: iris.id, startDate: new Date("2030-06-16T00:00:00Z"), endDate: new Date("2030-06-20T00:00:00Z") },
     });
     // A gap that is already over is not listed.
     await booking("G", "2030-06-01", "2030-06-05", { roomId: iris.id });
@@ -152,8 +152,8 @@ describe("gap nights on Today", () => {
       {
         room: expect.objectContaining({ name: "Iris" }),
         start: "2030-06-15",
-        end: "2030-06-17",
-        nights: 2,
+        end: "2030-06-16",
+        nights: 1,
         bookingId: before.id,
       },
     ]);

@@ -1188,9 +1188,9 @@
   },
   "gapNights": {
     "label": "{count, plural, one {1 empty night} other {# empty nights}}",
-    "hint": "{count, plural, one {One empty night between two bookings: hard to sell.} other {# empty nights between two bookings: hard to sell.}}",
+    "hint": "{count, plural, one {One empty night between two bookings: with a 2-night minimum stay it can't be booked.} other {# empty nights between two bookings.}}",
     "title": "Gap nights",
-    "intro": "One or two empty nights between bookings in the next {days} days. They rarely sell: a lower price or a move may help.",
+    "intro": "Single empty nights between bookings in the next {days} days. With a 2-night minimum stay they can't be booked: a move may help.",
     "none": "No gap nights in the next {days} days."
   },
   "guestNotes": {

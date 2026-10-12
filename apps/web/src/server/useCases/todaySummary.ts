@@ -22,7 +22,7 @@ export type TodayStay = {
   guestNotes: string[];
 };
 
-/** One to two empty nights between stays in an apartment, hard to sell (gap night warning). */
+/** A single empty night between stays in an apartment, which the 2-night minimum stay leaves unsellable. */
 export type TodayGap = {
   room: { id: string; name: string; color: string | null };
   /** First empty night. */

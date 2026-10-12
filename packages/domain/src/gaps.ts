@@ -1,7 +1,7 @@
 import { compareDates, daysBetween, type IsoDate } from "./stay.js";
 
-/** Gaps of this many empty nights or fewer between two stays are hard to sell. */
-export const GAP_MAX_NIGHTS = 2;
+/** Gaps of this many empty nights or fewer between two stays cannot be sold (the minimum stay is 2 nights). */
+export const GAP_MAX_NIGHTS = 1;
 
 /** How far ahead the Today screen lists gap nights. */
 export const GAP_LOOKAHEAD_DAYS = 60;
@@ -27,7 +27,7 @@ export interface GapNights {
 }
 
 /**
- * Short empty gaps (1 to `maxNights` nights) between stays or closed periods in the same apartment.
+ * Short empty gaps (1 to `maxNights` nights, by default single nights) between stays or closed periods in the same apartment.
  * Overlapping or back-to-back stays leave no gap; the open time before the first and after the last stay
  * is not a gap. Only gaps that end after `after` (usually today) are returned, by apartment then date.
  */

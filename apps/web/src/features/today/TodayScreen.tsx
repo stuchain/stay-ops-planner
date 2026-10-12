@@ -120,7 +120,7 @@ function PrintCardsLink({ stays }: { stays: TodayStay[] }) {
   );
 }
 
-/** "Κενές νύχτες": one or two empty nights between stays in the coming weeks. */
+/** "Κενές νύχτες": single empty nights between stays in the coming weeks. */
 function GapNights({ gaps, days }: { gaps: TodayGap[]; days: number }) {
   const t = useTranslations("gapNights");
   return (

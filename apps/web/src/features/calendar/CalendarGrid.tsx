@@ -119,7 +119,7 @@ type RoomTrackProps = {
   rowBookings: CalendarBooking[];
   rowBlocks: CalendarBlock[];
   rowProposed: CalendarBooking[];
-  /** One or two empty nights between stays, still to come: hard to sell. */
+  /** Single empty nights between stays, still to come: they cannot be sold. */
   rowGaps: GapNights[];
   onOpen: (bookingId: string) => void;
 };
