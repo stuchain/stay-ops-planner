@@ -43,5 +43,8 @@ jobs:
 
       - uses: ./.github/actions/setup-node-pnpm
 
+      - name: Generate Prisma client
+        run: pnpm --filter @stay-ops/db generate
+
       - name: Prisma db seed
         run: pnpm --filter @stay-ops/db seed
