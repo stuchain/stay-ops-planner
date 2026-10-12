@@ -82,8 +82,8 @@ describe("api /api/admin/integrations/hosthub/token", () => {
     return jar;
   }
 
-  it("operator can PUT then GET token status, then admin DELETE clears it", async () => {
-    const jar = await loginJar(operatorEmail);
+  it("admin can PUT then GET token status, then DELETE clears it", async () => {
+    const jar = await loginJar(adminEmail);
 
     const putRes = await PUT_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
@@ -111,11 +111,10 @@ describe("api /api/admin/integrations/hosthub/token", () => {
     expect(getJson.data.configured).toBe(true);
     expect(getJson.data.name).toBe("test-label");
 
-    const adminJar = await loginJar(adminEmail);
     const delRes = await DELETE_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
         method: "DELETE",
-        headers: { cookie: adminJar.getCookieHeader() },
+        headers: { cookie: jar.getCookieHeader() },
       }),
     );
     expect(delRes.status).toBe(200);
@@ -133,15 +132,32 @@ describe("api /api/admin/integrations/hosthub/token", () => {
     expect(afterJson.data.configured).toBe(false);
   });
 
-  it("operator is forbidden on DELETE and the token stays", async () => {
-    const jar = await loginJar(operatorEmail);
+  it("operator is forbidden on GET, PUT and DELETE, and the saved token stays", async () => {
+    const adminJar = await loginJar(adminEmail);
     await PUT_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
         method: "PUT",
-        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
-        body: JSON.stringify({ token: "keep-me" }),
+        headers: { "content-type": "application/json", cookie: adminJar.getCookieHeader() },
+        body: JSON.stringify({ token: "keep-me", name: "kept" }),
       }),
     );
+
+    const jar = await loginJar(operatorEmail);
+    const getRes = await GET_HOSTHUB_TOKEN(
+      new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
+        method: "GET",
+        headers: { cookie: jar.getCookieHeader() },
+      }),
+    );
+    expect(getRes.status).toBe(403);
+    const putRes = await PUT_HOSTHUB_TOKEN(
+      new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
+        method: "PUT",
+        headers: { "content-type": "application/json", cookie: jar.getCookieHeader() },
+        body: JSON.stringify({ token: "replaced-by-operator", name: "operator" }),
+      }),
+    );
+    expect(putRes.status).toBe(403);
     const delRes = await DELETE_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
         method: "DELETE",
@@ -149,14 +165,16 @@ describe("api /api/admin/integrations/hosthub/token", () => {
       }),
     );
     expect(delRes.status).toBe(403);
-    const getRes = await GET_HOSTHUB_TOKEN(
+
+    const adminGet = await GET_HOSTHUB_TOKEN(
       new NextRequest("http://localhost/api/admin/integrations/hosthub/token", {
         method: "GET",
-        headers: { cookie: jar.getCookieHeader() },
+        headers: { cookie: adminJar.getCookieHeader() },
       }),
     );
-    const json = (await getRes.json()) as { data: { configured: boolean } };
+    const json = (await adminGet.json()) as { data: { configured: boolean; name: string | null } };
     expect(json.data.configured).toBe(true);
+    expect(json.data.name).toBe("kept");
   });
 
   it("viewer is forbidden on GET, PUT, and DELETE", async () => {

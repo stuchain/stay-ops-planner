@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { respondAuthError } from "@/lib/apiError";
 import { AuthError, jsonError } from "@/modules/auth/errors";
-import { requireAdminSession, requireOperatorOrAdmin } from "@/modules/auth/guard";
+import { requireAdminSession } from "@/modules/auth/guard";
 import { deleteHosthubToken, getHosthubTokenStatus, setHosthubToken } from "@/modules/integrations/hosthubToken";
 
 const PutSchema = z.object({
@@ -11,9 +11,10 @@ const PutSchema = z.object({
   name: z.string().trim().max(120).optional().nullable(),
 });
 
+/** The Hosthub key is an admin setting, like everything under /api/admin (and dev.hosthub.saveToken). */
 export async function GET(request: NextRequest) {
   try {
-    await requireOperatorOrAdmin(request);
+    await requireAdminSession(request);
     const data = await getHosthubTokenStatus();
     return NextResponse.json({ data }, { status: 200 });
   } catch (err) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await requireOperatorOrAdmin(request);
+    await requireAdminSession(request);
   } catch (err) {
     if (err instanceof AuthError) {
       return respondAuthError(request, err);
