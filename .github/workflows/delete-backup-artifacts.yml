@@ -1,0 +1,43 @@
+# Delete database backup files (artifacts named stay-ops-db-*) from the given "Daily database backup" runs.
+# Trigger manually only. Used on 2026-10-12 to remove two unencrypted backups that were downloadable from this
+# public repository; kept for any backup that has to go early.
+
+name: Delete backup artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_ids:
+        description: Run ids of "Daily database backup", separated by spaces
+        required: true
+        type: string
+
+permissions:
+  actions: write
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete stay-ops-db-* artifacts of the runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_IDS: ${{ inputs.run_ids }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for run in $RUN_IDS; do
+            if ! [[ "$run" =~ ^[0-9]+$ ]]; then
+              echo "::error::Not a run id: $run"
+              exit 1
+            fi
+            ids="$(gh api "repos/$REPO/actions/runs/$run/artifacts" --jq '.artifacts[] | select(.name | startswith("stay-ops-db-")) | .id')"
+            if [ -z "$ids" ]; then
+              echo "Run $run: no backup artifacts left"
+              continue
+            fi
+            for id in $ids; do
+              gh api -X DELETE "repos/$REPO/actions/artifacts/$id"
+              echo "Run $run: deleted artifact $id"
+            done
+          done
