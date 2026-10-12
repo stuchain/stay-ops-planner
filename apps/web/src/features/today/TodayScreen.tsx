@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, CircleAlert, LogIn, LogOut, Printer, Sunrise } from "lucide-react";
+import { CalendarDays, CalendarRange, CircleAlert, LogIn, LogOut, Printer, StickyNote, Sunrise } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { GAP_LOOKAHEAD_DAYS } from "@stay-ops/domain";
 import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
-import type { TodayStay, TodaySummary } from "@/api/types";
+import type { TodayGap, TodayStay, TodaySummary } from "@/api/types";
 import { arrivalCardsHref } from "@/features/arrivalCards/ids";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
@@ -25,6 +26,8 @@ type Line = "arrival" | "departure";
 function StayRow({ stay, line }: { stay: TodayStay; line: Line }) {
   const t = useTranslations("today");
   const common = useTranslations("common");
+  const notes = useTranslations("guestNotes");
+  const noteLines = stay.guestNotes.map((note) => notes("onToday", { note }));
   const pending = stay.status === "pending";
   const people = stay.partySize === null ? common("unknownPeople") : common("people", { count: stay.partySize });
   const nights = common("nights", { count: stay.nights });
@@ -44,6 +47,14 @@ function StayRow({ stay, line }: { stay: TodayStay; line: Line }) {
             {line === "arrival" ? t("arrivalLine", { people, nights }) : t("departureLine", { nights })}
           </span>
           {pending ? <span className="text-warning-text text-sm font-semibold">{t("pendingLabel")}</span> : null}
+          {line === "arrival"
+            ? noteLines.map((text, i) => (
+                <span key={i} className="text-sm flex items-start gap-1.5 break-words whitespace-pre-wrap">
+                  <StickyNote size={16} aria-hidden="true" className="mt-0.5 flex-none" />
+                  {text}
+                </span>
+              ))
+            : null}
         </span>
         {stay.room ? (
           <ApartmentChip name={stay.room.name} color={stay.room.color ?? "#5B5852"} />
@@ -109,6 +120,44 @@ function PrintCardsLink({ stays }: { stays: TodayStay[] }) {
   );
 }
 
+/** "Κενές νύχτες": one or two empty nights between stays in the coming weeks. */
+function GapNights({ gaps, days }: { gaps: TodayGap[]; days: number }) {
+  const t = useTranslations("gapNights");
+  return (
+    <Card
+      title={<CardTitle icon={CalendarRange}>{t("title")}</CardTitle>}
+      aria-label={t("title")}
+      className={cn(gaps.length > 0 && "ring-warning ring-2")}
+    >
+      {gaps.length === 0 ? (
+        <p className="text-text-muted text-base">{t("none", { days })}</p>
+      ) : (
+        <>
+          <p className="text-text-muted text-sm">{t("intro", { days })}</p>
+          <ul className="flex flex-col gap-2">
+            {gaps.map((gap) => (
+              <li key={`${gap.room.id}:${gap.start}`}>
+                <Link
+                  href={gap.bookingId ? `/app/calendar?booking=${gap.bookingId}` : "/app/calendar"}
+                  className="min-h-target hover:bg-surface-muted border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm border px-3 py-2"
+                >
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-base font-semibold">
+                      <DateText date={gap.start} to={gap.end} />
+                    </span>
+                    <span className="text-warning-text text-sm font-semibold">{t("label", { count: gap.nights })}</span>
+                  </span>
+                  <ApartmentChip name={gap.room.name} color={gap.room.color ?? "#5B5852"} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Card>
+  );
+}
+
 function Loading() {
   const t = useTranslations("today");
   return (
@@ -168,6 +217,8 @@ function Summary({ data }: { data: TodaySummary }) {
           </div>
         </div>
       </Card>
+
+      <GapNights gaps={data.gaps} days={GAP_LOOKAHEAD_DAYS} />
 
       <p className="text-text-muted text-sm">
         <SyncIndicator />

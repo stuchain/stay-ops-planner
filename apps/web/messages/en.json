@@ -869,7 +869,8 @@
     "datesFollowed": "The dates changed in Hosthub and the booking followed them, {when}",
     "movedOutBySync": "Taken out of the apartment because the dates changed in Hosthub, {when}",
     "cancelled": "Cancelled in Hosthub, {when}",
-    "other": "A change was made, {when}"
+    "other": "A change was made, {when}",
+    "guestNote": "You changed the note about the guest, {when}"
   },
   "free": {
     "title": "What is free?",
@@ -1184,5 +1185,23 @@
     "dates": "From {checkin} to {checkout}",
     "phone": "Phone: {phone}",
     "pending": "Waiting for confirmation."
+  },
+  "gapNights": {
+    "label": "{count, plural, one {1 empty night} other {# empty nights}}",
+    "hint": "{count, plural, one {One empty night between two bookings: hard to sell.} other {# empty nights between two bookings: hard to sell.}}",
+    "title": "Gap nights",
+    "intro": "One or two empty nights between bookings in the next {days} days. They rarely sell: a lower price or a move may help.",
+    "none": "No gap nights in the next {days} days."
+  },
+  "guestNotes": {
+    "title": "Note about the guest",
+    "help": "Only for you. You'll see it again if the same guest books again.",
+    "placeholder": "e.g. Pays on arrival, asked for extra towels",
+    "save": "Save note",
+    "saved": "Note saved",
+    "earlier": "Notes from earlier stays",
+    "earlierMaybe": "Notes from stays with the same name (maybe another guest)",
+    "from": "{apartment}, {month}",
+    "onToday": "Note: {note}"
   }
 }

@@ -41,6 +41,7 @@ function stay(over: Partial<TodayStay> & Pick<TodayStay, "id">): TodayStay {
     checkout: iso("2030-06-13"),
     status: "confirmed",
     room: { id: "r1", name: "Onar", color: "#0F766E" },
+    guestNotes: [],
     ...over,
   };
 }
@@ -53,6 +54,7 @@ const EMPTY: TodaySummary = {
   tomorrowArrivals: [],
   tomorrowDepartures: [],
   needsApartment: 0,
+  gaps: [],
 };
 
 function Wrap({ children }: { children: ReactNode }) {
@@ -143,6 +145,35 @@ describe("TodayScreen", () => {
         "Elena Tomorrow",
       ]),
     ).toEqual([]);
+  });
+
+  it("shows guest notes under arrivals and lists gap nights with a link to the calendar", async () => {
+    show({
+      ...EMPTY,
+      arrivals: [stay({ id: "b1", guestNotes: ["Πληρώνει με την άφιξη"] })],
+      gaps: [
+        {
+          room: { id: "r1", name: "Onar", color: "#0F766E" },
+          start: iso("2030-06-14"),
+          end: iso("2030-06-15"),
+          nights: 1,
+          bookingId: "b9",
+        },
+      ],
+    });
+    const arrivals = within(await screen.findByRole("region", { name: "Αφίξεις σήμερα" }));
+    expect(arrivals.getByRole("link", { name: /Maria Papadopoulou/ })).toHaveTextContent(
+      "Σημείωση: Πληρώνει με την άφιξη",
+    );
+    const gaps = within(screen.getByRole("region", { name: "Κενές νύχτες" }));
+    const link = gaps.getByRole("link", { name: /1 κενή νύχτα/ });
+    expect(link).toHaveAttribute("href", "/app/calendar?booking=b9");
+    expect(link).toHaveTextContent("Onar");
+  });
+
+  it("says when there are no gap nights", async () => {
+    show(EMPTY);
+    expect(await screen.findByText("Καμία κενή νύχτα τις επόμενες 60 μέρες.")).toBeInTheDocument();
   });
 
   it("says it in English when asked", async () => {

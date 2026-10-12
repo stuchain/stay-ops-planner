@@ -8,6 +8,7 @@ export type HistoryEvent =
   | { kind: "moved"; from: string | null; to: string | null }
   | { kind: "edited"; fields: EditableField[] }
   | { kind: "reset"; field: EditableField }
+  | { kind: "guestNote" }
   | { kind: "created" }
   | { kind: "synced" }
   | { kind: "datesFollowed" }
@@ -90,6 +91,8 @@ export function describeAuditEvent(
       const [field] = fieldsOf(meta.fields);
       return field ? { kind: "reset", field } : { kind: "other" };
     }
+    case "booking.guest_note":
+      return { kind: "guestNote" };
     case "booking.sync_upsert":
       if (r.beforeJson === null) return { kind: "created" };
       return after.status === "cancelled" ? { kind: "cancelled" } : { kind: "synced" };

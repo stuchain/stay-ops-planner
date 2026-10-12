@@ -14,6 +14,7 @@ export type TodaySummary = RouterOutputs["today"]["summary"];
 export type AvailabilityData = RouterOutputs["availability"]["check"];
 export type AvailabilityRoom = AvailabilityData["rooms"][number];
 export type TodayStay = TodaySummary["arrivals"][number];
+export type TodayGap = TodaySummary["gaps"][number];
 export type TurnoverList = RouterOutputs["cleaning"]["list"];
 export type TurnoverTask = TurnoverList["tasks"][number];
 export type { CleanerDay, CleanerTask } from "@/server/useCases/cleaningCleanerDay";

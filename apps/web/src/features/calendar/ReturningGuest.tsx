@@ -1,8 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { useTRPC } from "@/api/client";
 import type { PreviousStays } from "@/api/types";
 import { formatMonthYear, type UiLocale } from "@/ui/format";
 
@@ -33,12 +31,4 @@ export function ReturningLines({ previous }: { previous: PreviousStays }) {
       {previous.maybe.length > 0 ? <StayList stays={previous.maybe} sure={false} /> : null}
     </div>
   );
-}
-
-/** Earlier stays of the guest of a booking, for the booking panel. A failed lookup shows nothing. */
-export function ReturningGuest({ bookingId }: { bookingId: string }) {
-  const trpc = useTRPC();
-  const previous = useQuery(trpc.booking.previousStays.queryOptions({ bookingId }));
-  if (!previous.data) return null;
-  return <ReturningLines previous={previous.data} />;
 }

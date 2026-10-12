@@ -10,6 +10,8 @@ export type PreviousStay = {
   checkin: IsoDate;
   /** The apartment it was in; null when it had none. */
   apartment: string | null;
+  /** The team's note about the guest from that stay, if any. */
+  note: string | null;
 };
 
 export type PreviousStays = {
@@ -48,7 +50,12 @@ export function nameKey(name: string | null | undefined): string | null {
   return words.length < 2 ? null : words.join(" ");
 }
 
-export type Candidate = Identity & { bookingId: string; checkin: IsoDate; apartment: string | null };
+export type Candidate = Identity & {
+  bookingId: string;
+  checkin: IsoDate;
+  apartment: string | null;
+  note?: string | null;
+};
 
 /** Pure matching of one guest against earlier bookings (already limited to ones that ended before). */
 export function matchPreviousStays(guest: Identity, candidates: Candidate[]): PreviousStays {
@@ -58,7 +65,12 @@ export function matchPreviousStays(guest: Identity, candidates: Candidate[]): Pr
   const sure: PreviousStay[] = [];
   const maybe: PreviousStay[] = [];
   for (const c of candidates) {
-    const stay: PreviousStay = { bookingId: c.bookingId, checkin: c.checkin, apartment: c.apartment };
+    const stay: PreviousStay = {
+      bookingId: c.bookingId,
+      checkin: c.checkin,
+      apartment: c.apartment,
+      note: c.note ?? null,
+    };
     if ((phone !== null && phone === phoneKey(c.phone)) || (email !== null && email === emailKey(c.email))) {
       sure.push(stay);
     } else if (name !== null && name === nameKey(c.name)) {
@@ -92,6 +104,7 @@ export async function previousStaysForMany(bookingIds: string[]): Promise<Map<st
       guestName: true,
       guestPhone: true,
       guestEmail: true,
+      guestNote: true,
       assignment: { select: { room: { select: { displayName: true, code: true } } } },
     },
   });
@@ -105,6 +118,7 @@ export async function previousStaysForMany(bookingIds: string[]): Promise<Map<st
         name: h.guestName,
         phone: h.guestPhone,
         email: h.guestEmail,
+        note: h.guestNote,
       }));
     result.set(
       guest.id,

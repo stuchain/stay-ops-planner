@@ -162,6 +162,8 @@ model Booking {
   guestPaidCents    Int?     @map("guest_paid_cents")
   action            String?  @map("action")
   notes             String?  @map("notes")
+  /// The team's own note about the guest ("pays on arrival", "left it spotless"). Never from Hosthub; shown when the guest books again.
+  guestNote         String?  @map("guest_note")
   hosthubCalendarEventRaw Json? @map("hosthub_calendar_event_raw")
   hosthubNotesRaw   Json?    @map("hosthub_notes_raw")
   hosthubGrTaxesRaw Json?    @map("hosthub_gr_taxes_raw")

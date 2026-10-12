@@ -8,6 +8,7 @@ const stay = (checkin: string, apartment: string | null) => ({
   bookingId: checkin,
   checkin: checkin as IsoDate,
   apartment,
+  note: null,
 });
 
 describe("ReturningLines", () => {

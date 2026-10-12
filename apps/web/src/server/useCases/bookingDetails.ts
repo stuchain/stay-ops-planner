@@ -25,6 +25,8 @@ export type BookingDetails = BookingSlice & {
   children: number | null;
   infants: number | null;
   notes: string | null;
+  /** The team's own note about the guest; shown again when they book another stay. */
+  guestNote: string | null;
   phone: string | null;
   email: string | null;
   price: BookingPrice | null;
@@ -41,6 +43,7 @@ export async function getBookingDetails(bookingId: string): Promise<BookingDetai
       ...editSelect,
       guestPhone: true,
       guestEmail: true,
+      guestNote: true,
       totalAmountCents: true,
       totalValueCents: true,
       payoutAmountCents: true,
@@ -67,6 +70,7 @@ export async function getBookingDetails(bookingId: string): Promise<BookingDetai
     children: row.guestChildren,
     infants: row.guestInfants,
     notes: row.notes,
+    guestNote: row.guestNote,
     phone: row.guestPhone?.trim() || null,
     email: row.guestEmail?.trim() || null,
     price: hasMoney

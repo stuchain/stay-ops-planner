@@ -72,6 +72,7 @@ describe("buildDailyReminder", () => {
     tomorrowArrivals: [],
     tomorrowDepartures: [],
     needsApartment: 0,
+    gaps: [],
   };
 
   it("says nothing on a quiet day", () => {
@@ -88,6 +89,7 @@ describe("buildDailyReminder", () => {
       checkout: "2030-06-10" as TodaySummary["today"],
       status: "confirmed" as const,
       room: null,
+      guestNotes: [],
     };
     const alert = buildDailyReminder({ ...empty, departures: [stay] })!;
     expect(alert.subject).toBe("Stay Ops: σήμερα φεύγει 1 επισκέπτης");

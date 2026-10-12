@@ -3,7 +3,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
 import { memo, useMemo, useSyncExternalStore } from "react";
-import type { IsoDate } from "@stay-ops/domain";
+import { shortGaps, type GapNights, type IsoDate } from "@stay-ops/domain";
 import type { CalendarBlock, CalendarBooking, CalendarRoom } from "@/api/types";
 import { ApartmentRow } from "@/ui/ApartmentRow";
 import { cn } from "@/ui/cn";
@@ -18,6 +18,7 @@ export type DropState = { state: "free" | "busy"; guest?: string } | null;
 
 const EMPTY: CalendarBooking[] = [];
 const EMPTY_BLOCKS: CalendarBlock[] = [];
+const EMPTY_GAPS: GapNights[] = [];
 
 export type CalendarGridProps = {
   span: Span;
@@ -118,6 +119,8 @@ type RoomTrackProps = {
   rowBookings: CalendarBooking[];
   rowBlocks: CalendarBlock[];
   rowProposed: CalendarBooking[];
+  /** One or two empty nights between stays, still to come: hard to sell. */
+  rowGaps: GapNights[];
   onOpen: (bookingId: string) => void;
 };
 
@@ -132,6 +135,7 @@ const RoomTrack = memo(function RoomTrack({
   rowBookings,
   rowBlocks,
   rowProposed,
+  rowGaps,
   onOpen,
 }: RoomTrackProps) {
   const t = useTranslations();
@@ -158,6 +162,22 @@ const RoomTrack = memo(function RoomTrack({
               aria-hidden="true"
             />
           ) : null}
+          {rowGaps.map((g) => (
+            <div
+              key={g.start}
+              data-testid="gap-nights"
+              className="border-warning bg-warning-soft text-warning-text text-xs pointer-events-none absolute top-4 flex h-14 items-center justify-center overflow-hidden rounded-[10px] border-2 border-dashed px-1 font-semibold"
+              style={{
+                left: (dayIndex(span, g.start) + 0.5) * dayWidth + 2,
+                width: g.nights * dayWidth - 4,
+              }}
+              role="img"
+              aria-label={t("gapNights.hint", { count: g.nights })}
+              title={t("gapNights.hint", { count: g.nights })}
+            >
+              <span className="truncate">{t("gapNights.label", { count: g.nights })}</span>
+            </div>
+          ))}
           {rowBlocks.map((b) => (
             <div
               key={b.id}
@@ -293,7 +313,7 @@ function PastUnplacedRow({
 /** The day header and one row per apartment; day cells are drawn around the visible days, bars for all loaded data. */
 export const CalendarGrid = memo(function CalendarGrid(props: CalendarGridProps) {
   const { drawn, bookings, proposed, today, blocks } = props;
-  const { byRoom, proposedByRoom, pastUnplaced, blocksByRoom } = useMemo(() => {
+  const { byRoom, proposedByRoom, pastUnplaced, blocksByRoom, gapsByRoom } = useMemo(() => {
     const byRoom = new Map<string, CalendarBooking[]>();
     const proposedByRoom = new Map<string, CalendarBooking[]>();
     const pastUnplaced: CalendarBooking[] = [];
@@ -306,7 +326,17 @@ export const CalendarGrid = memo(function CalendarGrid(props: CalendarGridProps)
     }
     const blocksByRoom = new Map<string, CalendarBlock[]>();
     for (const b of blocks) blocksByRoom.set(b.roomId, [...(blocksByRoom.get(b.roomId) ?? []), b]);
-    return { byRoom, proposedByRoom, pastUnplaced, blocksByRoom };
+    const gapsByRoom = new Map<string, GapNights[]>();
+    const occupied = [
+      ...bookings.flatMap((b) =>
+        b.assignment ? [{ id: b.id, roomId: b.assignment.roomId, start: b.checkin, end: b.checkout }] : [],
+      ),
+      ...blocks.map((b) => ({ id: b.id, roomId: b.roomId, start: b.start, end: b.end })),
+    ];
+    for (const g of shortGaps(occupied, { after: today })) {
+      gapsByRoom.set(g.roomId, [...(gapsByRoom.get(g.roomId) ?? []), g]);
+    }
+    return { byRoom, proposedByRoom, pastUnplaced, blocksByRoom, gapsByRoom };
   }, [bookings, proposed, today, blocks]);
   return (
     <div style={{ width: LABEL_WIDTH + props.span.days * props.dayWidth }}>
@@ -329,6 +359,7 @@ export const CalendarGrid = memo(function CalendarGrid(props: CalendarGridProps)
           rowBookings={byRoom.get(room.id) ?? EMPTY}
           rowBlocks={blocksByRoom.get(room.id) ?? EMPTY_BLOCKS}
           rowProposed={proposedByRoom.get(room.id) ?? EMPTY}
+          rowGaps={gapsByRoom.get(room.id) ?? EMPTY_GAPS}
           onOpen={props.onOpen}
         />
       ))}

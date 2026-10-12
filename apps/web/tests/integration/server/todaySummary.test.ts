@@ -82,6 +82,7 @@ describe("getTodaySummary", () => {
       tomorrowArrivals: [],
       tomorrowDepartures: [],
       needsApartment: 0,
+      gaps: [],
     });
   });
 

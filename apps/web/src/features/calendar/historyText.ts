@@ -50,6 +50,8 @@ export function historySentence(
     }
     case "reset":
       return t("reset", { field: t("field", { field: event.field }), when });
+    case "guestNote":
+      return t("guestNote", { when });
     case "created":
       return t("created", { when });
     case "synced":

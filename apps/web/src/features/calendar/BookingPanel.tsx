@@ -21,7 +21,7 @@ import { BookingEdit } from "./BookingEdit";
 import { BookingHistory } from "./BookingHistory";
 import { BookingPrice } from "./BookingPrice";
 import { GuestMessage } from "./GuestMessage";
-import { ReturningGuest } from "./ReturningGuest";
+import { GuestNotes } from "./GuestNotes";
 import { recommendationText } from "./recommendation";
 import type { MoveRequest } from "./useMoveBooking";
 
@@ -174,7 +174,9 @@ export function BookingPanel({
             <Skeleton variant="block" className="h-40" />
           ) : null}
 
-          <ReturningGuest bookingId={booking.id} />
+          {details.data ? (
+            <GuestNotes key={`notes-${booking.id}`} bookingId={booking.id} note={details.data.guestNote} />
+          ) : null}
 
           <Link
             href={arrivalCardsHref([booking.id])}

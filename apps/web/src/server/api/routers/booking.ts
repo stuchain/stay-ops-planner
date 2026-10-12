@@ -6,6 +6,7 @@ import { bookingSuggestions } from "@/server/useCases/bookingSuggestions";
 import { getGuestMessageTemplates } from "@/server/useCases/guestMessageTemplates";
 import { getArrivalCards } from "@/server/useCases/arrivalCards";
 import { getPreviousStays } from "@/server/useCases/previousStays";
+import { GUEST_NOTE_MAX, setGuestNote } from "@/server/useCases/guestNote";
 import { moveBooking } from "@/server/useCases/moveBooking";
 import { createTRPCRouter, operatorProcedure, userProcedure } from "../trpc";
 
@@ -31,6 +32,11 @@ export const bookingRouter = createTRPCRouter({
   previousStays: userProcedure
     .input(z.object({ bookingId: z.string().min(1) }))
     .query(({ input }) => getPreviousStays(input.bookingId)),
+
+  /** Save the team's own note about the guest; it comes back when the same guest books again. Viewers cannot. */
+  setGuestNote: operatorProcedure
+    .input(z.object({ bookingId: z.string().min(1), note: z.string().max(GUEST_NOTE_MAX) }))
+    .mutation(({ ctx, input }) => setGuestNote({ ...input, actorUserId: ctx.user.userId })),
 
   /** The printable arrival cards (Κάρτες άφιξης) for up to 30 bookings, in check-in order. */
   arrivalCards: userProcedure
