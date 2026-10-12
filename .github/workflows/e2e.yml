@@ -93,6 +93,9 @@ jobs:
       BOOTSTRAP_ADMIN_PASSWORD: E2E_Test_Password_12+
       E2E_ADMIN_EMAIL: e2e-admin@stayops.local
       E2E_ADMIN_PASSWORD: E2E_Test_Password_12+
+      # The tests run against `next start` on plain http, so the session cookie must not require https.
+      SESSION_COOKIE_SECURE: "false"
+      SKIP_STAYOPS_ENV_VALIDATE: "1"
       CI: true
 
     steps:
@@ -109,10 +112,25 @@ jobs:
       - name: Seed admin + E2E fixtures
         run: pnpm --filter @stay-ops/db seed && pnpm --filter @stay-ops/db seed:e2e
 
+      # A production build, as on Vercel: `next dev` compiles each page on first visit, which made the suite slow
+      # and its first tests prone to timeouts.
+      - name: Build the app
+        run: pnpm --filter @stay-ops/web build
+
       - name: Install Playwright Chromium
         run: pnpm --filter @stay-ops/web exec playwright install chromium --with-deps
 
+      - name: Start the production server
+        working-directory: apps/web
+        run: |
+          nohup pnpm exec next start -p 3000 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:3000/login > /dev/null && exit 0; sleep 1; done
+          cat next.log; exit 1
+
       - name: Run Playwright
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          PLAYWRIGHT_NO_SERVER: "1"
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             pnpm --filter @stay-ops/web test:e2e --grep "@smoke|@a11y" --grep-invert "@calendar"
@@ -127,6 +145,7 @@ jobs:
           path: |
             apps/web/test-results/
             apps/web/playwright-report/
+            apps/web/next.log
 
   lighthouse:
     name: lighthouse budget
