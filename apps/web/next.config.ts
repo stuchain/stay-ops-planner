@@ -142,6 +142,8 @@ export default withSentryConfig(withNextIntl(nextConfig), {
   ...(process.env.SENTRY_AUTH_TOKEN !== undefined ? { authToken: process.env.SENTRY_AUTH_TOKEN } : {}),
   silent: !sentryUploadEnabled,
   telemetry: false,
+  /** Browser events go to /monitoring on our own domain (rewritten to Sentry), so ad blockers don't drop them. */
+  tunnelRoute: "/monitoring",
   sourcemaps: {
     disable: !sentryUploadEnabled,
   },
