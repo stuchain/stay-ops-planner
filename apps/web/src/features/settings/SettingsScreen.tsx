@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
+import { useHydrated } from "@/api/useHydrated";
 import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
@@ -22,7 +23,10 @@ export function SettingsScreen() {
   const tp = useTranslations("polish");
   const errorText = useErrorText();
   const trpc = useTRPC();
-  const me = useQuery(trpc.me.get.queryOptions());
+  const query = useQuery(trpc.me.get.queryOptions());
+  // The offline copy can restore `me` before hydration ends; the server rendered it as still loading.
+  const hydrated = useHydrated();
+  const me = { ...query, data: hydrated ? query.data : undefined };
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
