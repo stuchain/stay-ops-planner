@@ -31,6 +31,22 @@ function resolveSentryRelease(): string | undefined {
 
 const sentryRelease = resolveSentryRelease();
 
+/** `next dev` needs eval for fast refresh; the production build never does. */
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://vercel.live`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://vercel.live https://vercel.com",
+  "font-src 'self' data: https://vercel.live",
+  "connect-src 'self' https://*.sentry.io https://vercel.live wss://ws-us3.pusher.com",
+  "frame-src https://vercel.live",
+  "worker-src 'self' blob:",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Inlined into the browser bundle so client events carry the same release as the uploaded source maps.
@@ -91,9 +107,10 @@ const nextConfig: NextConfig = {
    */
   serverExternalPackages: ["@prisma/client", "prisma", "@stay-ops/db"],
   /**
-   * Browser safety headers on every response. The CSP only sets the directives that cannot break the app
-   * (no framing, no plugins, no foreign <base> or form targets); scripts and styles stay unrestricted because
-   * Next.js and Sentry inject inline code.
+   * Browser safety headers on every response. The CSP lets the page load code, styles, fonts and images only from
+   * the app itself, and send data only to the app and Sentry. Inline scripts stay allowed because Next.js writes
+   * its page data inline; nonces would make every page dynamic and slower, which this two-user app does not need.
+   * vercel.live is the Vercel toolbar on preview deployments.
    */
   async headers() {
     return [
@@ -102,7 +119,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
+            value: contentSecurityPolicy,
           },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
