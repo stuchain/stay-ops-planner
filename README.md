@@ -2,6 +2,10 @@
 
 **Work in progress.** Internal tool for short-term rental ops: sync bookings from a channel manager, assign each stay to a **physical unit**, avoid double-booking, and coordinate cleaning and maintenance. Not for guests.
 
+![Demo: Today, placing a booking on the calendar, search, the week, income, statistics and settings](docs/media/demo.gif)
+
+<sub>Recorded with the demo seed (`pnpm --filter @stay-ops/db seed:demo`); every guest and figure is made up.</sub>
+
 Stack direction: Next.js, PostgreSQL / Prisma, and server-side sync flows — see [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md). 
 
 **Code review:** use [docs/architecture/CONVENTIONS.md](docs/architecture/CONVENTIONS.md) as the checklist for module boundaries, API errors, and data access.
