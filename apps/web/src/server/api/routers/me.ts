@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DomainError } from "@stay-ops/domain";
 import { createCalendarFeed, getCalendarFeed, removeCalendarFeed } from "@/server/useCases/calendarFeed";
 import { comparePassword, hashPassword, isAcceptablePasswordLength } from "@/modules/auth/password";
+import { createSessionToken, sessionSetCookieHeader } from "@/modules/auth/session";
 import { adminProcedure, createTRPCRouter, userProcedure } from "../trpc";
 
 /** Text size choices, saved in `users.text_size`. */
@@ -53,10 +54,20 @@ export const meRouter = createTRPCRouter({
       if (!user) throw new DomainError("UNAUTHORIZED");
       if (!(await comparePassword(input.currentPassword, user.passwordHash))) throw new DomainError("WRONG_PASSWORD");
       if (!isAcceptablePasswordLength(input.newPassword)) throw new DomainError("PASSWORD_TOO_SHORT");
-      await prisma.user.update({
+      // Every other signed-in device is signed out (in case the old password was known to someone else);
+      // this browser gets a new session cookie so it stays signed in.
+      const updated = await prisma.user.update({
         where: { id: ctx.user.userId },
-        data: { passwordHash: await hashPassword(input.newPassword) },
+        data: { passwordHash: await hashPassword(input.newPassword), sessionVersion: { increment: 1 } },
+        select: { sessionVersion: true },
       });
+      const { token, expiresAt } = createSessionToken(
+        ctx.user.userId,
+        ctx.user.role,
+        Date.now(),
+        updated.sessionVersion,
+      );
+      ctx.resHeaders?.append("Set-Cookie", sessionSetCookieHeader(token, expiresAt));
       return { ok: true as const };
     }),
 

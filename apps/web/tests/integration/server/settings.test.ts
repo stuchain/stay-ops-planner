@@ -96,6 +96,25 @@ describe("me.changePassword", () => {
     const row = await prisma.user.findUnique({ where: { id: ids.operator! }, select: { passwordHash: true } });
     expect(await bcrypt.compare("brand-new-pass", row!.passwordHash)).toBe(true);
   });
+
+  it("signs out the other devices and gives this browser a new session cookie", async () => {
+    const before = (await prisma.user.findUnique({ where: { id: ids.operator! } }))!.sessionVersion;
+    const otherDevice = createSessionToken(ids.operator!, "operator", Date.now(), before).token;
+    expect(await verifyAndLoadAuthContext(otherDevice)).not.toBeNull();
+
+    const resHeaders = new Headers();
+    await createCaller({
+      headers: new Headers(),
+      resHeaders,
+      user: { userId: ids.operator!, role: "operator", sessionExpiresAt: new Date(Date.now() + 1e6) },
+    }).me.changePassword({ currentPassword: "brand-new-pass", newPassword: "another-new-pass" });
+
+    expect(await verifyAndLoadAuthContext(otherDevice)).toBeNull();
+    const cookie = resHeaders.get("set-cookie") ?? "";
+    expect(cookie).toMatch(/^stay_ops_session=[^;]+; Path=\/; .*HttpOnly; SameSite=Lax/);
+    const thisBrowser = cookie.split(";")[0]!.slice("stay_ops_session=".length);
+    expect(await verifyAndLoadAuthContext(thisBrowser)).not.toBeNull();
+  });
 });
 
 describe("me.setDevMode", () => {
@@ -111,14 +130,15 @@ describe("me.setDevMode", () => {
 
 describe("sessionVersion", () => {
   it("rejects sessions older than the stored version after signOutEverywhere", async () => {
-    const token = createSessionToken(ids.operator!, "operator", Date.now(), 0).token;
-    expect(verifySessionToken(token)?.sessionVersion).toBe(0);
+    const version = (await prisma.user.findUnique({ where: { id: ids.operator! } }))!.sessionVersion;
+    const token = createSessionToken(ids.operator!, "operator", Date.now(), version).token;
+    expect(verifySessionToken(token)?.sessionVersion).toBe(version);
     expect(await verifyAndLoadAuthContext(token)).not.toBeNull();
 
     await as("admin", ids.admin!).admin.signOutEverywhere({ userId: ids.operator! });
 
     expect(await verifyAndLoadAuthContext(token)).toBeNull();
-    const fresh = createSessionToken(ids.operator!, "operator", Date.now(), 1).token;
+    const fresh = createSessionToken(ids.operator!, "operator", Date.now(), version + 1).token;
     expect(await verifyAndLoadAuthContext(fresh)).not.toBeNull();
   });
 

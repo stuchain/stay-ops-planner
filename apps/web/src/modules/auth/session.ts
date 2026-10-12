@@ -231,6 +231,19 @@ export function setSessionCookie(response: NextResponse, token: string, expiresA
   });
 }
 
+/** The same cookie as `setSessionCookie`, as a raw `Set-Cookie` value for handlers that only have response headers. */
+export function sessionSetCookieHeader(token: string, expiresAt: Date, nowMs = Date.now()): string {
+  return [
+    `${SESSION_COOKIE_NAME}=${token}`,
+    "Path=/",
+    `Expires=${expiresAt.toUTCString()}`,
+    `Max-Age=${cookieMaxAgeSeconds(expiresAt, nowMs)}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    ...(resolveSessionCookieSecure() ? ["Secure"] : []),
+  ].join("; ");
+}
+
 export function clearSessionCookie(response: NextResponse) {
   response.cookies.set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
