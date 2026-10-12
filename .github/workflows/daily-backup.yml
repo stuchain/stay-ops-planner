@@ -1,8 +1,9 @@
 name: Daily database backup
 
 # Daily logical backup of the production Neon database (pg_dump, custom format),
-# kept as a 30-day workflow artifact. See docs/runbooks/db-backup-restore.md for
-# how to restore it into a new Neon branch.
+# encrypted with a passphrase and kept as a 30-day workflow artifact. The repository is public, so its
+# artifacts can be downloaded by anyone signed in to GitHub: only the encrypted file is ever uploaded.
+# See docs/runbooks/db-backup-restore.md for how to decrypt and restore it into a new Neon branch.
 #
 # pg_dump runs from the official postgres:17 docker image: Docker is preinstalled
 # on ubuntu-latest, the major version is pinned to Neon's Postgres 17 (pg_dump refuses
@@ -34,10 +35,16 @@ jobs:
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           set -euo pipefail
           if [ -z "${DATABASE_URL:-}" ]; then
             echo "::error::Missing secret DATABASE_URL in the production environment (Neon direct, non-pooled connection string)"
+            exit 1
+          fi
+          # Never upload a readable dump: without the passphrase there is no backup, and the run goes red.
+          if [ "${#BACKUP_PASSPHRASE}" -lt 20 ]; then
+            echo "::error::Missing or short secret BACKUP_PASSPHRASE (20+ characters) in the production environment"
             exit 1
           fi
 
@@ -65,9 +72,20 @@ jobs:
             exit 1
           fi
 
-          echo "file=${file}" >> "$GITHUB_OUTPUT"
+          # AES-256 with the passphrase (read from a file descriptor, so it is never on a command line).
+          gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-fd 3 \
+            --symmetric --cipher-algo AES256 \
+            --output "backup/${file}.gpg" "backup/${file}" 3<<<"$BACKUP_PASSPHRASE"
+          size="$(stat -c %s "backup/${file}")"
+          rm "backup/${file}"
+          if [ ! -s "backup/${file}.gpg" ]; then
+            echo "::error::Encrypted dump is empty"
+            exit 1
+          fi
+
+          echo "file=${file}.gpg" >> "$GITHUB_OUTPUT"
           echo "stamp=${stamp}" >> "$GITHUB_OUTPUT"
-          echo "Backup ${file}: $(stat -c %s "backup/${file}") bytes, ${entries} TOC entries"
+          echo "Backup ${file}.gpg: ${size} bytes before encryption, ${entries} TOC entries"
 
       - name: Upload backup artifact
         uses: actions/upload-artifact@v4
