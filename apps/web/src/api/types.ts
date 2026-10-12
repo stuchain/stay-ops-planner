@@ -33,3 +33,7 @@ export type ApartmentRow = RouterOutputs["dev"]["apartments"]["list"][number];
 
 export type SyncRunRow = RouterOutputs["dev"]["hosthub"]["runs"]["items"][number];
 export type ImportErrorRow = RouterOutputs["dev"]["hosthub"]["errors"]["items"][number];
+export type SearchResultData = RouterOutputs["booking"]["search"]["results"][number];
+export type WeekSummaryData = RouterOutputs["today"]["week"];
+export type WeekDayData = WeekSummaryData["days"][number];
+export type FamilyMemberData = RouterOutputs["admin"]["family"]["list"]["members"][number];

@@ -10,6 +10,7 @@ import { useErrorText } from "@/api/errors";
 import type { CalendarBooking, CalendarRoom, Suggestion } from "@/api/types";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { arrivalCardsHref } from "@/features/arrivalCards/ids";
+import { useCanChange } from "@/features/shell/role";
 import { Button, buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 import { DateText } from "@/ui/DateText";
@@ -145,6 +146,7 @@ export function BookingPanel({
   const t = useTranslations();
   const locale = useLocale();
   const trpc = useTRPC();
+  const canChange = useCanChange();
   const details = useQuery({
     ...trpc.booking.details.queryOptions({ bookingId: booking?.id ?? "" }),
     enabled: booking !== null,
@@ -187,7 +189,7 @@ export function BookingPanel({
             {t("arrivalCards.open")}
           </Link>
 
-          {details.data ? (
+          {details.data && canChange ? (
             <GuestMessage
               key={`message-${booking.id}`}
               booking={booking}
@@ -230,7 +232,7 @@ export function BookingPanel({
 
           {booking.status === "pending" ? (
             <p className="bg-surface-muted rounded-card text-text-muted p-4">{t("booking.pendingNote")}</p>
-          ) : booking.checkout <= today && booking.assignment ? (
+          ) : !canChange ? null : booking.checkout <= today && booking.assignment ? (
             <p className="bg-surface-muted rounded-card text-text-muted p-4">
               {t("booking.endedNote", { date: formatDay(booking.checkout, locale) })}
             </p>
@@ -264,7 +266,7 @@ export function BookingPanel({
             </section>
           )}
 
-          {details.data ? <BookingPrice price={details.data.price} /> : null}
+          {details.data && canChange ? <BookingPrice price={details.data.price} /> : null}
           <BookingHistory bookingId={booking.id} />
         </div>
       ) : null}

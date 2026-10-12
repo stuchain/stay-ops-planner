@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import { useOnline } from "@/api/online";
+import { useCanChange } from "@/features/shell/role";
 import type { PreviousStays } from "@/api/types";
 import { Button } from "@/ui/Button";
 import { formatMonthYear, type UiLocale } from "@/ui/format";
@@ -57,6 +58,7 @@ export function GuestNotes({ bookingId, note }: { bookingId: string; note: strin
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const online = useOnline();
+  const canChange = useCanChange();
   const id = useId();
   const previous = useQuery(trpc.booking.previousStays.queryOptions({ bookingId }));
   const [draft, setDraft] = useState(note ?? "");
@@ -80,42 +82,53 @@ export function GuestNotes({ bookingId, note }: { bookingId: string; note: strin
       {previous.data ? <ReturningLines previous={previous.data} /> : null}
       {previous.data ? <EarlierNotes stays={previous.data.sure} title={t("earlier")} /> : null}
       {previous.data ? <EarlierNotes stays={previous.data.maybe} title={t("earlierMaybe")} /> : null}
-      <form
-        className="flex flex-col gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (changed) save.mutate({ bookingId, note: draft });
-        }}
-      >
-        <label id={`${id}-title`} htmlFor={`${id}-note`} className="text-base font-semibold">
-          {t("title")}
-        </label>
-        <p id={`${id}-help`} className="text-text-muted text-sm">
-          {t("help")}
-        </p>
-        <textarea
-          id={`${id}-note`}
-          aria-describedby={`${id}-help`}
-          className={inputClass}
-          rows={3}
-          maxLength={MAX_LENGTH}
-          placeholder={t("placeholder")}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
-        {changed ? (
-          <Button
-            type="submit"
-            variant="primary"
-            size="md"
-            loading={save.isPending}
-            disabled={!online}
-            className="self-start"
-          >
-            {t("save")}
-          </Button>
-        ) : null}
-      </form>
+      {!canChange ? (
+        note ? (
+          <div className="flex flex-col gap-1">
+            <h3 id={`${id}-title`} className="text-base font-semibold">
+              {t("title")}
+            </h3>
+            <p className="break-words whitespace-pre-wrap">{note}</p>
+          </div>
+        ) : null
+      ) : (
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (changed) save.mutate({ bookingId, note: draft });
+          }}
+        >
+          <label id={`${id}-title`} htmlFor={`${id}-note`} className="text-base font-semibold">
+            {t("title")}
+          </label>
+          <p id={`${id}-help`} className="text-text-muted text-sm">
+            {t("help")}
+          </p>
+          <textarea
+            id={`${id}-note`}
+            aria-describedby={`${id}-help`}
+            className={inputClass}
+            rows={3}
+            maxLength={MAX_LENGTH}
+            placeholder={t("placeholder")}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          {changed ? (
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              loading={save.isPending}
+              disabled={!online}
+              className="self-start"
+            >
+              {t("save")}
+            </Button>
+          ) : null}
+        </form>
+      )}
     </section>
   );
 }

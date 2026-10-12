@@ -1,3 +1,4 @@
+import { isIsoDate, type IsoDate } from "@stay-ops/domain";
 import { z } from "zod";
 import { EDITABLE_FIELDS, resetBookingField, updateBookingDetails } from "@/server/useCases/bookingEdit";
 import { bookingHistory } from "@/server/useCases/bookingHistory";
@@ -8,9 +9,27 @@ import { getArrivalCards } from "@/server/useCases/arrivalCards";
 import { getPreviousStays } from "@/server/useCases/previousStays";
 import { GUEST_NOTE_MAX, setGuestNote } from "@/server/useCases/guestNote";
 import { moveBooking } from "@/server/useCases/moveBooking";
+import { searchBookings } from "@/server/useCases/bookingSearch";
 import { createTRPCRouter, operatorProcedure, userProcedure } from "../trpc";
 
+const day = z
+  .string()
+  .refine(isIsoDate, "Not a calendar date")
+  .transform((s) => s as IsoDate);
+
 export const bookingRouter = createTRPCRouter({
+  /** Find bookings by guest name, phone, e-mail and/or dates, past and future. */
+  search: userProcedure
+    .input(
+      z.object({
+        text: z.string().max(100).optional(),
+        from: day.optional(),
+        to: day.optional(),
+        includeCancelled: z.boolean().optional(),
+      }),
+    )
+    .query(({ input }) => searchBookings(input)),
+
   /** Place, move or take out a booking. Viewers cannot. */
   move: operatorProcedure
     .input(
@@ -24,9 +43,11 @@ export const bookingRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => moveBooking({ ...input, actorUserId: ctx.user.userId })),
 
   /** Guest, dates, party, amount and notes for the booking panel. */
-  details: userProcedure
-    .input(z.object({ bookingId: z.string().min(1) }))
-    .query(({ input }) => getBookingDetails(input.bookingId)),
+  /** Read-only (family) accounts never get the price. */
+  details: userProcedure.input(z.object({ bookingId: z.string().min(1) })).query(async ({ ctx, input }) => {
+    const details = await getBookingDetails(input.bookingId);
+    return ctx.user.role === "viewer" ? { ...details, price: null } : details;
+  }),
 
   /** Earlier stays of the same guest (same phone or e-mail), and weaker same-name hints. */
   previousStays: userProcedure

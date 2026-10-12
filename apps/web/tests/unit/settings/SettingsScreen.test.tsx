@@ -21,6 +21,7 @@ function setup(role: Role, locale: "el" | "en" = "el") {
     "me.get": { email: "stelios@example.com", role, locale, textSize: "normal", devMode: false, flags: {} },
     "sync.status": { lastSuccessAt: null, running: false, problem: "none" },
     "me.updatePreferences": { locale, textSize: "large" },
+    "admin.family.list": { members: [] },
   };
   const link: TRPCLink<AppRouter> =
     () =>
@@ -51,6 +52,7 @@ describe("SettingsScreen", () => {
     expect(screen.getByRole("button", { name: "Αλλαγή κωδικού" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ενημέρωση τώρα" })).toBeTruthy();
     expect(latinWords(container.textContent ?? "", ["stelios@example.com", "English"])).toEqual([]);
+    expect(screen.getByText("Οικογένεια")).toBeTruthy();
   });
 
   it("hides Dev mode from everyone but admins", async () => {

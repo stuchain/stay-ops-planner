@@ -6,9 +6,10 @@ import { cleanup, latinWords, render, screen, waitFor } from "../intl";
 import type { BookingDetails, CalendarBooking } from "@/api/types";
 import { BookingEdit } from "@/features/calendar/BookingEdit";
 import { BookingPrice } from "@/features/calendar/BookingPrice";
+import { RoleProvider } from "@/features/shell/role";
 import { useUnsavedGuard } from "@/features/calendar/useUnsavedGuard";
 
-const calls = vi.hoisted(() => ({ update: vi.fn(), reset: vi.fn() }));
+const calls = vi.hoisted(() => ({ update: vi.fn(), reset: vi.fn(), undoToast: vi.fn() }));
 
 vi.mock("@/api/client", () => {
   const key = (name: string) => () => [name];
@@ -24,12 +25,13 @@ vi.mock("@/api/client", () => {
   return { useTRPC: () => trpc };
 });
 
-vi.mock("@/ui/Toast", () => ({ showToast: vi.fn() }));
+vi.mock("@/ui/Toast", () => ({ showToast: vi.fn(), undoToast: calls.undoToast }));
 
 afterEach(cleanup);
 beforeEach(() => {
   calls.update.mockReset().mockResolvedValue({ version: 4 });
   calls.reset.mockReset().mockResolvedValue({ version: 4 });
+  calls.undoToast.mockReset();
 });
 
 const booking = {
@@ -47,11 +49,17 @@ const details = (over: Partial<BookingDetails> = {}): BookingDetails =>
     ...over,
   }) as BookingDetails;
 
-function renderEdit(d: BookingDetails, onDirtyChange: (dirty: boolean) => void = () => {}) {
+function renderEdit(
+  d: BookingDetails,
+  onDirtyChange: (dirty: boolean) => void = () => {},
+  role: "viewer" | "operator" = "operator",
+) {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <BookingEdit booking={booking} details={d} onDirtyChange={onDirtyChange} />
+      <RoleProvider role={role}>
+        <BookingEdit booking={booking} details={d} onDirtyChange={onDirtyChange} />
+      </RoleProvider>
     </QueryClientProvider>,
   );
 }
@@ -81,6 +89,48 @@ describe("BookingEdit", () => {
     await user.click(screen.getByRole("button", { name: "Αποθήκευση" }));
     await waitFor(() => expect(calls.update).toHaveBeenCalled());
     expect(calls.update.mock.calls[0]![0]).toEqual({ bookingId: "b1", expectedVersion: 3, partySize: 4 });
+  });
+
+  it("offers Αναίρεση after a save, which sends the earlier values with the new version", async () => {
+    const user = userEvent.setup();
+    renderEdit(details());
+    await user.click(screen.getByRole("button", { name: "Αλλαγή" }));
+    const people = screen.getByRole("spinbutton", { name: "Άτομα" });
+    await user.clear(people);
+    await user.type(people, "4");
+    await user.click(screen.getByRole("button", { name: "Αποθήκευση" }));
+    await waitFor(() => expect(calls.undoToast).toHaveBeenCalled());
+    const toast = calls.undoToast.mock.calls[0]![0] as { undoLabel: string; onUndo: () => void };
+    expect(toast.undoLabel).toBe("Αναίρεση");
+    calls.update.mockResolvedValue({ version: 5 });
+    toast.onUndo();
+    await waitFor(() => expect(calls.update).toHaveBeenCalledTimes(2));
+    expect(calls.update.mock.calls[1]![0]).toEqual({ bookingId: "b1", expectedVersion: 4, partySize: 5 });
+  });
+
+  it("undoes Επαναφορά by sending the app's value back", async () => {
+    const user = userEvent.setup();
+    renderEdit(details({ local: { guestName: { hosthub: "Maria P." }, partySize: null, notes: null } }));
+    await user.click(screen.getByRole("button", { name: "Επαναφορά: Όνομα επισκέπτη" }));
+    await waitFor(() => expect(calls.undoToast).toHaveBeenCalled());
+    (calls.undoToast.mock.calls[0]![0] as { onUndo: () => void }).onUndo();
+    await waitFor(() => expect(calls.update).toHaveBeenCalled());
+    expect(calls.update.mock.calls[0]![0]).toEqual({
+      bookingId: "b1",
+      expectedVersion: 4,
+      guestName: "Μαρία Παπαδοπούλου",
+    });
+  });
+
+  it("is read-only for family accounts: no Αλλαγή and no Επαναφορά", () => {
+    renderEdit(
+      details({ local: { guestName: { hosthub: "Maria P." }, partySize: null, notes: null } }),
+      () => {},
+      "viewer",
+    );
+    expect(screen.getByText("Μαρία Παπαδοπούλου")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Αλλαγή" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Επαναφορά: Όνομα επισκέπτη" })).toBeNull();
   });
 
   it("will not save an empty name or an impossible number of people", async () => {

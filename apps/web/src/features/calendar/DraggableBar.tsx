@@ -5,6 +5,7 @@ import { motion as m, useReducedMotion, type MotionStyle } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { memo, type CSSProperties } from "react";
 import { useOnline } from "@/api/online";
+import { useCanChange } from "@/features/shell/role";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
 import { formatMoney, type UiLocale } from "@/ui/format";
@@ -52,6 +53,7 @@ function DraggableBarInner({
   const locale = useLocale() as UiLocale;
   const pending = booking.status === "pending";
   const online = useOnline();
+  const canChange = useCanChange();
   const priceDetail =
     booking.nightlyCents === undefined
       ? undefined
@@ -61,7 +63,7 @@ function DraggableBarInner({
   const { listeners, setNodeRef, isDragging } = useDraggable({
     id: `booking:${booking.id}`,
     data: { bookingId: booking.id },
-    disabled: pending || !online,
+    disabled: pending || !online || !canChange,
   });
   // Dragging is a mouse shortcut. Keyboard users open the panel with Enter or Space and
   // choose the apartment there, so dnd-kit's keyboard attributes are not used.

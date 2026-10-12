@@ -10,6 +10,7 @@ import { Skeleton } from "@/ui/Skeleton";
 import { HosthubTokenCard } from "@/features/dev/HosthubScreen";
 import { CalendarFeedCard } from "./CalendarFeedCard";
 import { DevModeCard } from "./DevModeCard";
+import { FamilyCard } from "./FamilyCard";
 import { HosthubCard } from "./HosthubCard";
 import { LanguageCard } from "./LanguageCard";
 import { PasswordCard } from "./PasswordCard";
@@ -42,6 +43,7 @@ export function SettingsScreen() {
           {me.data.role === "admin" ? <HosthubTokenCard /> : null}
           <CalendarFeedCard />
           <PasswordCard />
+          {me.data.role === "admin" ? <FamilyCard /> : null}
           {me.data.role === "admin" ? <DevModeCard enabled={me.data.devMode} /> : null}
         </>
       )}

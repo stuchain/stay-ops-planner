@@ -28,6 +28,7 @@ import { HelpButton } from "./HelpButton";
 import { HosthubBanner } from "./HosthubBanner";
 import { LogoutButton } from "./LogoutButton";
 import { OfflineBanner } from "./OfflineBanner";
+import { RoleProvider, type Role } from "./role";
 import { SessionDialog } from "./SessionDialog";
 import { SyncIndicator } from "./SyncIndicator";
 import { useSyncWhileOpen } from "./useSyncWhileOpen";
@@ -38,7 +39,7 @@ const NAV = [
   { href: "/app/calendar", key: "calendar", icon: CalendarDays },
   { href: "/app/free", key: "free", icon: SearchCheck },
   { href: "/app/turnovers", key: "cleaning", icon: BrushCleaning },
-  { href: "/app/excel", key: "income", icon: Wallet },
+  { href: "/app/excel", key: "income", icon: Wallet, money: true },
   { href: "/app/settings", key: "settings", icon: Settings },
 ] as const;
 
@@ -57,18 +58,21 @@ const DEV_NAV = [
 
 export type NewShellProps = {
   textSize: string;
+  /** Family members (viewer) get a read-only app without money screens. */
+  role?: Role;
   devMode: boolean;
   /** Scopes the copy of the data kept for offline reading to this person. */
   userId?: string;
   children: ReactNode;
 };
 
-function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNode }) {
+function ShellInner({ devMode, role, children }: { devMode: boolean; role: Role; children: ReactNode }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tDev = useTranslations("dev.nav");
   useSyncWhileOpen();
-  const items: SidebarItem[] = NAV.map(({ href, key, icon }) => ({
+  const nav = role === "viewer" ? NAV.filter((item) => !("money" in item)) : NAV;
+  const items: SidebarItem[] = nav.map(({ href, key, icon }) => ({
     href,
     icon,
     label: t(key),
@@ -114,11 +118,15 @@ function ShellInner({ devMode, children }: { devMode: boolean; children: ReactNo
 }
 
 /** The app shell: sidebar, banners and the signed-in layout. */
-export function NewShell({ textSize, devMode, userId, children }: NewShellProps) {
+export function NewShell({ textSize, devMode, role = "operator", userId, children }: NewShellProps) {
   return (
     <div id="new-ui-root" data-ui="new" data-text-size={textSize}>
       <ApiProvider {...(userId ? { userId } : {})}>
-        <ShellInner devMode={devMode}>{children}</ShellInner>
+        <RoleProvider role={role}>
+          <ShellInner devMode={devMode} role={role}>
+            {children}
+          </ShellInner>
+        </RoleProvider>
       </ApiProvider>
     </div>
   );

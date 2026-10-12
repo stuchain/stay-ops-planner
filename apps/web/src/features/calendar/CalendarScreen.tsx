@@ -13,9 +13,11 @@ import { ChevronLeft, ChevronRight, Printer, Wand2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { canPlace, type IsoDate, type Occupant } from "@stay-ops/domain";
+import { canPlace, isIsoDate, type IsoDate, type Occupant } from "@stay-ops/domain";
 import { useErrorText } from "@/api/errors";
 import { useOnline } from "@/api/online";
+import { SearchLink } from "@/features/search/QuickLinks";
+import { useCanChange } from "@/features/shell/role";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
 import { Button } from "@/ui/Button";
@@ -93,6 +95,11 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const span = useMemo(() => spanAround(today), [today]);
+  // /app/calendar?date=YYYY-MM-DD (from search or the week) opens the calendar at that day instead of today.
+  const [start] = useState<IsoDate>(() => {
+    const wanted = searchParams?.get("date") ?? "";
+    return isIsoDate(wanted) && dayIndex(span, wanted) >= 0 && dayIndex(span, wanted) < span.days ? wanted : today;
+  });
   const [zoom, setZoom] = useState<Zoom>("month");
   const dayWidth = DAY_WIDTH[zoom];
   const scroller = useRef<HTMLDivElement>(null);
@@ -100,7 +107,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   // directly; this screen only follows which blocks of data to load.
   const [drawn] = useState(() =>
     createDrawnDaysStore(
-      drawnDays(Math.max(0, dayIndex(span, today) - 2) * DAY_WIDTH.month, 1200, DAY_WIDTH.month, LABEL_WIDTH),
+      drawnDays(Math.max(0, dayIndex(span, start) - 2) * DAY_WIDTH.month, 1200, DAY_WIDTH.month, LABEL_WIDTH),
     ),
   );
   // /app/calendar?booking=<id> (from the Today screen) opens that booking's panel.
@@ -145,6 +152,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     setConfirm(request);
   }, []);
   const online = useOnline();
+  const canChange = useCanChange();
   const { move, pending: movingNow } = useMoveBooking(data.rooms, askToConfirm);
   // Without internet the move buttons in the panel are off, like while a move is running.
   const moving = movingNow || !online;
@@ -170,7 +178,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   );
 
   // Start at today once the rows are drawn, and keep the same first visible day when the zoom changes.
-  const anchor = useRef<IsoDate>(today);
+  const anchor = useRef<IsoDate>(start);
   const positioned = useRef(false);
   const hasRows = data.rooms.length > 0;
   useLayoutEffect(() => {
@@ -296,12 +304,15 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 </button>
               ))}
             </div>
-            <Button icon={Printer} onClick={openPrint} className="ml-2">
+            <SearchLink className="ml-2" />
+            <Button icon={Printer} onClick={openPrint}>
               {t("calendar.print")}
             </Button>
-            <Button icon={Wand2} onClick={openArrange} disabled={!online}>
-              {t("calendar.arrangeButton")}
-            </Button>
+            {canChange ? (
+              <Button icon={Wand2} onClick={openArrange} disabled={!online}>
+                {t("calendar.arrangeButton")}
+              </Button>
+            ) : null}
           </div>
         }
       />

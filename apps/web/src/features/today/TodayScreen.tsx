@@ -18,6 +18,7 @@ import { DateText } from "@/ui/DateText";
 import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
+import { SearchLink, WeekLink } from "../search/QuickLinks";
 import { SyncIndicator } from "../shell/SyncIndicator";
 
 /** Which line goes under the guest's name. */
@@ -239,6 +240,12 @@ export function TodayScreen() {
       <PageHeader
         title={t("title")}
         subtitle={summary.data ? <DateText date={summary.data.today} withYear /> : undefined}
+        actions={
+          <>
+            <SearchLink />
+            <WeekLink />
+          </>
+        }
       />
       {summary.data ? (
         <Summary data={summary.data} />

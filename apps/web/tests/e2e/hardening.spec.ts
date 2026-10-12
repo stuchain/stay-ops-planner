@@ -35,6 +35,8 @@ const SCREENS = [
   "/app/cleaning",
   "/app/turnovers",
   "/app/arrival-cards",
+  "/app/search",
+  "/app/week",
   "/app/settings",
 ] as const;
 

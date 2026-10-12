@@ -8,13 +8,38 @@ import { useOnline } from "@/api/online";
 import { useErrorText } from "@/api/errors";
 import type { BookingDetails, CalendarBooking } from "@/api/types";
 import { Button } from "@/ui/Button";
-import { showToast } from "@/ui/Toast";
+import { useCanChange } from "@/features/shell/role";
+import { showToast, undoToast } from "@/ui/Toast";
 
 type Field = "guestName" | "partySize" | "notes";
 
 const FIELDS: readonly Field[] = ["guestName", "partySize", "notes"];
 
 type Draft = { guestName: string; partySize: string; notes: string };
+
+type Changes = { guestName?: string; partySize?: number; notes?: string };
+
+/**
+ * How to put fields back to what they were before a save: values the server accepts are sent again (sending
+ * Hosthub's own value clears the change), an empty name or number of people is restored from Hosthub.
+ */
+export function undoPlan(before: Draft, fields: readonly Field[]): { restore: Changes; reset: Field[] } {
+  const restore: Changes = {};
+  const reset: Field[] = [];
+  for (const field of fields) {
+    const value = before[field].trim();
+    if (field === "notes") restore.notes = value;
+    else if (field === "guestName") {
+      if (value === "") reset.push(field);
+      else restore.guestName = value;
+    } else {
+      const n = Number(value);
+      if (value === "" || !Number.isInteger(n) || n < 1 || n > 99) reset.push(field);
+      else restore.partySize = n;
+    }
+  }
+  return { restore, reset };
+}
 
 const inputClass =
   "min-h-button rounded-sm border border-border bg-surface px-4 py-2 text-base text-text w-full " +
@@ -62,6 +87,8 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const online = useOnline();
+  const canChange = useCanChange();
+  const tCommon = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => startDraft(booking, details));
   const [showErrors, setShowErrors] = useState(false);
@@ -85,7 +112,6 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
   const update = useMutation({
     ...trpc.booking.updateDetails.mutationOptions(),
     onSuccess: () => {
-      showToast({ message: t("saved"), tone: "success" });
       setEditing(false);
       setShowErrors(false);
     },
@@ -94,10 +120,36 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
   });
   const reset = useMutation({
     ...trpc.booking.resetField.mutationOptions(),
-    onSuccess: () => showToast({ message: t("restored"), tone: "success" }),
     onError: (error) => showToast({ message: errorText(error), tone: "danger" }),
     onSettled: refresh,
   });
+  // Undo sends its own requests so the save and reset toasts above are not shown again.
+  const undoUpdate = useMutation(trpc.booking.updateDetails.mutationOptions());
+  const undoReset = useMutation(trpc.booking.resetField.mutationOptions());
+
+  /** Puts the fields back as they were before the change that left the booking at `version`. */
+  async function undo(before: Draft, fields: readonly Field[], version: number) {
+    const plan = undoPlan(before, fields);
+    try {
+      let current = version;
+      if (Object.keys(plan.restore).length > 0) {
+        current = (await undoUpdate.mutateAsync({ bookingId: booking.id, expectedVersion: current, ...plan.restore }))
+          .version;
+      }
+      for (const field of plan.reset) {
+        current = (await undoReset.mutateAsync({ bookingId: booking.id, field, expectedVersion: current })).version;
+      }
+      showToast({ message: t("undone"), tone: "success" });
+    } catch (error) {
+      showToast({ message: errorText(error), tone: "danger" });
+    } finally {
+      refresh();
+    }
+  }
+
+  function offerUndo(message: string, before: Draft, fields: readonly Field[], version: number) {
+    undoToast({ message, undoLabel: tCommon("undo"), onUndo: () => void undo(before, fields, version) });
+  }
 
   function open() {
     setDraft(startDraft(booking, details));
@@ -114,7 +166,12 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
       setEditing(false);
       return;
     }
-    update.mutate({ bookingId: booking.id, expectedVersion: booking.version, ...changes });
+    const before = start;
+    const fields = Object.keys(changes) as Field[];
+    update.mutate(
+      { bookingId: booking.id, expectedVersion: booking.version, ...changes },
+      { onSuccess: (result) => offerUndo(t("saved"), before, fields, result.version) },
+    );
   }
 
   function fromHosthub(field: Field) {
@@ -144,7 +201,7 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
         <dd className="font-medium break-words whitespace-pre-wrap">
           {valueOf[field] === "" ? (field === "notes" ? t("noNotes") : "–") : valueOf[field]}
         </dd>
-        {hosthub ? (
+        {hosthub && canChange ? (
           <div className="mt-1 flex flex-wrap items-center gap-x-3">
             <span className="text-text-muted">{hosthub}</span>
             <Button
@@ -152,7 +209,13 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
               loading={reset.isPending && reset.variables?.field === field}
               disabled={reset.isPending}
               aria-label={t("resetAria", { field: labels[field] })}
-              onClick={() => reset.mutate({ bookingId: booking.id, field, expectedVersion: booking.version })}
+              onClick={() => {
+                const before = start;
+                reset.mutate(
+                  { bookingId: booking.id, field, expectedVersion: booking.version },
+                  { onSuccess: (result) => offerUndo(t("restored"), before, [field], result.version) },
+                );
+              }}
             >
               {t("reset")}
             </Button>
@@ -181,7 +244,7 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
         <h3 id={`${idBase}-title`} className="text-base font-semibold">
           {t("title")}
         </h3>
-        {editing ? null : (
+        {editing || !canChange ? null : (
           <Button onClick={open} size="md" disabled={!online}>
             {t("change")}
           </Button>

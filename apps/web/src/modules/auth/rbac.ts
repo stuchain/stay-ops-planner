@@ -40,10 +40,12 @@ export function resolveApiPolicy(method: string, pathname: string): readonly Rol
   return best ? [...best.roles] : null;
 }
 
-export type AppPolicyKey = "app_shell";
+export type AppPolicyKey = "app_shell" | "money";
 
+/** Family members (viewer) may open the app read-only; money screens are for operators and admins. */
 const APP_POLICY: Record<AppPolicyKey, readonly Role[]> = {
-  app_shell: ["operator", "admin"],
+  app_shell: ["viewer", "operator", "admin"],
+  money: ["operator", "admin"],
 };
 
 export function rolesForAppPolicy(key: AppPolicyKey): readonly Role[] {
@@ -53,8 +55,8 @@ export function rolesForAppPolicy(key: AppPolicyKey): readonly Role[] {
 /** Map pathname (with or without query) to required roles for server-rendered `/app` pages. */
 export function resolveAppPolicy(pathname: string): { key: AppPolicyKey; roles: readonly Role[] } {
   const path = pathname.split("?")[0] ?? pathname;
-  if (path.startsWith("/app")) {
-    return { key: "app_shell", roles: rolesForAppPolicy("app_shell") };
+  if (path.startsWith("/app/excel")) {
+    return { key: "money", roles: rolesForAppPolicy("money") };
   }
   return { key: "app_shell", roles: rolesForAppPolicy("app_shell") };
 }
