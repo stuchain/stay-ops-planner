@@ -126,11 +126,47 @@ jobs:
             console.log("Readiness OK: " + JSON.stringify(parsed));
           '
 
+      # Read-only smoke test of what a person meets first: the login page renders, a signed-out visit to the app is sent
+      # to login, the API refuses without a session, and the browser safety headers are there.
+      - name: Smoke test the login page, sign-in redirect, API guard and safety headers
+        id: smoke
+        shell: bash
+        run: |
+          set -uo pipefail
+          base="${DEPLOYMENT_URL%/}"
+          curl_opts=(--silent --show-error --max-time 20)
+          if [[ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]]; then
+            curl_opts+=(--header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
+          fi
+          failed=0
+          fail() { echo "::error title=Smoke test failed::$1"; failed=1; }
+
+          status=$(curl "${curl_opts[@]}" -D /tmp/login-headers.txt -o /tmp/login.html -w '%{http_code}' "$base/login") || status="000"
+          [ "$status" = "200" ] || fail "/login answered HTTP $status"
+          grep -q 'data-testid="login-email"' /tmp/login.html || fail "/login did not render the login form"
+          grep -qi '^x-frame-options: *DENY' /tmp/login-headers.txt || fail "/login is missing X-Frame-Options: DENY"
+          grep -qi "^content-security-policy:.*frame-ancestors 'none'" /tmp/login-headers.txt || fail "/login is missing the frame-ancestors CSP"
+          grep -qi '^x-content-type-options: *nosniff' /tmp/login-headers.txt || fail "/login is missing X-Content-Type-Options"
+
+          location=$(curl "${curl_opts[@]}" -o /dev/null -w '%{redirect_url}' "$base/app/today") || location=""
+          case "$location" in
+            */login?next=*) ;;
+            *) fail "a signed-out visit to /app/today was not sent to /login (got '${location}')" ;;
+          esac
+
+          status=$(curl "${curl_opts[@]}" -o /tmp/me.json -w '%{http_code}' "$base/api/auth/me") || status="000"
+          [ "$status" = "401" ] || fail "/api/auth/me without a session answered HTTP $status, expected 401"
+          node -e 'const b=JSON.parse(require("fs").readFileSync("/tmp/me.json","utf8")); process.exit(b.error && b.error.code==="UNAUTHORIZED"?0:1)' \
+            || fail "/api/auth/me without a session did not answer the JSON error shape"
+
+          [ "$failed" = "0" ] && echo "Smoke test OK on $base"
+          exit "$failed"
+
       - name: Mirror result as commit status `post-deploy-health`
         if: always() && env.DEPLOYMENT_SHA != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OUTCOME: ${{ steps.probe.outcome }}
+          OUTCOME: ${{ steps.probe.outcome == 'success' && steps.smoke.outcome == 'success' && 'success' || 'failure' }}
           TRACE_ID: ${{ steps.probe.outputs.trace_id }}
           URL: ${{ steps.probe.outputs.url }}
         shell: bash
