@@ -19,6 +19,10 @@ async function login(page: Page, next?: string): Promise<void> {
 function watchForProblems(page: Page): string[] {
   const problems: string[] = [];
   page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
+  // Anything the Content-Security-Policy blocks would be a broken feature in production.
+  page.on("console", (message) => {
+    if (/Content Security Policy/i.test(message.text())) problems.push(`CSP: ${message.text()}`);
+  });
   page.on("response", (response) => {
     // The background Hosthub sync answers 503 here because the test database has no Hosthub key.
     if (response.url().includes("/api/sync/hosthub/reconcile")) return;
@@ -174,6 +178,7 @@ test.describe("hardening @calendar", () => {
     expect(headers["x-frame-options"]).toBe("DENY");
     expect(headers["x-content-type-options"]).toBe("nosniff");
     expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+    expect(headers["content-security-policy"]).toContain("default-src 'self'");
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   });
 
@@ -184,5 +189,45 @@ test.describe("hardening @calendar", () => {
     const body = (await response.json()) as { error?: { code?: string } };
     expect(body.error?.code).toBe("UNAUTHORIZED");
     await anonymous.dispose();
+  });
+});
+
+test.describe("hardening on a phone @calendar", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    locale: "el-GR",
+    contextOptions: { reducedMotion: "reduce" },
+  });
+
+  test.beforeAll(async () => {
+    await resetCalendarFixtures();
+  });
+
+  test.beforeEach(async () => {
+    // The phone size is set here, so one run is enough.
+    test.skip(test.info().project.name === "mobile-chromium", "Phone size is set by this describe.");
+    test.setTimeout(180_000);
+  });
+
+  test.afterAll(async () => {
+    await closeCalendarFixtures();
+  });
+
+  test("every screen opens on a phone without errors or sideways scrolling", async ({ page }) => {
+    const problems = watchForProblems(page);
+    await login(page);
+    for (const path of SCREENS) {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 }), `heading on ${path}`).toBeVisible({ timeout: 60_000 });
+      await expect(page.getByRole("main").getByRole("alert"), `error box on ${path}`).toHaveCount(0);
+      // Wide content (the calendar grid) scrolls inside its own box; the page itself never does.
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow, `page wider than the phone on ${path}`).toBeLessThanOrEqual(1);
+      // The bottom menu stays reachable.
+      await expect(page.getByRole("navigation").last()).toBeVisible();
+    }
+    expect(problems).toEqual([]);
   });
 });
