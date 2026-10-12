@@ -17,6 +17,7 @@ import {
 import { fillTemplate, resolveTemplate, sampleContext } from "@/i18n/guestMessages/fill";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
+import { ConfirmButton } from "@/ui/ConfirmButton";
 import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
@@ -187,15 +188,16 @@ function Editor({ data }: Props) {
         >
           {t("save")}
         </Button>
-        <Button
+        <ConfirmButton
           size="lg"
           icon={RotateCcw}
           disabled={!own}
           loading={reset.isPending}
-          onClick={() => reset.mutate({ kind, lang, roomId })}
+          question={t("resetConfirm")}
+          onConfirm={() => reset.mutate({ kind, lang, roomId })}
         >
           {t("reset")}
-        </Button>
+        </ConfirmButton>
       </div>
     </section>
   );

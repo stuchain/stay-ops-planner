@@ -107,6 +107,9 @@ describe("MessagesScreen", () => {
     expect(screen.getByText("Αυτό είναι το κείμενο που αποθηκεύσατε.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Επαναφορά προεπιλογής" }));
+    // It asks first, so a stray click never throws away the person's text.
+    expect(calls.reset).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Ναι" }));
     await waitFor(() => expect(calls.reset).toHaveBeenCalledWith({ kind: "wifi", lang: "en", roomId: null }));
     await waitFor(async () => expect((await textbox()).value).toBe(DEFAULT_TEMPLATES.wifi.en));
   });

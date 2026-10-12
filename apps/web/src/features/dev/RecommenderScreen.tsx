@@ -9,6 +9,7 @@ import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
+import { ConfirmButton } from "@/ui/ConfirmButton";
 import { DateText } from "@/ui/DateText";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState } from "@/ui/ErrorState";
@@ -141,9 +142,15 @@ function RulesEditor({
         >
           {t("save")}
         </Button>
-        <Button size="lg" icon={RotateCcw} loading={reset.isPending} onClick={() => reset.mutate()}>
+        <ConfirmButton
+          size="lg"
+          icon={RotateCcw}
+          loading={reset.isPending}
+          question={t("resetConfirm")}
+          onConfirm={() => reset.mutate()}
+        >
           {t("reset")}
-        </Button>
+        </ConfirmButton>
       </div>
     </section>
   );

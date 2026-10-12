@@ -1,5 +1,6 @@
 {
   "common": {
+    "loadingPage": "Loading the page…",
     "noName": "No name",
     "guest": "The guest",
     "retry": "Try again",
@@ -474,6 +475,7 @@
       "save": "Save",
       "saved": "The rules were saved.",
       "reset": "Restore defaults",
+      "resetConfirm": "Restore the default rules? Your own rules will be lost.",
       "resetDone": "The default rules were restored.",
       "pickTitle": "Choose a booking",
       "pickHint": "Upcoming bookings that need an apartment come first.",
@@ -703,6 +705,7 @@
       "save": "Save",
       "saved": "Saved",
       "reset": "Restore the built-in text",
+      "resetConfirm": "Restore the built-in text? Your own text will be lost.",
       "resetDone": "The built-in text is back",
       "loading": "Loading the message texts"
     }
