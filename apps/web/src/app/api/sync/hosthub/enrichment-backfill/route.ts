@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { respondAuthError } from "@/lib/apiError";
+import { apiError, respondAuthError } from "@/lib/apiError";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runHosthubEnrichmentBackfill } from "@stay-ops/sync";
@@ -42,6 +42,17 @@ async function postEnrichmentBackfill(request: NextRequest) {
       limit: parsed.data.limit,
     });
     return NextResponse.json({ data: { status: "completed", result } }, { status: 200 });
+  } catch (err) {
+    // The usual error shape with a trace id, and the stack in Sentry, instead of a bare 500 page.
+    return apiError(
+      request,
+      "INTERNAL_ERROR",
+      "Enrichment backfill failed",
+      500,
+      undefined,
+      { route: "/api/sync/hosthub/enrichment-backfill", method: "POST" },
+      err,
+    );
   } finally {
     await prisma.$queryRaw`SELECT pg_advisory_unlock(${BACKFILL_LOCK_KEY})`;
   }
