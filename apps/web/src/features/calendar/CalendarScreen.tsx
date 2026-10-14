@@ -416,6 +416,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
               checkin={dragging.checkin}
               checkout={dragging.checkout}
               channel={dragging.channel}
+              people={dragging.partySize}
               showDates
               className="shadow-raised w-72"
               tabIndex={-1}

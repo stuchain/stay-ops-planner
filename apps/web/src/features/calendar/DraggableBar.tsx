@@ -96,6 +96,7 @@ function DraggableBarInner({
         dragging={isDragging}
         pending={pending}
         needsRoom={needsRoom && !pending}
+        people={booking.partySize}
         detail={priceDetail}
         stickyLeft={stickyLeft}
         showDates={showDates}

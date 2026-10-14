@@ -38,6 +38,20 @@ describe("BookingBar", () => {
     expect(screen.getByText("4 νύχτες · 100 €/νύχτα")).toBeInTheDocument();
   });
 
+  it("shows how many people stay first, and says it in the name", () => {
+    render(<BookingBar {...base} people={3} />);
+    expect(screen.getByTestId("bar-people")).toHaveTextContent("3");
+    expect(
+      screen.getByRole("button", { name: "Maria Konstantinou, Παρ 17 – Τρι 21 Οκτ, 4 νύχτες, 3 άτομα" }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([null, 0, undefined])("leaves the people out when the count is %s", (people) => {
+    render(<BookingBar {...base} people={people} />);
+    expect(screen.queryByTestId("bar-people")).toBeNull();
+    expect(screen.getByText("4 νύχτες")).toBeInTheDocument();
+  });
+
   it("is keyboard focusable and activates with Enter", async () => {
     const onClick = vi.fn();
     const user = userEvent.setup();

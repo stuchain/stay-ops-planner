@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, CSSProperties } from "react";
+import { UserRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { IsoDate } from "@stay-ops/domain";
 import { cn } from "@/ui/cn";
@@ -23,6 +24,8 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" 
   pendingLabel?: string;
   needsRoomLabel?: string;
   channelLabels?: Partial<Record<BookingChannel, string>>;
+  /** How many people stay (adults and children). Shown as a person icon and the number; left out when unknown. */
+  people?: number | null | undefined;
   /** Extra text after the nights, such as the Dev mode price per night. */
   detail?: string | undefined;
   /**
@@ -101,6 +104,7 @@ export function BookingBar({
   pendingLabel,
   needsRoomLabel,
   channelLabels,
+  people,
   detail,
   stickyLeft,
   showDates = false,
@@ -119,7 +123,12 @@ export function BookingBar({
     : needsRoom
       ? (needsRoomLabel ?? t("bookingStatus.needsRoom"))
       : null;
-  const accessibleName = [guest, range, nights, status].filter(Boolean).join(", ");
+  const hasPeople = people != null && people > 0;
+  const peopleText = hasPeople ? t("common.people", { count: people }) : null;
+  const accessibleName = [guest, range, nights, peopleText, status].filter(Boolean).join(", ");
+  const info = (showDates ? [range, nights, pending ? status : null, detail] : [nights, status, detail])
+    .filter(Boolean)
+    .join(" · ");
   const draggable = !pending;
 
   return (
@@ -154,10 +163,16 @@ export function BookingBar({
         <ChannelLogo channel={channel} label={channelLabel} muted={pending || needsRoom} />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-bold">{shownGuest ?? guest}</span>
-          <span className="truncate text-xs">
-            {(showDates ? [range, nights, pending ? status : null, detail] : [nights, status, detail])
-              .filter(Boolean)
-              .join(" · ")}
+          {/* The people come first so they still show on short stays, where the rest is cut off. */}
+          <span className="flex min-w-0 items-center text-xs">
+            {hasPeople ? (
+              <span className="flex flex-none items-center gap-0.5 font-semibold tabular-nums" data-testid="bar-people">
+                <UserRound size={12} strokeWidth={2.5} aria-hidden="true" />
+                {people}
+              </span>
+            ) : null}
+            {hasPeople && info ? <span className="flex-none px-1">·</span> : null}
+            <span className="truncate">{info}</span>
           </span>
         </span>
       </span>
