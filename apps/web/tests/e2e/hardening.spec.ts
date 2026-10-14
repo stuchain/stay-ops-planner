@@ -124,19 +124,19 @@ test.describe("hardening @calendar", () => {
     await page.unroute("**/api/trpc/**");
     await alert.getByRole("button", { name: "Δοκιμάστε ξανά" }).click();
     await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0, { timeout: 30_000 });
-    await expect(page.getByRole("region", { name: "Αύριο" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Επόμενες μέρες" })).toBeVisible();
   });
 
   test("losing the internet shows a banner, and it goes away when it is back", async ({ page, context }) => {
     await login(page);
     await page.goto("/app/today");
-    await expect(page.getByRole("region", { name: "Αύριο" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("region", { name: "Επόμενες μέρες" })).toBeVisible({ timeout: 30_000 });
 
     await context.setOffline(true);
     const banner = page.getByRole("status").filter({ hasText: "Χωρίς σύνδεση στο ίντερνετ" });
     await expect(banner).toBeVisible();
     // The last data stays on screen.
-    await expect(page.getByRole("region", { name: "Αύριο" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Επόμενες μέρες" })).toBeVisible();
 
     await context.setOffline(false);
     await expect(banner).toBeHidden({ timeout: 15_000 });

@@ -81,17 +81,16 @@
     "label": "Main navigation",
     "today": "Today",
     "calendar": "Calendar",
-    "free": "Free",
+    "free": "What's free?",
     "income": "Income",
     "settings": "Settings",
-    "cleaning": "Cleaning",
-    "stats": "Statistics"
+    "cleaning": "Cleaning"
   },
   "sync": {
-    "loading": "Updating from Hosthub…",
-    "running": "Updating from Hosthub now…",
     "lastSuccess": "Last update from Hosthub: {ago}",
-    "never": "No update from Hosthub yet"
+    "never": "No update from Hosthub yet",
+    "failed": "The update from Hosthub failed. Last successful: {ago}",
+    "failedNever": "The update from Hosthub failed."
   },
   "ui": {
     "inactive": "Not in use",
@@ -383,7 +382,8 @@
       "history": "History",
       "users": "Users",
       "system": "System",
-      "messages": "Messages"
+      "messages": "Messages",
+      "stats": "Statistics"
     },
     "noAccess": {
       "title": "You don't have access",
@@ -938,26 +938,26 @@
   },
   "today": {
     "title": "Today",
-    "arrivals": "Arrivals today",
-    "departures": "Departures today",
     "needs": "Need an apartment",
     "tomorrow": "Tomorrow",
-    "tomorrowArrivals": "Arrivals tomorrow",
-    "tomorrowDepartures": "Departures tomorrow",
-    "noArrivals": "No arrivals today.",
-    "noDepartures": "No departures today.",
-    "noTomorrowArrivals": "No arrivals tomorrow.",
-    "noTomorrowDepartures": "No departures tomorrow.",
-    "allPlaced": "Every booking has an apartment.",
-    "needsSentence": "{count, plural, one {One booking is waiting for an apartment.} other {# bookings are waiting for an apartment.}}",
+    "noArrivals": "Nobody arrives today.",
+    "noDepartures": "Nobody leaves today.",
     "placeThem": "Put them in an apartment",
-    "toCalendar": "Open the calendar",
     "arrivalLine": "{people} · {nights}",
     "departureLine": "Stayed {nights}",
     "pendingLabel": "Waiting for confirmation",
     "needsApartment": "Needs an apartment",
     "loading": "Loading today's overview",
-    "printCards": "Print arrival cards"
+    "printCards": "Print arrival cards",
+    "comes": "Arrives",
+    "leaves": "Leaves",
+    "todayCard": "Today",
+    "needsTitle": "{count, plural, one {One booking needs an apartment} other {# bookings need an apartment}}",
+    "nextDays": "Next days",
+    "printWeek": "Print the week",
+    "nextDaysEmpty": "No arrivals or departures in the next 7 days.",
+    "gapLine": "{count, plural, one {Empty night} other {# empty nights}}: {date} in {room}",
+    "gapsLabel": "Empty nights"
   },
   "errorPage": {
     "retry": "Try again",

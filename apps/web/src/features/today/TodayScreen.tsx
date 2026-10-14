@@ -1,11 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, CalendarRange, CircleAlert, LogIn, LogOut, Printer, StickyNote, Sunrise } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { CalendarDays, CircleAlert, Printer, StickyNote } from "lucide-react";
 import Link from "next/link";
-import { GAP_LOOKAHEAD_DAYS } from "@stay-ops/domain";
-import { useTranslations } from "next-intl";
+import type { IsoDate } from "@stay-ops/domain";
+import { useLocale, useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { TodayGap, TodayStay, TodaySummary } from "@/api/types";
@@ -17,14 +16,13 @@ import { cn } from "@/ui/cn";
 import { DateText } from "@/ui/DateText";
 import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
+import { formatDay, type UiLocale } from "@/ui/format";
 import { Skeleton } from "@/ui/Skeleton";
-import { SearchLink, WeekLink } from "../search/QuickLinks";
-import { SyncIndicator } from "../shell/SyncIndicator";
 
 /** Which line goes under the guest's name. */
 type Line = "arrival" | "departure";
 
-function StayRow({ stay, line }: { stay: TodayStay; line: Line }) {
+function StayRow({ stay, line, showKind = false }: { stay: TodayStay; line: Line; showKind?: boolean }) {
   const t = useTranslations("today");
   const common = useTranslations("common");
   const notes = useTranslations("guestNotes");
@@ -38,11 +36,21 @@ function StayRow({ stay, line }: { stay: TodayStay; line: Line }) {
       <Link
         href={`/app/calendar?booking=${stay.id}`}
         className={cn(
-          "min-h-target hover:bg-surface-muted border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm border px-3 py-2",
+          "min-h-target hover:bg-surface-muted border-border flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border px-3 py-2",
           pending && "bg-surface-muted text-text-muted border-dashed",
         )}
       >
-        <span className="flex min-w-0 flex-col">
+        {showKind ? (
+          <span
+            className={cn(
+              "w-24 flex-none text-sm font-bold uppercase",
+              line === "arrival" ? "text-success-text" : "text-text-muted",
+            )}
+          >
+            {line === "arrival" ? t("comes") : t("leaves")}
+          </span>
+        ) : null}
+        <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-base font-semibold">{name}</span>
           <span className="text-text-muted text-sm">
             {line === "arrival" ? t("arrivalLine", { people, nights }) : t("departureLine", { nights })}
@@ -69,40 +77,22 @@ function StayRow({ stay, line }: { stay: TodayStay; line: Line }) {
   );
 }
 
-function StayList({ stays, line, empty }: { stays: TodayStay[]; line: Line; empty: string }) {
-  if (stays.length === 0) return <p className="text-text-muted text-base">{empty}</p>;
+/** Today's arrivals and departures in one list, each line saying which it is. */
+function DayList({ arrivals, departures }: { arrivals: TodayStay[]; departures: TodayStay[] }) {
+  const t = useTranslations("today");
   return (
     <ul className="flex flex-col gap-2">
-      {stays.map((stay) => (
-        <StayRow key={stay.id} stay={stay} line={line} />
-      ))}
-    </ul>
-  );
-}
-
-function CardTitle({ icon: Icon, children }: { icon: LucideIcon; children: string }) {
-  return (
-    <span className="flex items-center gap-2">
-      <Icon size={24} aria-hidden="true" />
-      {children}
-    </span>
-  );
-}
-
-function CalendarLink({ primary, children }: { primary?: boolean; children: string }) {
-  return (
-    <Link
-      href="/app/calendar"
-      className={cn(
-        buttonBase,
-        buttonVariants[primary ? "primary" : "secondary"],
-        buttonSizes.lg,
-        "mt-auto self-start",
+      {arrivals.length === 0 ? (
+        <li className="text-text-muted text-base">{t("noArrivals")}</li>
+      ) : (
+        arrivals.map((stay) => <StayRow key={stay.id} stay={stay} line="arrival" showKind />)
       )}
-    >
-      <CalendarDays size={24} aria-hidden="true" />
-      {children}
-    </Link>
+      {departures.length === 0 ? (
+        <li className="text-text-muted text-base">{t("noDepartures")}</li>
+      ) : (
+        departures.map((stay) => <StayRow key={stay.id} stay={stay} line="departure" showKind />)
+      )}
+    </ul>
   );
 }
 
@@ -121,41 +111,76 @@ function PrintCardsLink({ stays }: { stays: TodayStay[] }) {
   );
 }
 
-/** "Κενές νύχτες": single empty nights between stays in the coming weeks. */
-function GapNights({ gaps, days }: { gaps: TodayGap[]; days: number }) {
-  const t = useTranslations("gapNights");
+/** The coming days with arrivals or departures; quiet days are left out. */
+function NextDays({ tomorrow }: { tomorrow: IsoDate }) {
+  const t = useTranslations("today");
+  const locale = useLocale() as UiLocale;
+  const trpc = useTRPC();
+  const errorText = useErrorText();
+  const week = useQuery({
+    ...trpc.today.week.queryOptions({ day: tomorrow, startOnDay: true }),
+    refetchInterval: 60_000,
+  });
+  const days = week.data?.days.filter((d) => d.arrivals.length + d.departures.length > 0) ?? [];
   return (
     <Card
-      title={<CardTitle icon={CalendarRange}>{t("title")}</CardTitle>}
-      aria-label={t("title")}
-      className={cn(gaps.length > 0 && "ring-warning ring-2")}
+      title={t("nextDays")}
+      aria-label={t("nextDays")}
+      actions={
+        <Link href="/app/week" className={cn(buttonBase, buttonVariants.secondary, buttonSizes.md)}>
+          <Printer size={20} aria-hidden="true" />
+          {t("printWeek")}
+        </Link>
+      }
     >
-      {gaps.length === 0 ? (
-        <p className="text-text-muted text-base">{t("none", { days })}</p>
+      {week.error ? (
+        <ErrorState message={errorText(week.error)} onRetry={() => void week.refetch()} />
+      ) : !week.data ? (
+        <Skeleton variant="block" className="h-32" />
+      ) : days.length === 0 ? (
+        <p className="text-text-muted text-base">{t("nextDaysEmpty")}</p>
       ) : (
-        <>
-          <p className="text-text-muted text-sm">{t("intro", { days })}</p>
-          <ul className="flex flex-col gap-2">
-            {gaps.map((gap) => (
-              <li key={`${gap.room.id}:${gap.start}`}>
-                <Link
-                  href={gap.bookingId ? `/app/calendar?booking=${gap.bookingId}` : "/app/calendar"}
-                  className="min-h-target hover:bg-surface-muted border-border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm border px-3 py-2"
-                >
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-base font-semibold">
-                      <DateText date={gap.start} to={gap.end} />
-                    </span>
-                    <span className="text-warning-text text-sm font-semibold">{t("label", { count: gap.nights })}</span>
-                  </span>
-                  <ApartmentChip name={gap.room.name} color={gap.room.color ?? "#5B5852"} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
+        <ul className="flex flex-col gap-4">
+          {days.map((day) => (
+            <li key={day.date} className="flex flex-col gap-2">
+              <h4 className="text-base font-semibold">
+                {day.date === tomorrow ? t("tomorrow") : formatDay(day.date, locale)}
+              </h4>
+              <ul className="flex flex-col gap-2">
+                {day.arrivals.map((stay) => (
+                  <StayRow key={`a${stay.id}`} stay={stay} line="arrival" showKind />
+                ))}
+                {day.departures.map((stay) => (
+                  <StayRow key={`d${stay.id}`} stay={stay} line="departure" showKind />
+                ))}
+              </ul>
+              {day.date === tomorrow ? <PrintCardsLink stays={day.arrivals} /> : null}
+            </li>
+          ))}
+        </ul>
       )}
     </Card>
+  );
+}
+
+/** One quiet line per single empty night, linking to the calendar. */
+function GapNights({ gaps }: { gaps: TodayGap[] }) {
+  const t = useTranslations("today");
+  const locale = useLocale() as UiLocale;
+  if (gaps.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-1" aria-label={t("gapsLabel")}>
+      {gaps.map((gap) => (
+        <li key={`${gap.room.id}:${gap.start}`}>
+          <Link
+            href={gap.bookingId ? `/app/calendar?booking=${gap.bookingId}` : "/app/calendar"}
+            className="text-text-muted text-sm hover:underline"
+          >
+            {t("gapLine", { count: gap.nights, date: formatDay(gap.start, locale), room: gap.room.name })}
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -163,12 +188,8 @@ function Loading() {
   const t = useTranslations("today");
   return (
     <div role="status" aria-label={t("loading")} className="flex flex-col gap-6">
-      <div className="grid grid-cols-3 gap-6 max-[1099px]:grid-cols-1">
-        <Skeleton variant="block" className="h-64" />
-        <Skeleton variant="block" className="h-64" />
-        <Skeleton variant="block" className="h-64" />
-      </div>
-      <Skeleton variant="block" />
+      <Skeleton variant="block" className="h-48" />
+      <Skeleton variant="block" className="h-64" />
     </div>
   );
 }
@@ -177,58 +198,41 @@ function Summary({ data }: { data: TodaySummary }) {
   const t = useTranslations("today");
   const needs = data.needsApartment;
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-3 items-stretch gap-6 max-[1099px]:grid-cols-1">
-        <Card title={<CardTitle icon={LogIn}>{t("arrivals")}</CardTitle>} aria-label={t("arrivals")}>
-          <p className="text-3xl font-bold">{data.arrivals.length}</p>
-          <StayList stays={data.arrivals} line="arrival" empty={t("noArrivals")} />
-          <PrintCardsLink stays={data.arrivals} />
-          <CalendarLink>{t("toCalendar")}</CalendarLink>
-        </Card>
-        <Card title={<CardTitle icon={LogOut}>{t("departures")}</CardTitle>} aria-label={t("departures")}>
-          <p className="text-3xl font-bold">{data.departures.length}</p>
-          <StayList stays={data.departures} line="departure" empty={t("noDepartures")} />
-          <CalendarLink>{t("toCalendar")}</CalendarLink>
-        </Card>
+    <div className="flex max-w-4xl flex-col gap-6">
+      {needs > 0 ? (
         <Card
-          title={<CardTitle icon={CircleAlert}>{t("needs")}</CardTitle>}
+          title={
+            <span className="flex items-center gap-2">
+              <CircleAlert size={24} aria-hidden="true" />
+              {t("needsTitle", { count: needs })}
+            </span>
+          }
           aria-label={t("needs")}
-          className={cn(needs > 0 && "ring-warning ring-2")}
+          className="ring-warning ring-2"
         >
-          <p className="text-3xl font-bold">{needs}</p>
-          <p className="text-base">{needs > 0 ? t("needsSentence", { count: needs }) : t("allPlaced")}</p>
-          {needs > 0 ? <CalendarLink primary>{t("placeThem")}</CalendarLink> : null}
+          <Link
+            href="/app/calendar"
+            className={cn(buttonBase, buttonVariants.primary, buttonSizes.lg, "self-start")}
+          >
+            <CalendarDays size={24} aria-hidden="true" />
+            {t("placeThem")}
+          </Link>
         </Card>
-      </div>
+      ) : null}
 
-      <Card title={<CardTitle icon={Sunrise}>{t("tomorrow")}</CardTitle>} aria-label={t("tomorrow")}>
-        <div className="grid grid-cols-2 gap-6 max-[1099px]:grid-cols-1">
-          <div className="flex flex-col gap-3">
-            <h4 className="text-base font-semibold">
-              {t("tomorrowArrivals")} ({data.tomorrowArrivals.length})
-            </h4>
-            <StayList stays={data.tomorrowArrivals} line="arrival" empty={t("noTomorrowArrivals")} />
-            <PrintCardsLink stays={data.tomorrowArrivals} />
-          </div>
-          <div className="flex flex-col gap-3">
-            <h4 className="text-base font-semibold">
-              {t("tomorrowDepartures")} ({data.tomorrowDepartures.length})
-            </h4>
-            <StayList stays={data.tomorrowDepartures} line="departure" empty={t("noTomorrowDepartures")} />
-          </div>
-        </div>
+      <Card title={t("todayCard")} aria-label={t("todayCard")}>
+        <DayList arrivals={data.arrivals} departures={data.departures} />
+        <PrintCardsLink stays={data.arrivals} />
       </Card>
 
-      <GapNights gaps={data.gaps} days={GAP_LOOKAHEAD_DAYS} />
+      <NextDays tomorrow={data.tomorrow} />
 
-      <p className="text-text-muted text-sm">
-        <SyncIndicator />
-      </p>
+      <GapNights gaps={data.gaps} />
     </div>
   );
 }
 
-/** The Today screen: who arrives and leaves today and tomorrow, and what still needs an apartment. */
+/** The Today screen: what needs an apartment, who arrives and leaves today, and the coming days. */
 export function TodayScreen() {
   const t = useTranslations("today");
   const errorText = useErrorText();
@@ -240,12 +244,6 @@ export function TodayScreen() {
       <PageHeader
         title={t("title")}
         subtitle={summary.data ? <DateText date={summary.data.today} withYear /> : undefined}
-        actions={
-          <>
-            <SearchLink />
-            <WeekLink />
-          </>
-        }
       />
       {summary.data ? (
         <Summary data={summary.data} />

@@ -16,7 +16,7 @@ export type WeekDay = {
 
 export type WeekSummary = {
   today: IsoDate;
-  /** The Monday the week starts on. */
+  /** The first day: the Monday, or the requested day when asked to start there. */
   from: IsoDate;
   days: WeekDay[];
 };
@@ -37,9 +37,11 @@ export async function getWeekSummary(
   day: IsoDate | undefined,
   now = new Date(),
   timeZone: string = appTimeZone(),
+  /** "day": the 7 days starting on `day` (or today) instead of on its Monday; Today's "next days" uses it. */
+  start: "monday" | "day" = "monday",
 ): Promise<WeekSummary> {
   const today = todayIso(now, timeZone);
-  const from = mondayOn(day ?? today);
+  const from = start === "day" ? (day ?? today) : mondayOn(day ?? today);
   const to = addDays(from, 7);
   const range = { gte: isoToDbDate(from), lt: isoToDbDate(to) };
 

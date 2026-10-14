@@ -42,13 +42,13 @@ const NAV = [
   { href: "/app/free", key: "free", icon: SearchCheck },
   { href: "/app/turnovers", key: "cleaning", icon: BrushCleaning },
   { href: "/app/excel", key: "income", icon: Wallet, money: true },
-  // On phones the tab bar has no room for it; the Income screen links to it.
-  { href: "/app/stats", key: "stats", icon: ChartNoAxesCombined, money: true, hideOnPhone: true },
   { href: "/app/settings", key: "settings", icon: Settings },
 ] as const;
 
 /** Dev mode sections, shown only to an admin with Dev mode switched on (decided on the server). */
 const DEV_NAV = [
+  // Statistics is for the admin, not the father: it lives with the other Dev mode sections.
+  { href: "/app/stats", key: "stats", icon: ChartNoAxesCombined },
   { href: "/app/dev/apartments", key: "apartments", icon: Building2 },
   { href: "/app/dev/taxes", key: "taxes", icon: Landmark },
   { href: "/app/dev/hosthub", key: "hosthub", icon: PlugZap },
@@ -81,7 +81,6 @@ function ShellInner({ devMode, role, children }: { devMode: boolean; role: Role;
     icon: item.icon,
     label: t(item.key),
     current: pathname?.startsWith(item.href) ?? false,
-    ...("hideOnPhone" in item ? { hideOnPhone: item.hideOnPhone } : {}),
   }));
   const secondary = devMode
     ? {

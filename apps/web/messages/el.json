@@ -81,17 +81,16 @@
     "label": "Κύρια πλοήγηση",
     "today": "Σήμερα",
     "calendar": "Ημερολόγιο",
-    "free": "Ελεύθερα",
+    "free": "Ποιο είναι ελεύθερο;",
     "income": "Έσοδα",
     "settings": "Ρυθμίσεις",
-    "cleaning": "Καθαριότητα",
-    "stats": "Στατιστικά"
+    "cleaning": "Καθαριότητα"
   },
   "sync": {
-    "loading": "Ενημέρωση από το Hosthub…",
-    "running": "Ενημέρωση από το Hosthub τώρα…",
     "lastSuccess": "Τελευταία ενημέρωση από το Hosthub: {ago}",
-    "never": "Δεν έχει γίνει ακόμα ενημέρωση από το Hosthub"
+    "never": "Δεν έχει γίνει ακόμα ενημέρωση από το Hosthub",
+    "failed": "Η ενημέρωση από το Hosthub δεν πέτυχε. Τελευταία επιτυχής: {ago}",
+    "failedNever": "Η ενημέρωση από το Hosthub δεν πέτυχε."
   },
   "ui": {
     "inactive": "Απενεργοποιημένο",
@@ -383,7 +382,8 @@
       "history": "Ιστορικό",
       "users": "Χρήστες",
       "system": "Σύστημα",
-      "messages": "Μηνύματα"
+      "messages": "Μηνύματα",
+      "stats": "Στατιστικά"
     },
     "noAccess": {
       "title": "Δεν έχετε πρόσβαση",
@@ -938,26 +938,26 @@
   },
   "today": {
     "title": "Σήμερα",
-    "arrivals": "Αφίξεις σήμερα",
-    "departures": "Αναχωρήσεις σήμερα",
     "needs": "Χρειάζονται διαμέρισμα",
     "tomorrow": "Αύριο",
-    "tomorrowArrivals": "Αφίξεις αύριο",
-    "tomorrowDepartures": "Αναχωρήσεις αύριο",
-    "noArrivals": "Καμία άφιξη σήμερα.",
-    "noDepartures": "Καμία αναχώρηση σήμερα.",
-    "noTomorrowArrivals": "Καμία άφιξη αύριο.",
-    "noTomorrowDepartures": "Καμία αναχώρηση αύριο.",
-    "allPlaced": "Όλες οι κρατήσεις έχουν διαμέρισμα.",
-    "needsSentence": "{count, plural, one {Μία κράτηση περιμένει διαμέρισμα.} other {# κρατήσεις περιμένουν διαμέρισμα.}}",
+    "noArrivals": "Κανείς δεν έρχεται σήμερα.",
+    "noDepartures": "Κανείς δεν φεύγει σήμερα.",
     "placeThem": "Βάλτε τις σε διαμέρισμα",
-    "toCalendar": "Στο ημερολόγιο",
     "arrivalLine": "{people} · {nights}",
     "departureLine": "Έμειναν {nights}",
     "pendingLabel": "Περιμένει επιβεβαίωση",
     "needsApartment": "Χρειάζεται διαμέρισμα",
     "loading": "Φόρτωση της σημερινής εικόνας",
-    "printCards": "Εκτύπωση καρτών άφιξης"
+    "printCards": "Εκτύπωση καρτών άφιξης",
+    "comes": "Έρχεται",
+    "leaves": "Φεύγει",
+    "todayCard": "Σήμερα",
+    "needsTitle": "{count, plural, one {Μία κράτηση χρειάζεται διαμέρισμα} other {# κρατήσεις χρειάζονται διαμέρισμα}}",
+    "nextDays": "Επόμενες μέρες",
+    "printWeek": "Εκτύπωση εβδομάδας",
+    "nextDaysEmpty": "Καμία άφιξη ή αναχώρηση τις επόμενες 7 μέρες.",
+    "gapLine": "{count, plural, one {Κενή νύχτα} other {# κενές νύχτες}}: {date} στο {room}",
+    "gapsLabel": "Κενές νύχτες"
   },
   "errorPage": {
     "retry": "Δοκιμάστε ξανά",

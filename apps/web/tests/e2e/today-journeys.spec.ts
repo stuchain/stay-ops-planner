@@ -31,8 +31,8 @@ for (const viewport of [{ width: 1366, height: 768 }] as const) {
     });
 
     test("find who arrives tomorrow", async ({ page }) => {
-      const tomorrow = page.getByRole("region", { name: "Αύριο" });
-      await expect(tomorrow).toBeVisible();
+      const tomorrow = page.getByRole("region", { name: "Επόμενες μέρες" });
+      await expect(tomorrow.getByRole("heading", { name: "Αύριο" })).toBeVisible();
 
       const arriving = tomorrow.getByRole("link", { name: new RegExp(GUEST.arrivesTomorrow) });
       await expect(arriving).toBeVisible();
@@ -43,18 +43,16 @@ for (const viewport of [{ width: 1366, height: 768 }] as const) {
       const leaving = tomorrow.getByRole("link", { name: new RegExp(GUEST.leavesTomorrow) });
       await expect(leaving).toBeVisible();
       await expect(leaving).toContainText("Έμειναν 3 νύχτες");
+      await expect(leaving).toContainText("Φεύγει");
 
       // A cancelled booking never shows, and tomorrow's guests are not in today's cards.
       await expect(page.getByText(GUEST.cancelledTomorrow)).toHaveCount(0);
-      await expect(page.getByRole("region", { name: "Αφίξεις σήμερα" }).getByText(GUEST.arrivesTomorrow)).toHaveCount(
+      await expect(page.getByRole("region", { name: "Σήμερα", exact: true }).getByText(GUEST.arrivesTomorrow)).toHaveCount(
         0,
       );
 
-      // The cards still add up: the "needs an apartment" count includes the fixtures' tray bookings.
+      // The fixtures' tray bookings show as the one warning card at the top.
       await expect(page.getByRole("region", { name: "Χρειάζονται διαμέρισμα" })).toContainText(/κρατήσ/);
-      await expect(
-        page.getByRole("main").getByText(/Τελευταία ενημέρωση από το Hosthub|Δεν έχει γίνει ακόμα ενημέρωση/),
-      ).toBeVisible();
 
       // Clicking the guest opens the calendar with their booking selected.
       await arriving.click();

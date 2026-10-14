@@ -16,7 +16,9 @@ export const todayRouter = createTRPCRouter({
           .refine(isIsoDate, "Not a calendar date")
           .transform((s) => s as IsoDate)
           .optional(),
+        /** Start on `day` itself rather than its Monday. */
+        startOnDay: z.boolean().optional(),
       }),
     )
-    .query(({ input }) => getWeekSummary(input.day)),
+    .query(({ input }) => getWeekSummary(input.day, undefined, undefined, input.startOnDay ? "day" : "monday")),
 });

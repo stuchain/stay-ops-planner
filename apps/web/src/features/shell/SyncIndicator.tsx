@@ -26,28 +26,34 @@ export function useAgoText(): (iso: string, now?: Date) => string {
   };
 }
 
-/** The Hosthub "last updated" line at the bottom of the sidebar. */
-export function SyncIndicator() {
+/** After this long without a successful update the line shows, even when no error was recorded. */
+export const STALE_AFTER_MS = 24 * 60 * 60_000;
+
+/** The Hosthub line at the bottom of the sidebar. Silent while all is well; it only speaks up when an update
+ * failed or none succeeded for a day, so the father never reads about Hosthub for nothing. A broken key is
+ * the banner's job (HosthubBanner), not this line's. */
+export function SyncIndicator({ now = Date.now() }: { now?: number }) {
   const t = useTranslations("sync");
   const agoText = useAgoText();
   const trpc = useTRPC();
   const status = useQuery({ ...trpc.sync.status.queryOptions(), refetchInterval: 60_000 });
-  if (!status.data) return <span>{t("loading")}</span>;
+  const data = status.data;
+  if (!data || data.running || data.problem === "auth") return null;
+  const last = data.lastSuccessAt;
+  const stale = last === null || now - new Date(last).getTime() > STALE_AFTER_MS;
+  if (data.problem !== "other" && !stale) return null;
+  const text =
+    data.problem === "other"
+      ? last
+        ? t("failed", { ago: agoText(last) })
+        : t("failedNever")
+      : last
+        ? t("lastSuccess", { ago: agoText(last) })
+        : t("never");
   return (
-    <span className="flex items-start gap-2" aria-live="polite">
-      <RefreshCw
-        size={20}
-        strokeWidth={2}
-        aria-hidden="true"
-        className={status.data.running ? "motion-safe:animate-spin" : undefined}
-      />
-      <span>
-        {status.data.running
-          ? t("running")
-          : status.data.lastSuccessAt
-            ? t("lastSuccess", { ago: agoText(status.data.lastSuccessAt) })
-            : t("never")}
-      </span>
+    <span className="text-warning-text flex items-start gap-2" aria-live="polite">
+      <RefreshCw size={20} strokeWidth={2} aria-hidden="true" className="flex-none" />
+      <span>{text}</span>
     </span>
   );
 }
