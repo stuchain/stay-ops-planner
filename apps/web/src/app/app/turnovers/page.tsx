@@ -1,5 +1,5 @@
-import { TurnoversScreen } from "@/features/turnovers/TurnoversScreen";
+import { CleaningScreen } from "@/features/turnovers/CleaningScreen";
 
 export default function TurnoversPage() {
-  return <TurnoversScreen />;
+  return <CleaningScreen />;
 }

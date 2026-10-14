@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Link2, Printer } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { addDays, type IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
@@ -143,7 +143,7 @@ function LinkPanel({ list, onClose }: { list: TurnoverList; onClose: () => void 
  * a big "Έγινε", and one grey line for days with none. Sending the schedule to the cleaner and printing sit at
  * the top, once.
  */
-export function TurnoversScreen() {
+export function TurnoversScreen({ viewSwitch }: { viewSwitch?: ReactNode } = {}) {
   const t = useTranslations("turnovers");
   const errorText = useErrorText();
   const trpc = useTRPC();
@@ -179,6 +179,7 @@ export function TurnoversScreen() {
         actions={
           list.data ? (
             <div className="flex flex-wrap items-center gap-3 print:hidden">
+              {viewSwitch}
               {canEdit ? (
                 <Button icon={Link2} aria-expanded={linkOpen} onClick={() => setLinkOpen(!linkOpen)}>
                   {t("link.open")}

@@ -75,7 +75,10 @@
     "TOO_MANY_REQUESTS": "Too many tries in a short time. Please try again in a while.",
     "EMAIL_TAKEN": "This email is already used by another account.",
     "TASK_CLOSED": "This cleaning is closed and cannot be changed.",
-    "CLEANING_DOES_NOT_FIT": "That time does not fit. It has to be after the guest leaves and before the next guest arrives."
+    "CLEANING_DOES_NOT_FIT": "That time does not fit. It has to be after the guest leaves and before the next guest arrives.",
+    "CLEANING_IN_PAST": "A cleaning can't go on a day that has passed. Pick today or later.",
+    "CLEANING_NO_STAY": "This apartment has no bookings yet, so a cleaning can't be added.",
+    "CLEANING_CHANGEOVER": "This cleaning stays: the next guest arrives the same day."
   },
   "nav": {
     "label": "Main navigation",
@@ -1460,6 +1463,63 @@
         "booking": "https://www.booking.com/hotel/gr/…",
         "google": "https://maps.app.goo.gl/…"
       }
+    }
+  },
+  "cleaningCalendar": {
+    "view": {
+      "label": "View",
+      "calendar": "Calendar",
+      "list": "List"
+    },
+    "earlier": "Back two weeks",
+    "later": "Forward two weeks",
+    "upTo": "up to {count} guests",
+    "nights": "{count, plural, one {# night} other {# nights}}",
+    "addAt": "Cleaning in {room}, {date}",
+    "tag": "Cleaning {room}, {date}, {time}",
+    "sameDay": "the next guest arrives the same day",
+    "legend": {
+      "auto": "Added by itself when one guest leaves and another arrives the same day",
+      "added": "Added by you",
+      "done": "Done"
+    },
+    "hint": "Click a day on an apartment's row to add a cleaning there. Drag a cleaning to move it to another day.",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "context": {
+      "changeover": "{leaving} leaves at 11:00 and {arriving} arrives at 15:00.",
+      "staying": "{guest} is staying until {date}. Good to let them know.",
+      "leaving": "{guest} leaves at 11:00. Empty after that.",
+      "empty": "The apartment is empty that day."
+    },
+    "add": {
+      "title": "New cleaning in {room}",
+      "day": "Which day",
+      "time": "What time",
+      "morning": "Morning",
+      "noon": "Midday",
+      "afternoon": "Afternoon",
+      "otherName": "Another name",
+      "whoUnknown": "Not sure yet",
+      "note": "Note (optional)",
+      "notePlaceholder": "e.g. Windows, change sheets",
+      "save": "Add cleaning",
+      "saved": "The cleaning was added."
+    },
+    "detail": {
+      "title": "Cleaning in {room}",
+      "day": "Day",
+      "locked": "It stays on this day: the next guest arrives the same day.",
+      "remove": "Remove cleaning",
+      "removeQuestion": "Remove this cleaning?",
+      "removed": "The cleaning was removed.",
+      "moved": "The cleaning moved to {date}."
+    },
+    "drag": {
+      "help": "Drag the cleaning with the mouse to another day, or open it to change the day with the buttons.",
+      "start": "Picked up the cleaning.",
+      "end": "Dropped the cleaning on a new day.",
+      "cancel": "The cleaning stayed where it was."
     }
   }
 }

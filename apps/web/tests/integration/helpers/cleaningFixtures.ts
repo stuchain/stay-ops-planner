@@ -1,4 +1,12 @@
-import { BookingStatus, Channel, PrismaClient } from "@stay-ops/db";
+import {
+  BookingStatus,
+  Channel,
+  computeTurnoverPlannedWindowUTC,
+  PrismaClient,
+  TURNOVER_MINUTES,
+  TURNOVER_TASK_TYPE,
+  turnoverSourceEventId,
+} from "@stay-ops/db";
 
 export async function makeBooking(
   prisma: PrismaClient,
@@ -15,8 +23,7 @@ export async function makeBooking(
   const checkoutDate = overrides?.checkoutDate ?? new Date("2026-01-05T00:00:00.000Z");
   const msPerDay = 86_400_000;
   const nights =
-    overrides?.nights ??
-    Math.max(1, Math.round((checkoutDate.getTime() - checkinDate.getTime()) / msPerDay));
+    overrides?.nights ?? Math.max(1, Math.round((checkoutDate.getTime() - checkinDate.getTime()) / msPerDay));
   return prisma.booking.create({
     data: {
       channel: overrides?.channel ?? Channel.direct,
@@ -59,6 +66,29 @@ export async function makeBlock(
       startDate: params.startDate,
       endDate: params.endDate,
       reason: params.reason ?? null,
+    },
+  });
+}
+
+/**
+ * A turnover cleaning as the app would have it, made directly. Automatic cleanings are only made for same-day
+ * changeovers, so tests about what happens to an existing turnover start from this.
+ */
+export async function addTurnoverTask(
+  prisma: PrismaClient,
+  params: { bookingId: string; roomId: string; checkoutDate: Date },
+) {
+  const { plannedStart, plannedEnd } = computeTurnoverPlannedWindowUTC(params.checkoutDate);
+  return prisma.cleaningTask.create({
+    data: {
+      bookingId: params.bookingId,
+      roomId: params.roomId,
+      status: "todo",
+      taskType: TURNOVER_TASK_TYPE,
+      sourceEventId: turnoverSourceEventId(params.bookingId, params.checkoutDate, params.roomId),
+      plannedStart,
+      plannedEnd,
+      durationMinutes: TURNOVER_MINUTES,
     },
   });
 }

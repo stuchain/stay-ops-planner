@@ -40,9 +40,10 @@ export async function cancelOpenTurnoverTasks(tx: Prisma.TransactionClient, book
 }
 
 /**
- * Ensures exactly one turnover cleaning task per assigned booking (DB partial unique on booking_id where turnover).
- * Skips cancelled bookings, a missing assignment, or a finished task; a cancelled task comes back when the booking
- * is placed again. Times set by hand are kept while the checkout day is the same.
+ * Keeps the automatic cleanings in step after a booking is placed or changed. Cleanings are added automatically
+ * only for a same-day changeover: the guest leaves and the next one arrives the same day in the same apartment
+ * (Stelios, 2026-10-14). Every other cleaning is added by hand. So this looks after the booking's own checkout and
+ * after the stay that ends on its arrival day, which may have just become a changeover.
  */
 export async function ensureTurnoverCleaningTask(
   tx: Prisma.TransactionClient,
@@ -50,6 +51,53 @@ export async function ensureTurnoverCleaningTask(
 ): Promise<void> {
   const booking = await tx.booking.findUnique({ where: { id: params.bookingId } });
   if (!booking || booking.status === BookingStatus.cancelled) {
+    return;
+  }
+  await ensureOwnTurnover(tx, params, booking.status);
+  const before = await tx.assignment.findFirst({
+    where: {
+      roomId: params.roomId,
+      bookingId: { not: params.bookingId },
+      endDate: booking.checkinDate,
+      booking: { status: { not: BookingStatus.cancelled } },
+    },
+    select: { bookingId: true, roomId: true, endDate: true },
+  });
+  if (before) {
+    await ensureOwnTurnover(tx, { bookingId: before.bookingId, roomId: before.roomId, checkoutDate: before.endDate });
+  }
+}
+
+/** True when another guest arrives in the apartment on this checkout day. */
+export async function isSameDayChangeover(
+  tx: Prisma.TransactionClient,
+  params: { bookingId: string; roomId: string; checkoutDate: Date },
+): Promise<boolean> {
+  const next = await tx.assignment.findFirst({
+    where: {
+      roomId: params.roomId,
+      bookingId: { not: params.bookingId },
+      startDate: params.checkoutDate,
+      booking: { status: { not: BookingStatus.cancelled } },
+    },
+    select: { id: true },
+  });
+  return next !== null;
+}
+
+/**
+ * At most one turnover cleaning task per assigned booking (DB partial unique on booking_id where turnover).
+ * Skips cancelled bookings, a missing assignment, or a finished task; a cancelled task comes back when the booking
+ * is placed again. Times set by hand are kept while the checkout day is the same. A new task is only made for a
+ * same-day changeover.
+ */
+async function ensureOwnTurnover(
+  tx: Prisma.TransactionClient,
+  params: { bookingId: string; roomId: string; checkoutDate: Date },
+  knownStatus?: BookingStatus,
+): Promise<void> {
+  const status = knownStatus ?? (await tx.booking.findUnique({ where: { id: params.bookingId } }))?.status;
+  if (!status || status === BookingStatus.cancelled) {
     return;
   }
 
@@ -92,6 +140,10 @@ export async function ensureTurnoverCleaningTask(
         sourceEventId,
       },
     });
+    return;
+  }
+
+  if (!(await isSameDayChangeover(tx, params))) {
     return;
   }
 

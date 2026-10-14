@@ -5,17 +5,21 @@ import {
   DEFAULT_CHECKIN_TIME,
   DEFAULT_CHECKOUT_TIME,
   ensureTurnoverCleaningTask,
+  isSameDayChangeover,
   Prisma,
+  SERVICE_TASK_TYPE,
   TURNOVER_TASK_TYPE,
   utcToZonedDay,
   validateCleaningSchedule,
   zonedTimeToUtc,
 } from "@stay-ops/db";
+import { randomUUID } from "node:crypto";
 import { addDays, DomainError, type IsoDate, type Party } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
-import { clockTime, isoToDbDate, todayIso } from "@/server/time";
+import { clockTime, dbDateToIso, isoToDbDate, todayIso } from "@/server/time";
 import { findCleanerConflicts } from "./cleaningConflicts";
 import { bookingSliceSelect, partyOf } from "./bookingSlice";
+import { listCalendarRooms, type CalendarRoom } from "./calendarRange";
 
 export type TurnoverStatus = "todo" | "in_progress" | "done" | "cancelled";
 
@@ -65,9 +69,10 @@ function dayStart(day: IsoDate): Date {
 }
 
 /**
- * Placements made before turnover tasks existed (or written straight to the database) have no cleaning yet:
- * create the missing ones for departures in `[from, to)`. Idempotent; a booking that has any turnover task
- * (done or cancelled included) is left alone.
+ * Same-day changeovers get their cleaning automatically (Stelios, 2026-10-14); one can be missing when the stays
+ * were placed before that rule or written straight to the database. Create the missing ones for departures in
+ * `[from, to)`. Idempotent; a booking that has any turnover task (done or cancelled included) is left alone, and
+ * a checkout with nobody arriving that day gets nothing.
  */
 export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate): Promise<number> {
   const missing = await prisma.assignment.findMany({
@@ -78,12 +83,23 @@ export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate): Promis
     },
     select: { bookingId: true, roomId: true, endDate: true },
   });
-  for (const a of missing) {
+  if (missing.length === 0) return 0;
+  const arrivals = await prisma.assignment.findMany({
+    where: {
+      startDate: { in: missing.map((a) => a.endDate) },
+      roomId: { in: [...new Set(missing.map((a) => a.roomId))] },
+      booking: { status: { not: BookingStatus.cancelled } },
+    },
+    select: { roomId: true, startDate: true },
+  });
+  const arriving = new Set(arrivals.map((a) => `${a.roomId}|${a.startDate.getTime()}`));
+  const changeovers = missing.filter((a) => arriving.has(`${a.roomId}|${a.endDate.getTime()}`));
+  for (const a of changeovers) {
     await prisma.$transaction((tx) =>
       ensureTurnoverCleaningTask(tx, { bookingId: a.bookingId, roomId: a.roomId, checkoutDate: a.endDate }),
     );
   }
-  return missing.length;
+  return changeovers.length;
 }
 
 /** Cleanings planned from `from` for `days` days, with the guest who leaves and the one who comes next. */
@@ -188,10 +204,10 @@ function parseVersion(version: string): Date {
 async function updateTask(
   change: Change,
   action: string,
-  rule: (task: { status: string }) => void,
+  rule: (task: { status: string; taskType: string }) => void,
   data: () => Prisma.CleaningTaskUpdateManyMutationInput,
   tx: Prisma.TransactionClient,
-  validate?: (task: { roomId: string; bookingId: string }) => Promise<void>,
+  validate?: (task: { roomId: string; bookingId: string; taskType: string }) => Promise<void>,
 ): Promise<void> {
   const task = await tx.cleaningTask.findUnique({ where: { id: change.id } });
   if (!task) throw new DomainError("NOT_FOUND");
@@ -307,14 +323,245 @@ export async function rescheduleTurnover(input: Change & { start: string; end: s
         durationMinutes: Math.round((plannedEnd.getTime() - plannedStart.getTime()) / 60_000),
       }),
       tx,
-      async (task) => {
-        try {
-          await validateCleaningSchedule(tx, { ...task, plannedStart, plannedEnd });
-        } catch (err) {
-          if (err instanceof CleaningWindowInvalidError) throw new DomainError("CLEANING_DOES_NOT_FIT");
-          throw err;
-        }
-      },
+      (task) => checkFits(tx, task, plannedStart, plannedEnd),
     );
   });
 }
+
+/**
+ * A cleaning after a guest leaves must sit between that checkout and the next guest's arrival. A cleaning added
+ * by hand can be on any day the apartment is in use.
+ */
+async function checkFits(
+  tx: Prisma.TransactionClient,
+  task: { roomId: string; bookingId: string; taskType: string },
+  plannedStart: Date,
+  plannedEnd: Date,
+): Promise<void> {
+  if (task.taskType !== TURNOVER_TASK_TYPE) return;
+  try {
+    await validateCleaningSchedule(tx, { roomId: task.roomId, bookingId: task.bookingId, plannedStart, plannedEnd });
+  } catch (err) {
+    if (err instanceof CleaningWindowInvalidError) throw new DomainError("CLEANING_DOES_NOT_FIT");
+    throw err;
+  }
+}
+
+/**
+ * Moves a cleaning to another day, keeping its times. Not into the past, and not once it is done or cancelled.
+ * A cleaning after a same-day changeover cannot move: the next guest arrives that afternoon.
+ */
+export async function moveCleaningDay(input: Change & { day: IsoDate }, now = new Date()): Promise<void> {
+  if (input.day < todayIso(now)) throw new DomainError("CLEANING_IN_PAST");
+  await run(async (tx) => {
+    const current = await tx.cleaningTask.findUnique({
+      where: { id: input.id },
+      select: { plannedStart: true, plannedEnd: true },
+    });
+    if (!current) throw new DomainError("NOT_FOUND");
+    if (!current.plannedStart || !current.plannedEnd) throw new DomainError("VALIDATION");
+    const plannedStart = zonedTimeToUtc(input.day, clockTime(current.plannedStart));
+    const plannedEnd = new Date(
+      plannedStart.getTime() + (current.plannedEnd.getTime() - current.plannedStart.getTime()),
+    );
+    await updateTask(
+      input,
+      "cleaning_task.day_moved",
+      (task) => {
+        if (task.status === "done" || task.status === "cancelled") throw new DomainError("TASK_CLOSED");
+      },
+      () => ({ plannedStart, plannedEnd }),
+      tx,
+      (task) => checkFits(tx, task, plannedStart, plannedEnd),
+    );
+  });
+}
+
+/** How long a cleaning added by hand is planned to take. */
+export const ADDED_CLEANING_MINUTES = 120;
+
+/**
+ * A cleaning added by hand belongs to the stay it is closest to in that apartment: the guest staying that day,
+ * else the one who left last, else the next one coming. Null when the apartment has never had a stay.
+ */
+async function stayForDay(tx: Prisma.TransactionClient, roomId: string, day: IsoDate): Promise<string | null> {
+  const date = isoToDbDate(day);
+  const live = { roomId, booking: { status: { not: BookingStatus.cancelled } } };
+  const during = await tx.assignment.findFirst({
+    where: { ...live, startDate: { lte: date }, endDate: { gt: date } },
+    select: { bookingId: true },
+  });
+  if (during) return during.bookingId;
+  const before = await tx.assignment.findFirst({
+    where: { ...live, endDate: { lte: date } },
+    orderBy: [{ endDate: "desc" }, { id: "asc" }],
+    select: { bookingId: true },
+  });
+  if (before) return before.bookingId;
+  const after = await tx.assignment.findFirst({
+    where: { ...live, startDate: { gt: date } },
+    orderBy: [{ startDate: "asc" }, { id: "asc" }],
+    select: { bookingId: true },
+  });
+  return after?.bookingId ?? null;
+}
+
+/** Adds a cleaning on any day from today, in an apartment, at a time, with who cleans and a note if given. */
+export async function addCleaning(
+  input: {
+    roomId: string;
+    day: IsoDate;
+    start: string;
+    assigneeName: string | null;
+    notes: string | null;
+    actorUserId: string;
+  },
+  now = new Date(),
+): Promise<{ id: string }> {
+  if (!CLOCK.test(input.start)) throw new DomainError("VALIDATION");
+  if (input.day < todayIso(now)) throw new DomainError("CLEANING_IN_PAST");
+  const name = input.assigneeName?.trim() || null;
+  const notes = input.notes?.trim() || null;
+  if ((name?.length ?? 0) > 80 || (notes?.length ?? 0) > 300) throw new DomainError("VALIDATION");
+  const plannedStart = zonedTimeToUtc(input.day, input.start);
+  const plannedEnd = new Date(plannedStart.getTime() + ADDED_CLEANING_MINUTES * 60_000);
+  let id = "";
+  await run(async (tx) => {
+    const room = await tx.room.findUnique({ where: { id: input.roomId }, select: { isActive: true } });
+    if (!room?.isActive) throw new DomainError("ROOM_INACTIVE");
+    const bookingId = await stayForDay(tx, input.roomId, input.day);
+    if (!bookingId) throw new DomainError("CLEANING_NO_STAY");
+    const row = await tx.cleaningTask.create({
+      data: {
+        bookingId,
+        roomId: input.roomId,
+        status: "todo",
+        taskType: SERVICE_TASK_TYPE,
+        sourceEventId: `manual:${randomUUID()}`,
+        plannedStart,
+        plannedEnd,
+        durationMinutes: ADDED_CLEANING_MINUTES,
+        assigneeName: name,
+        notes,
+      },
+    });
+    id = row.id;
+    await writeAuditSnapshot(tx, {
+      actorUserId: input.actorUserId,
+      action: "cleaning_task.added",
+      entityType: "cleaning_task",
+      entityId: row.id,
+      before: null,
+      after: {
+        status: "todo",
+        plannedStart: plannedStart.toISOString(),
+        plannedEnd: plannedEnd.toISOString(),
+        assigneeName: name,
+      },
+      meta: { bookingId },
+    });
+  });
+  return { id };
+}
+
+/**
+ * Takes a cleaning off the schedule. The one for a same-day changeover stays: the next guest arrives that day.
+ * A finished cleaning stays as a record.
+ */
+export async function removeCleaning(input: Change): Promise<void> {
+  await run(async (tx) => {
+    const task = await tx.cleaningTask.findUnique({
+      where: { id: input.id },
+      select: { bookingId: true, roomId: true, taskType: true, booking: { select: { checkoutDate: true } } },
+    });
+    if (!task) throw new DomainError("NOT_FOUND");
+    if (
+      task.taskType === TURNOVER_TASK_TYPE &&
+      (await isSameDayChangeover(tx, { ...task, checkoutDate: task.booking.checkoutDate }))
+    ) {
+      throw new DomainError("CLEANING_CHANGEOVER");
+    }
+    await updateTask(
+      input,
+      "cleaning_task.removed",
+      (row) => {
+        if (row.status === "done" || row.status === "cancelled") throw new DomainError("TASK_CLOSED");
+      },
+      () => ({ status: "cancelled" }),
+      tx,
+    );
+  });
+}
+
+/** The days the cleaning calendar shows at once. */
+export const CALENDAR_DAYS = 21;
+
+/** A stay drawn on the cleaning calendar. */
+export type CleaningStay = {
+  id: string;
+  roomId: string;
+  guestName: string | null;
+  checkin: IsoDate;
+  checkout: IsoDate;
+  party: Party | null;
+};
+
+export type CleaningCalendar = {
+  today: IsoDate;
+  from: IsoDate;
+  /** The day after the last day shown. */
+  to: IsoDate;
+  rooms: CalendarRoom[];
+  stays: CleaningStay[];
+  tasks: TurnoverTask[];
+  /** Names already used for who cleans, most recent first, to pick from. */
+  cleaners: string[];
+};
+
+/** Everything the cleaning calendar shows from `from`: apartments, the stays in them, and the cleanings. */
+export async function loadCleaningCalendar(from: IsoDate, now = new Date()): Promise<CleaningCalendar> {
+  const to = addDays(from, CALENDAR_DAYS);
+  const [rooms, assignments, list, recent] = await Promise.all([
+    listCalendarRooms(),
+    prisma.assignment.findMany({
+      where: {
+        startDate: { lt: isoToDbDate(to) },
+        endDate: { gt: isoToDbDate(from) },
+        booking: { status: { not: BookingStatus.cancelled } },
+      },
+      orderBy: [{ startDate: "asc" }, { id: "asc" }],
+      select: {
+        roomId: true,
+        startDate: true,
+        endDate: true,
+        booking: { select: { id: true, guestName: true, ...partySelect } },
+      },
+    }),
+    loadTurnovers(from, CALENDAR_DAYS, { includeCancelled: false }, now),
+    prisma.cleaningTask.findMany({
+      where: { assigneeName: { not: null } },
+      orderBy: { updatedAt: "desc" },
+      take: 50,
+      select: { assigneeName: true },
+    }),
+  ]);
+  const cleaners = [...new Set(recent.map((r) => r.assigneeName!.trim()).filter(Boolean))].slice(0, 6);
+  return {
+    today: list.today,
+    from,
+    to,
+    rooms: rooms.filter((r) => r.isActive),
+    stays: assignments.map((a) => ({
+      id: a.booking.id,
+      roomId: a.roomId,
+      guestName: a.booking.guestName,
+      checkin: dbDateToIso(a.startDate),
+      checkout: dbDateToIso(a.endDate),
+      party: partyOf(a.booking),
+    })),
+    tasks: list.tasks,
+    cleaners,
+  };
+}
+
+const partySelect = { guestTotal: true, guestAdults: true, guestChildren: true, guestInfants: true } as const;

@@ -206,7 +206,11 @@ export function TurnoverCard({ task, canEdit, actions }: TurnoverCardProps) {
         <ApartmentChip name={task.room.name} color={task.room.color} className="text-base" />
         {task.taskType === "service" ? <Badge tone="info">{t("serviceTag")}</Badge> : null}
         <span className="min-w-0 flex-1 text-lg">
-          <TimesLine task={task} />
+          {task.taskType === "service" ? (
+            t("windowRange", { start: task.start, end: task.end })
+          ) : (
+            <TimesLine task={task} />
+          )}
         </span>
         {task.status === "in_progress" ? <Badge tone="info">{t("status.in_progress")}</Badge> : null}
         {cancelled ? <Badge dashed>{t("status.cancelled")}</Badge> : null}

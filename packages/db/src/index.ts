@@ -20,6 +20,7 @@ export {
 export {
   cancelOpenTurnoverTasks,
   ensureTurnoverCleaningTask,
+  isSameDayChangeover,
   computeTurnoverPlannedWindowUTC,
   turnoverSourceEventId,
   TURNOVER_MINUTES,

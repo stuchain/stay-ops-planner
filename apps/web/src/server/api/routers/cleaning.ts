@@ -3,7 +3,11 @@ import { z } from "zod";
 import { todayIso } from "@/server/time";
 import { createCleanerToken } from "@/server/useCases/cleaningLink";
 import {
+  addCleaning,
+  loadCleaningCalendar,
   loadTurnovers,
+  moveCleaningDay,
+  removeCleaning,
   rescheduleTurnover,
   SCHEDULE_PAGE_DAYS,
   setTurnoverAssignee,
@@ -28,6 +32,32 @@ export const cleaningRouter = createTRPCRouter({
         includeCancelled: input.showCancelled ?? false,
       }),
     ),
+
+  /** Three weeks of the cleaning calendar from `from`: apartments, stays and cleanings. */
+  calendar: userProcedure.input(z.object({ from: day })).query(({ input }) => loadCleaningCalendar(input.from)),
+
+  /** Moves a cleaning to another day, same times. */
+  move: operatorProcedure
+    .input(z.object({ ...change, day }))
+    .mutation(({ ctx, input }) => moveCleaningDay({ ...input, actorUserId: ctx.user.userId })),
+
+  /** Adds a cleaning by hand. */
+  add: operatorProcedure
+    .input(
+      z.object({
+        roomId: z.string().min(1),
+        day,
+        start: z.string().length(5),
+        assigneeName: z.string().max(80).nullable(),
+        notes: z.string().max(300).nullable(),
+      }),
+    )
+    .mutation(({ ctx, input }) => addCleaning({ ...input, actorUserId: ctx.user.userId })),
+
+  /** Takes a cleaning off the schedule (not the one for a same-day changeover). */
+  remove: operatorProcedure
+    .input(z.object(change))
+    .mutation(({ ctx, input }) => removeCleaning({ ...input, actorUserId: ctx.user.userId })),
 
   /** To do, started or done. */
   setStatus: operatorProcedure

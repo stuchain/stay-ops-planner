@@ -8,7 +8,7 @@ import {
   PrismaClient,
   validateCleaningSchedule,
 } from "@stay-ops/db";
-import { makeAssignment, makeBooking, makeRoom } from "../helpers/cleaningFixtures";
+import { addTurnoverTask, makeAssignment, makeBooking, makeRoom } from "../helpers/cleaningFixtures";
 
 process.env.DATABASE_URL ??= "postgresql://stayops:stayops@localhost:5432/stayops";
 
@@ -35,6 +35,12 @@ async function stay(roomId: string, id: string, checkin: string, checkout: strin
 
 const ensure = (bookingId: string, roomId: string, checkoutDate: Date) =>
   prisma.$transaction((tx) => ensureTurnoverCleaningTask(tx, { bookingId, roomId, checkoutDate }));
+
+/** An existing turnover cleaning (as placed before), then the same sync step again. */
+const seed = async (bookingId: string, roomId: string, checkoutDate: Date) => {
+  await addTurnoverTask(prisma, { bookingId, roomId, checkoutDate });
+  await ensure(bookingId, roomId, checkoutDate);
+};
 
 const turnover = (bookingId: string) =>
   prisma.cleaningTask.findFirstOrThrow({ where: { bookingId, taskType: "turnover" } });
@@ -110,12 +116,33 @@ describe("cleaning shared logic (P4-2)", () => {
     });
   });
 
+  describe("automatic cleanings are for same-day changeovers only", () => {
+    it("adds none for a checkout with nobody arriving that day", async () => {
+      const room = await makeRoom(prisma, "AU1");
+      const out = await stay(room.id, "au-out", "2026-07-10", "2026-07-15");
+      await stay(room.id, "au-later", "2026-07-17", "2026-07-20");
+      await ensure(out.id, room.id, out.checkoutDate);
+      expect(await prisma.cleaningTask.count({ where: { bookingId: out.id } })).toBe(0);
+    });
+
+    it("adds the cleaning for the stay before when an arrival makes it a changeover", async () => {
+      const room = await makeRoom(prisma, "AU2");
+      const out = await stay(room.id, "au2-out", "2026-07-10", "2026-07-15");
+      await ensure(out.id, room.id, out.checkoutDate);
+      expect(await prisma.cleaningTask.count({ where: { bookingId: out.id } })).toBe(0);
+      const next = await stay(room.id, "au2-in", "2026-07-15", "2026-07-18");
+      await ensure(next.id, room.id, next.checkoutDate);
+      expect((await turnover(out.id)).plannedStart?.toISOString()).toBe("2026-07-15T08:00:00.000Z");
+      expect(await prisma.cleaningTask.count({ where: { bookingId: next.id } })).toBe(0);
+    });
+  });
+
   describe("E4-3 a manual reschedule is kept", () => {
     it("keeps the times when sync or a reassign runs again", async () => {
       const room = await makeRoom(prisma, "MR1");
       const other = await makeRoom(prisma, "MR2");
       const out = await stay(room.id, "mr-out", "2026-07-10", "2026-07-15");
-      await ensure(out.id, room.id, out.checkoutDate);
+      await seed(out.id, room.id, out.checkoutDate);
       const task = await turnover(out.id);
       const manualStart = new Date("2026-07-15T09:30:00.000Z");
       const manualEnd = new Date("2026-07-15T11:00:00.000Z");
@@ -146,7 +173,7 @@ describe("cleaning shared logic (P4-2)", () => {
     it("moves the times when the checkout day changed", async () => {
       const room = await makeRoom(prisma, "MR3");
       const out = await stay(room.id, "mr3-out", "2026-07-10", "2026-07-15");
-      await ensure(out.id, room.id, out.checkoutDate);
+      await seed(out.id, room.id, out.checkoutDate);
       const task = await turnover(out.id);
       await prisma.cleaningTask.update({
         where: { id: task.id },
@@ -166,8 +193,8 @@ describe("cleaning shared logic (P4-2)", () => {
       const room = await makeRoom(prisma, "UN1");
       const open = await stay(room.id, "un-open", "2026-07-10", "2026-07-15");
       const finished = await stay(room.id, "un-done", "2026-08-10", "2026-08-15");
-      await ensure(open.id, room.id, open.checkoutDate);
-      await ensure(finished.id, room.id, finished.checkoutDate);
+      await seed(open.id, room.id, open.checkoutDate);
+      await seed(finished.id, room.id, finished.checkoutDate);
       await prisma.cleaningTask.updateMany({ where: { bookingId: finished.id }, data: { status: "done" } });
 
       for (const b of [open, finished]) {
@@ -180,7 +207,7 @@ describe("cleaning shared logic (P4-2)", () => {
     it("brings a cancelled task back when the booking is placed again", async () => {
       const room = await makeRoom(prisma, "UN2");
       const b = await stay(room.id, "un2", "2026-07-10", "2026-07-15");
-      await ensure(b.id, room.id, b.checkoutDate);
+      await seed(b.id, room.id, b.checkoutDate);
       await prisma.$transaction((tx) => cancelOpenTurnoverTasks(tx, b.id));
       await ensure(b.id, room.id, b.checkoutDate);
       expect((await turnover(b.id)).status).toBe("todo");
@@ -196,6 +223,8 @@ describe("cleaning shared logic (P4-2)", () => {
         checkinDate: d("2030-07-10"),
         checkoutDate: d("2030-07-15"),
       });
+      // The next guest arrives the day this one leaves, so placing it makes the changeover cleaning.
+      await stay(room.id, "un3-next", "2030-07-15", "2030-07-18");
       const now = new Date("2030-06-01T09:00:00Z");
       const placed = await moveBooking(
         { bookingId: b.id, roomId: room.id, expectedVersion: 0, actorUserId: actor.id },
@@ -216,7 +245,7 @@ describe("cleaning shared logic (P4-2)", () => {
       const actor = await prisma.user.create({ data: { email: "e45@example.com", passwordHash: "x" } });
       const room = await makeRoom(prisma, "RS1");
       const b = await stay(room.id, "rs1", "2026-07-10", "2026-07-15");
-      await ensure(b.id, room.id, b.checkoutDate);
+      await seed(b.id, room.id, b.checkoutDate);
       const task = await turnover(b.id);
       const window = {
         plannedStart: new Date("2026-07-15T09:00:00.000Z"),

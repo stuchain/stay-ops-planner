@@ -99,14 +99,21 @@ describe("calendar range and move command", () => {
     const db = await prisma.booking.findUniqueOrThrow({ where: { id: b.id } });
     expect(db.version).toBe(result.booking.version);
     expect(await prisma.auditEvent.count({ where: { action: "booking.move", entityId: b.id } })).toBe(1);
-    expect(
-      await prisma.cleaningTask.count({ where: { bookingId: b.id, taskType: TURNOVER_TASK_TYPE, roomId: onar.id } }),
-    ).toBe(1);
+    // Nobody arrives the day Maria leaves, so no cleaning by itself; placing a guest who arrives that day adds it.
+    const turnovers = () =>
+      prisma.cleaningTask.count({ where: { bookingId: b.id, taskType: TURNOVER_TASK_TYPE, roomId: onar.id } });
+    expect(await turnovers()).toBe(0);
+    const nikos = await booking("Nikos", "2030-07-05", "2030-07-08");
+    await move({ bookingId: nikos.id, roomId: onar.id, expectedVersion: 0 });
+    expect(await turnovers()).toBe(1);
   });
 
   it("moves to another room, then takes it out again", async () => {
     const onar = await room("Onar", 3);
     const cosmos = await room("Cosmos", 4, true);
+    // Nikos arrives in Onar the day Maria leaves, so placing her there makes the changeover cleaning.
+    const nikos = await booking("Nikos", "2030-07-05", "2030-07-08");
+    await move({ bookingId: nikos.id, roomId: onar.id, expectedVersion: 0 });
     const b = await booking("Maria", "2030-07-01", "2030-07-05");
     const placed = await move({ bookingId: b.id, roomId: onar.id, expectedVersion: 0 });
     const moved = await move({ bookingId: b.id, roomId: cosmos.id, expectedVersion: placed.booking.version });

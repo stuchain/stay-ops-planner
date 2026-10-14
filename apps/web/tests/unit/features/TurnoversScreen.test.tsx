@@ -27,6 +27,7 @@ vi.mock("@/api/client", () => {
     useTRPC: () => ({
       me: { get: { queryOptions: () => ({ queryKey: ["me"], queryFn: async () => ({ role }) }) } },
       cleaning: {
+        pathKey: () => ["cleaning"],
         list: {
           pathKey: () => ["cleaning.list"],
           queryOptions: (input: unknown) => {

@@ -22,7 +22,8 @@ export function useTurnoverActions(): TurnoverActions {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const errorText = useErrorText();
-  const listKey = trpc.cleaning.list.pathKey();
+  // The list and the calendar both show cleanings.
+  const listKey = trpc.cleaning.pathKey();
 
   const options = {
     meta: { handlesErrors: true },
