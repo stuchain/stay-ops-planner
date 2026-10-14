@@ -8,6 +8,7 @@ import {
   isSameDayChangeover,
   Prisma,
   SERVICE_TASK_TYPE,
+  TURNOVER_SET_ASIDE_PREFIX,
   TURNOVER_TASK_TYPE,
   utcToZonedDay,
   validateCleaningSchedule,
@@ -74,11 +75,18 @@ function dayStart(day: IsoDate): Date {
  * `[from, to)`. Idempotent; a booking that has any turnover task (done or cancelled included) is left alone, and
  * a checkout with nobody arriving that day gets nothing.
  */
-export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate): Promise<number> {
+export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate, now = new Date()): Promise<number> {
+  await setAsideNonChangeovers(from, to, now);
   const missing = await prisma.assignment.findMany({
     where: {
       endDate: { gte: isoToDbDate(from), lt: isoToDbDate(to) },
-      booking: { status: { not: BookingStatus.cancelled }, cleaningTasks: { none: { taskType: TURNOVER_TASK_TYPE } } },
+      booking: {
+        status: { not: BookingStatus.cancelled },
+        // A set-aside cleaning counts as missing, so it comes back once the day becomes a changeover.
+        cleaningTasks: {
+          none: { taskType: TURNOVER_TASK_TYPE, NOT: { sourceEventId: { startsWith: TURNOVER_SET_ASIDE_PREFIX } } },
+        },
+      },
       room: { isActive: true },
     },
     select: { bookingId: true, roomId: true, endDate: true },
@@ -102,6 +110,56 @@ export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate): Promis
   return changeovers.length;
 }
 
+/**
+ * Automatic cleanings used to be made for every checkout; now only same-day changeovers get one (Stelios,
+ * 2026-10-14). So a future automatic cleaning nobody has touched (still to do, no cleaner, no note) is cancelled
+ * when no guest arrives that day. Its key is marked set aside so placing the booking again does not bring it back.
+ */
+async function setAsideNonChangeovers(from: IsoDate, to: IsoDate, now: Date): Promise<number> {
+  const start = dayStart(from) > now ? dayStart(from) : now;
+  const untouched = await prisma.cleaningTask.findMany({
+    where: {
+      taskType: TURNOVER_TASK_TYPE,
+      status: "todo",
+      assigneeName: null,
+      notes: null,
+      plannedStart: { gte: start, lt: dayStart(to) },
+    },
+    select: {
+      id: true,
+      roomId: true,
+      bookingId: true,
+      sourceEventId: true,
+      booking: { select: { assignment: { select: { endDate: true } } } },
+    },
+  });
+  const checkouts = untouched.flatMap((t) => {
+    const endDate = t.booking.assignment?.endDate;
+    return endDate ? [{ ...t, endDate }] : [];
+  });
+  if (checkouts.length === 0) return 0;
+  const arrivals = await prisma.assignment.findMany({
+    where: {
+      startDate: { in: checkouts.map((c) => c.endDate) },
+      roomId: { in: [...new Set(checkouts.map((c) => c.roomId))] },
+      booking: { status: { not: BookingStatus.cancelled } },
+    },
+    select: { roomId: true, startDate: true, bookingId: true },
+  });
+  const isChangeover = (c: (typeof checkouts)[number]) =>
+    arrivals.some(
+      (a) => a.roomId === c.roomId && a.bookingId !== c.bookingId && a.startDate.getTime() === c.endDate.getTime(),
+    );
+  const setAside = checkouts.filter((c) => !isChangeover(c));
+  for (const c of setAside) {
+    await prisma.cleaningTask.updateMany({
+      where: { id: c.id, status: "todo", assigneeName: null, notes: null },
+      data: { status: "cancelled", sourceEventId: `${TURNOVER_SET_ASIDE_PREFIX}${c.sourceEventId ?? c.id}` },
+    });
+  }
+  return setAside.length;
+}
+
 /** Cleanings planned from `from` for `days` days, with the guest who leaves and the one who comes next. */
 export async function loadTurnovers(
   from: IsoDate,
@@ -110,8 +168,12 @@ export async function loadTurnovers(
   now = new Date(),
 ): Promise<TurnoverList> {
   const to = addDays(from, days);
-  await ensureTurnoversBetween(from, to);
-  const where: Prisma.CleaningTaskWhereInput = { plannedStart: { gte: dayStart(from), lt: dayStart(to) } };
+  await ensureTurnoversBetween(from, to, now);
+  // Set-aside automatic cleanings were never asked for, so they are not shown even among the cancelled ones.
+  const where: Prisma.CleaningTaskWhereInput = {
+    plannedStart: { gte: dayStart(from), lt: dayStart(to) },
+    OR: [{ sourceEventId: null }, { NOT: { sourceEventId: { startsWith: TURNOVER_SET_ASIDE_PREFIX } } }],
+  };
 
   const [rows, cancelledCount] = await Promise.all([
     prisma.cleaningTask.findMany({

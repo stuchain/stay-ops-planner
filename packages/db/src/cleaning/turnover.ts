@@ -6,6 +6,12 @@ export const TURNOVER_TASK_TYPE = "turnover";
 export const TURNOVER_MINUTES = 120;
 
 /**
+ * Key prefix of an automatic cleaning cancelled because its checkout is not a same-day changeover. It only comes
+ * back when the day becomes a changeover, not just because the booking is placed again.
+ */
+export const TURNOVER_SET_ASIDE_PREFIX = "set-aside:";
+
+/**
  * Default turnover window for a checkout day: starts at the checkout time (11:00) on that calendar day in the
  * business time zone (Athens) and lasts `durationMinutes`. Correct across the summer/winter clock change.
  */
@@ -123,6 +129,13 @@ async function ensureOwnTurnover(
 
   if (existing) {
     if (existing.status === "done") {
+      return;
+    }
+    if (
+      existing.status === "cancelled" &&
+      existing.sourceEventId?.startsWith(TURNOVER_SET_ASIDE_PREFIX) &&
+      !(await isSameDayChangeover(tx, params))
+    ) {
       return;
     }
     // A manual reschedule stays unless the checkout moved. The key carries the checkout day, so it tells
