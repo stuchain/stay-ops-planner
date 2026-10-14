@@ -74,8 +74,6 @@
     "HOSTHUB_UNREACHABLE": "Could not reach Hosthub to test the key. Try again in a moment. The old key is kept.",
     "TOO_MANY_REQUESTS": "Too many tries in a short time. Please try again in a while.",
     "EMAIL_TAKEN": "This email is already used by another account.",
-    "NOT_A_CALENDAR": "This file doesn't look like the Excel calendar (Φύλλο1 with the months and apartments).",
-    "CALENDAR_APARTMENT_MISSING": "The apartment {name} isn't in the app. Check the apartment names.",
     "TASK_CLOSED": "This cleaning is closed and cannot be changed.",
     "CLEANING_DOES_NOT_FIT": "That time does not fit. It has to be after the guest leaves and before the next guest arrives.",
     "CLEANING_IN_PAST": "A cleaning can't go on a day that has passed. Pick today or later.",
@@ -1530,38 +1528,6 @@
       "start": "Picked up the cleaning.",
       "end": "Dropped the cleaning on a new day.",
       "cancel": "The cleaning stayed where it was."
-    }
-  },
-  "paperCalendar": {
-    "title": "Apartments from the Excel calendar",
-    "intro": "Upload the Excel calendar (Φύλλο1). I find every booking that has already started and show which apartment the guest stayed in, and whether they moved mid-stay. Nothing changes until you press Save.",
-    "pick": "Choose the Excel file",
-    "pickAgain": "Another file",
-    "summary": "Will change: {newCount} with no apartment, {changeCount} in another apartment. {same} are already right.",
-    "nothingToDo": "Everything already matches the Excel ({same} bookings).",
-    "tickAll": "Select all",
-    "tickNone": "None",
-    "listLabel": "Bookings that will change",
-    "now": "Now:",
-    "excel": "Excel:",
-    "noApartment": "no apartment",
-    "noName": "No name",
-    "otherName": "The Excel has another name: {name}. Same dates. Check it is the same guest.",
-    "otherDates": "In the Excel: {name}, {dates}. The dates differ; the booking's dates are kept.",
-    "save": "Save ({count})",
-    "saved": "{count, plural, one {Saved 1 booking} other {Saved # bookings}}",
-    "skippedTitle": "{count, plural, one {1 booking did not change:} other {# bookings did not change:}}",
-    "missingTitle": "In the Excel but not in the app ({count})",
-    "missingHint": "No booking with a similar name on those dates. It may have been cancelled or not come from Hosthub.",
-    "notInCalendarTitle": "In the app but not in the Excel ({count})",
-    "skip": {
-      "NOT_FOUND": "no longer found.",
-      "BOOKING_CHANGED": "changed meanwhile. Upload the file again.",
-      "NOT_CONFIRMED": "is not confirmed.",
-      "INVALID_STAY": "the dates do not fit the booking.",
-      "ROOM_INACTIVE": "the apartment is not in use.",
-      "ROOM_TAKEN": "the apartment is taken then ({guest}).",
-      "ROOM_CLOSED": "the apartment is closed then."
     }
   }
 }
