@@ -1,29 +1,59 @@
-import { describe, expect, it } from "vitest";
-import { cents, defaultTaxRules, ledgerTax, ledgerTotals, type Cents } from "@stay-ops/domain";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { cents, defaultTaxRules, isoDate, ledgerTax, ledgerTotals, type Cents } from "@stay-ops/domain";
 import type { LedgerYearData } from "@/api/types";
-import { formatRate, incomeView, monthKind } from "@/features/money/incomeView";
-import { MonthlyChart } from "@/features/money/MonthlyChart";
-import { TaxCard } from "@/features/money/TaxCard";
+import { IncomeScreen } from "@/features/money/IncomeScreen";
+import { changeOnLastYear, formatChange, formatRate, incomeView, monthKind } from "@/features/money/incomeView";
+import { TaxFold } from "@/features/money/TaxCard";
 import { latinWords, render, screen } from "../intl";
+
+const ledgers = new Map<number, LedgerYearData>();
+
+vi.mock("@/api/client", () => ({
+  useTRPC: () => ({
+    money: {
+      year: {
+        queryOptions: (input: { year: number }) => ({
+          queryKey: ["money.year", input],
+          queryFn: async () => {
+            const found = ledgers.get(input.year);
+            if (!found) throw new Error("no ledger");
+            return found;
+          },
+        }),
+      },
+    },
+  }),
+}));
+
+vi.mock("@/features/money/LedgerTable", () => ({ LedgerTable: () => null }));
+
+// jsdom has no layout: opening the details scrolls to them.
+Element.prototype.scrollIntoView = vi.fn();
 
 const four = (a: number, b = 0, c = 0, d = 0) => [a, b, c, d].map((v) => cents(v)) as [Cents, Cents, Cents, Cents];
 
-function fakeLedger(scope: "total" | "per_apartment" = "total"): LedgerYearData {
-  const monthlyCents = Array.from({ length: 12 }, (_, i) => four((i + 1) * 100_000, 50_000));
-  const byRental = four(7_800_000, 600_000);
+function fakeLedger(
+  scope: "total" | "per_apartment" = "total",
+  { year = 2026, years = [2026], scale = 1, unbucketedCount = 0 } = {},
+): LedgerYearData {
+  const monthlyCents = Array.from({ length: 12 }, (_, i) => four((i + 1) * 100_000 * scale, 50_000 * scale));
+  const byRental = four(7_800_000 * scale, 600_000 * scale);
   const totals = {
     byRentalCents: byRental,
-    totalCents: cents(8_400_000),
+    totalCents: cents(8_400_000 * scale),
     soloCents: cents(0),
     payoutCents: cents(7_000_000),
-    unbucketedCount: 0,
-    unbucketedCents: cents(0),
+    unbucketedCount,
+    unbucketedCents: cents(unbucketedCount * 10_000),
     monthlyCents,
   };
-  const rules = { ...defaultTaxRules(2026), scope };
+  const rules = { ...defaultTaxRules(year), scope };
   return {
-    year: 2026,
-    years: [2026],
+    year,
+    years,
     rules,
     apartments: (["Onar", "Cosmos", "Iris", "Helios"] as const).map((label, i) => ({
       index: (i + 1) as 1 | 2 | 3 | 4,
@@ -60,6 +90,16 @@ describe("incomeView", () => {
     expect(view.months[0]).toMatchObject({ month: 1, kind: "actual", totalCents: 150_000 });
   });
 
+  it("compares this year so far with the same months last year", () => {
+    // Jan–Oct last year: half of this year's 60,000 €.
+    expect(changeOnLastYear(6_000_000, fakeLedger("total", { year: 2025, scale: 0.5 }), 2026, "2026-10-10")).toBe(1);
+    expect(changeOnLastYear(5_400_000, fakeLedger(), 2026, "2026-10-10")).toBeCloseTo(-0.1);
+    expect(changeOnLastYear(100, fakeLedger("total", { scale: 0 }), 2026, "2026-10-10")).toBeNull();
+    expect(formatChange(0.124)).toBe("+12%");
+    expect(formatChange(-0.05)).toBe("−5%");
+    expect(formatChange(0.001)).toBe("0%");
+  });
+
   it("formats rates per language", () => {
     expect(formatRate(1500, "el")).toBe("15%");
     expect(formatRate(2250, "el")).toBe("22,5%");
@@ -67,9 +107,63 @@ describe("incomeView", () => {
   });
 });
 
+function showIncome(devMode = false) {
+  return render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      {(<IncomeScreen today={isoDate("2026-10-10")} devMode={devMode} />) as ReactNode}
+    </QueryClientProvider>,
+  );
+}
+
+describe("IncomeScreen", () => {
+  it("shows the year so far, what is still to come, last year and the tax in one card", async () => {
+    ledgers.clear();
+    ledgers.set(2026, fakeLedger("per_apartment", { years: [2025, 2026] }));
+    ledgers.set(2025, fakeLedger("per_apartment", { year: 2025, years: [2025, 2026], scale: 0.5 }));
+    const { container } = showIncome();
+    const card = await screen.findByTestId("income-so-far");
+    expect(card).toHaveTextContent("Μέχρι σήμερα");
+    expect(card).toHaveTextContent(/60\.000\s€/);
+    expect(card).toHaveTextContent(/Έρχονται ακόμα 24\.000\s€/);
+    expect(await screen.findByText("+100%")).toBeInTheDocument();
+    expect(card).toHaveTextContent("Σε σχέση με πέρσι");
+    // The year's tax in the card, then one line per apartment; the bracket tables stay folded.
+    expect(screen.getAllByText(/^Φόρος περίπου/)).toHaveLength(5);
+    expect(screen.getByText("Πώς υπολογίζεται ο φόρος;").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("heading", { name: "Ανά μήνα" })).toBeInTheDocument();
+    // Gone from this screen: the chart, the occupancy grid, the warning when nothing is missing, Statistics.
+    expect(screen.queryByRole("list", { name: /Έσοδα ανά μήνα/ })).toBeNull();
+    expect(screen.queryByText("Πληρότητα και τιμές")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Στατιστικά" })).toBeNull();
+    expect(latinWords(screenText(container), ["Excel"])).toEqual([]);
+  });
+
+  it("says nothing about last year when there is no last year", async () => {
+    ledgers.clear();
+    ledgers.set(2026, fakeLedger());
+    showIncome();
+    expect(await screen.findByTestId("income-so-far")).not.toHaveTextContent("Σε σχέση με πέρσι");
+  });
+
+  it("warns about bookings outside an apartment, with a button that opens them", async () => {
+    ledgers.clear();
+    ledgers.set(2026, fakeLedger("total", { unbucketedCount: 12 }));
+    showIncome(true);
+    const warning = await screen.findByRole("status");
+    expect(warning).toHaveTextContent("12 κρατήσεις δεν μετράνε σε διαμέρισμα");
+    const details = screen.getByRole("button", { name: /^Λεπτομέρειες/ });
+    expect(details).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(screen.getByRole("button", { name: "Δείτε τις κρατήσεις" }));
+    expect(details).toHaveAttribute("aria-expanded", "true");
+    // Statistics is for Dev mode only.
+    expect(screen.getByRole("link", { name: "Στατιστικά" })).toHaveAttribute("href", "/app/stats");
+  });
+});
+
 describe("Έσοδα widgets", () => {
   it("explains the tax in Greek, bracket by bracket", () => {
-    const { container } = render(<TaxCard ledger={fakeLedger()} />);
+    const { container } = render(<TaxFold ledger={fakeLedger()} />);
     expect(screen.getByText("15% μέχρι 12.000 €")).toBeTruthy();
     expect(screen.getByText("25% από 12.000 € έως 24.000 €")).toBeTruthy();
     expect(screen.getByText("35% από 24.000 € έως 35.000 €")).toBeTruthy();
@@ -77,27 +171,14 @@ describe("Έσοδα widgets", () => {
     // 84,000 €: 1,800 + 3,000 + 3,850 + 49,000 × 45% = 30,700 €
     expect(screen.getAllByText("30.700 €").length).toBeGreaterThan(0);
     expect(screen.getByText("Τα κλιμάκια δεν έχουν επιβεβαιωθεί ακόμα από τον λογιστή.")).toBeTruthy();
-    expect(screen.getByText("Πώς υπολογίζεται;")).toBeTruthy();
+    expect(screen.getByText("Πώς υπολογίζεται ο φόρος;")).toBeTruthy();
+    expect(screen.getByText(/Ο λογιστής θα επιβεβαιώσει το τελικό ποσό/)).toBeTruthy();
     expect(latinWords(screenText(container))).toEqual([]);
   });
 
   it("shows one table per apartment when tax is per apartment", () => {
-    render(<TaxCard ledger={fakeLedger("per_apartment")} />);
+    render(<TaxFold ledger={fakeLedger("per_apartment")} />);
     expect(screen.getByText("Φόρος για Onar")).toBeTruthy();
     expect(screen.getByText("Φόρος για Helios")).toBeTruthy();
-  });
-
-  it("labels every month bar with its amounts for screen readers", () => {
-    const ledger = fakeLedger();
-    const view = incomeView(ledger, "2026-10-10");
-    const { container } = render(<MonthlyChart year={2026} months={view.months} apartments={ledger.apartments} />);
-    expect(screen.getByRole("list", { name: "Έσοδα ανά μήνα, 2026" })).toBeTruthy();
-    expect(
-      screen.getByRole("listitem", {
-        name: /^Οκτώβριος: 10\.500\s€\. Onar 10\.000\s€, Cosmos 500\s€, Iris 0\s€, Helios 0\s€$/,
-      }),
-    ).toBeTruthy();
-    expect(screen.getByText("Τώρα")).toBeTruthy();
-    expect(latinWords(screenText(container))).toEqual([]);
   });
 });

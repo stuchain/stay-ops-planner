@@ -39,6 +39,15 @@ vi.mock("@/api/client", () => ({
       removeReviewSource: mutation(() => undefined),
       refreshGoogle: mutation((i) => refreshGoogle(i)),
     },
+    // The occupancy section moved here from Έσοδα; its own test covers it.
+    money: {
+      occupancy: {
+        queryOptions: (input: { year: number }) => ({
+          queryKey: ["money.occupancy", input],
+          queryFn: () => ({ year: input.year, apartments: [], thisYear: [], lastYear: [] }),
+        }),
+      },
+    },
   }),
 }));
 

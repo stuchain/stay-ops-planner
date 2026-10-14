@@ -1,4 +1,4 @@
-import type { LedgerYearData } from "@/api/types";
+import type { LedgerApartmentData, LedgerYearData } from "@/api/types";
 
 /** A month already lived, the one we are in, or one still to come (from bookings already made). */
 export type MonthKind = "actual" | "current" | "expected";
@@ -46,6 +46,35 @@ export function incomeView(ledger: Pick<LedgerYearData, "year" | "totals">, toda
     expectedCents: ledger.totals.totalCents - soFarCents,
     futureMonths: months.filter((m) => m.kind === "expected").map((m) => m.month),
   };
+}
+
+/**
+ * This year so far against the same months last year, as a fraction (0.12 = 12% more);
+ * null when last year had nothing to compare with.
+ */
+export function changeOnLastYear(
+  soFarCents: number,
+  lastYear: Pick<LedgerYearData, "totals">,
+  year: number,
+  todayIso: string,
+): number | null {
+  const before = incomeView({ year, totals: lastYear.totals }, todayIso).soFarCents;
+  if (before <= 0) return null;
+  return (soFarCents - before) / before;
+}
+
+/** "+12%", "−5%" or "0%", rounded to a whole percent. */
+export function formatChange(fraction: number): string {
+  const percent = Math.round(fraction * 100);
+  if (percent === 0) return "0%";
+  return `${percent > 0 ? "+" : "−"}${Math.abs(percent)}%`;
+}
+
+/** Apartment colour, from the room settings or the design tokens. */
+export function apartmentColor(a: LedgerApartmentData): string {
+  return (
+    a.color ?? ["var(--color-onar)", "var(--color-cosmos)", "var(--color-iris)", "var(--color-helios)"][a.index - 1]!
+  );
 }
 
 /** "15%" or "22,5%" in Greek; "22.5%" in English. */

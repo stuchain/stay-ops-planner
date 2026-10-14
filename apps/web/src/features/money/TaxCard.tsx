@@ -1,23 +1,16 @@
 "use client";
 
-import { Landmark } from "lucide-react";
+import { ChevronDown, Landmark } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { LedgerYearData } from "@/api/types";
+import { buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { Card } from "@/ui/Card";
+import { cn } from "@/ui/cn";
 import { formatMoney } from "@/ui/format";
 import { formatRate } from "./incomeView";
 
 type Calculation = LedgerYearData["tax"]["calculations"][number];
 type Line = Calculation["lines"][number];
-
-function EstimatePill() {
-  const t = useTranslations("income");
-  return (
-    <span className="bg-warning-soft text-warning-text rounded-full px-2.5 py-0.5 text-sm font-semibold">
-      {t("estimate")}
-    </span>
-  );
-}
 
 function BracketTable({ calc, caption }: { calc: Calculation; caption?: string }) {
   const t = useTranslations("income");
@@ -71,42 +64,45 @@ function BracketTable({ calc, caption }: { calc: Calculation; caption?: string }
   );
 }
 
-/** The bracket calculation and a plain explanation of how the estimate is worked out. */
-export function TaxCard({ ledger }: { ledger: LedgerYearData }) {
+/**
+ * "Πώς υπολογίζεται ο φόρος;": a fold in the Έσοδα buttons row with the bracket calculation and a
+ * plain explanation. Open, it takes the full width of the row.
+ */
+export function TaxFold({ ledger }: { ledger: LedgerYearData }) {
   const t = useTranslations("income");
   const { rules, tax, apartments } = ledger;
   return (
-    <Card
-      title={
-        <span className="flex items-center gap-2">
-          <Landmark size={24} aria-hidden="true" />
-          {t("taxTitle")}
-          <EstimatePill />
-        </span>
-      }
-    >
-      {tax.scope === "total" ? (
-        <BracketTable calc={tax.calculations[0]!} />
-      ) : (
-        tax.calculations.map((calc, i) => (
-          <BracketTable key={i} calc={calc} caption={t("taxFor", { apartment: apartments[i]?.label ?? "" })} />
-        ))
-      )}
-      <p>{t("taxNote")}</p>
-      {!rules.confirmed ? <p className="text-warning-text">{t("taxUnconfirmed")}</p> : null}
-      <details className="border-border rounded-sm border px-4 py-3">
-        <summary className="min-h-target text-accent flex cursor-pointer items-center font-semibold">
-          {t("how.title")}
-        </summary>
-        <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5">
+    <details className="group open:basis-full">
+      <summary
+        className={cn(
+          buttonBase,
+          buttonVariants.ghost,
+          buttonSizes.lg,
+          "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+        )}
+      >
+        <Landmark size={24} aria-hidden="true" />
+        {t("how.title")}
+        <ChevronDown size={24} aria-hidden="true" className="transition-transform group-open:rotate-180" />
+      </summary>
+      <Card className="mt-3">
+        {tax.scope === "total" ? (
+          <BracketTable calc={tax.calculations[0]!} />
+        ) : (
+          tax.calculations.map((calc, i) => (
+            <BracketTable key={i} calc={calc} caption={t("taxFor", { apartment: apartments[i]?.label ?? "" })} />
+          ))
+        )}
+        <p>{t("taxNote")}</p>
+        {!rules.confirmed ? <p className="text-warning-text">{t("taxUnconfirmed")}</p> : null}
+        <ul className="flex list-disc flex-col gap-1.5 pl-5">
           <li>{t("how.year")}</li>
           <li>{rules.incomeBasis === "gross" ? t("how.gross") : t("how.payout")}</li>
           <li>{t("how.cancelled")}</li>
+          <li>{t("perApartmentNote")}</li>
           <li>{rules.scope === "total" ? t("how.total") : t("how.perApartment")}</li>
         </ul>
-      </details>
-    </Card>
+      </Card>
+    </details>
   );
 }
-
-export { EstimatePill };

@@ -26,6 +26,7 @@ import { formatDay, formatMoney, type UiLocale } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { Delta } from "./Delta";
+import { OccupancyCard } from "./OccupancyCard";
 import { ReviewsCard } from "./ReviewsCard";
 
 export type StatisticsScreenProps = {
@@ -736,6 +737,7 @@ export function StatisticsScreen({ today }: StatisticsScreenProps) {
       ) : (
         <StatisticsBody data={query.data} />
       )}
+      <OccupancyCard year={year} />
       <ReviewsCard year={year} today={today} />
     </div>
   );

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { OccupancyData } from "@/api/types";
-import { OccupancyCard } from "@/features/money/OccupancyCard";
+import { OccupancyCard } from "@/features/stats/OccupancyCard";
 import { latinWords, render, screen, within } from "../intl";
 
 let result: () => Promise<OccupancyData>;

@@ -31,7 +31,7 @@ function Cell({
   before: MonthOccupancy | undefined;
   strong?: boolean;
 }) {
-  const t = useTranslations("income.occupancy");
+  const t = useTranslations("stats.occupancy");
   const locale = useLocale();
   const price = averageNightCents(now);
   const change = before ? occupancyChange(now, before) : 0;
@@ -65,7 +65,7 @@ function OccupancyTable({
   thisYear: readonly RoomOccupancy[];
   lastYear: readonly RoomOccupancy[];
 }) {
-  const t = useTranslations("income");
+  const t = useTranslations();
   const head = "px-3 py-2.5 text-right font-bold whitespace-nowrap";
   return (
     <div className="overflow-x-auto">
@@ -73,15 +73,15 @@ function OccupancyTable({
         <thead>
           <tr className="border-text-muted border-b-2">
             <th scope="col" className="bg-surface sticky left-0 px-3 py-2.5 text-left font-bold">
-              {t("occupancy.colApartment")}
+              {t("stats.occupancy.colApartment")}
             </th>
             {MONTHS.map((m) => (
               <th key={m} scope="col" className={head}>
-                {t("monthShort", { month: m })}
+                {t("income.monthShort", { month: m })}
               </th>
             ))}
             <th scope="col" className={head}>
-              {t("colTotal")}
+              {t("stats.occupancy.colTotal")}
             </th>
           </tr>
         </thead>
@@ -109,7 +109,7 @@ function OccupancyTable({
 
 /** Occupancy and average price per night, by apartment and month, against the year before. */
 export function OccupancyCard({ year }: { year: number }) {
-  const t = useTranslations("income.occupancy");
+  const t = useTranslations("stats.occupancy");
   const errorText = useErrorText();
   const trpc = useTRPC();
   const query = useQuery({ ...trpc.money.occupancy.queryOptions({ year }), placeholderData: (prev) => prev });

@@ -2,14 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  BedDouble,
-  ChartColumn,
   ChartNoAxesCombined,
   ChevronDown,
   Download,
+  FileText,
   Grid3x3,
   LayoutDashboard,
-  FileText,
   Table2,
   TriangleAlert,
 } from "lucide-react";
@@ -27,31 +25,16 @@ import { ErrorState } from "@/ui/ErrorState";
 import { formatMoney } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
-import { incomeView, type IncomeView } from "./incomeView";
 import { ExcelSheet } from "./ExcelSheet";
-import { apartmentColor, MonthlyChart } from "./MonthlyChart";
-import { OccupancyCard } from "./OccupancyCard";
-import { EstimatePill, TaxCard } from "./TaxCard";
+import { apartmentColor, changeOnLastYear, formatChange, incomeView, type IncomeView } from "./incomeView";
+import { TaxFold } from "./TaxCard";
 
 export type IncomeScreenProps = {
   /** Today in the business time zone, from the server. */
   today: IsoDate;
+  /** Admin with Dev mode on: also shows the way to Statistics. */
+  devMode?: boolean;
 };
-
-function StatTile({ label, value, hint, tone }: { label: React.ReactNode; value: string; hint: string; tone?: "tax" }) {
-  return (
-    <div
-      className={cn(
-        "rounded-card shadow-card flex flex-col gap-1 p-5",
-        tone === "tax" ? "bg-warning-soft" : "bg-surface text-text",
-      )}
-    >
-      <span className="flex items-center gap-2 text-base font-semibold">{label}</span>
-      <span className="text-2xl font-bold tabular-nums">{value}</span>
-      <span className={cn("text-sm", tone === "tax" ? "text-warning-text" : "text-text-muted")}>{hint}</span>
-    </div>
-  );
-}
 
 function MonthTable({ ledger, view }: { ledger: LedgerYearData; view: IncomeView }) {
   const t = useTranslations();
@@ -194,104 +177,110 @@ function ViewSwitch({ mode, onChange }: { mode: IncomeViewMode; onChange: (mode:
   );
 }
 
-function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate }) {
+function IncomeBody({
+  ledger,
+  today,
+  devMode,
+  onOpenExcel,
+}: {
+  ledger: LedgerYearData;
+  today: IsoDate;
+  devMode: boolean;
+  /** Opens the "Σαν το Excel" view, where the bookings that count in no apartment are listed. */
+  onOpenExcel: () => void;
+}) {
   const t = useTranslations();
   const locale = useLocale();
+  const trpc = useTRPC();
   const money = (cents: number) => formatMoney(cents, locale);
   const view = useMemo(() => incomeView(ledger, today), [ledger, today]);
   const past = ledger.year < Number(today.slice(0, 4));
-  const future = view.futureMonths;
-  const monthName = (m: number) => t("common.month", { month: m });
+  // Same months last year, counted the same way; nothing is said when there is no such year.
+  const hasLastYear = ledger.years.includes(ledger.year - 1);
+  const lastYear = useQuery({ ...trpc.money.year.queryOptions({ year: ledger.year - 1 }), enabled: hasLastYear });
+  const change =
+    hasLastYear && lastYear.data ? changeOnLastYear(view.soFarCents, lastYear.data, ledger.year, today) : null;
+  const perApartmentTax = ledger.tax.scope === "total" ? null : ledger.tax.calculations;
 
   return (
     <>
-      <div className="grid grid-cols-3 gap-4 max-[1023px]:grid-cols-1">
-        <StatTile
-          label={t("income.soFar")}
-          value={money(view.soFarCents)}
-          hint={past ? t("income.soFarHintPast") : t("income.soFarHint")}
-        />
-        <StatTile label={t("income.expected")} value={money(view.expectedCents)} hint={t("income.expectedHint")} />
-        <StatTile
-          tone="tax"
-          label={
-            <>
-              {t("income.tax")} <EstimatePill />
-            </>
-          }
-          value={money(ledger.tax.taxCents)}
-          hint={t("income.taxHint", { amount: money(ledger.totals.totalCents) })}
-        />
-      </div>
-
-      {ledger.totals.unbucketedCount > 0 ? (
-        <p role="status" className="bg-warning-soft text-warning-text rounded-card flex items-start gap-2 p-4">
-          <TriangleAlert size={24} className="shrink-0" aria-hidden="true" />
-          {t("income.unbucketed", {
-            count: ledger.totals.unbucketedCount,
-            amount: money(ledger.totals.unbucketedCents),
-          })}
-        </p>
-      ) : null}
-
-      <Card
-        title={
-          <span className="flex items-center gap-2">
-            <BedDouble size={24} aria-hidden="true" />
-            {t("income.perApartment", { year: ledger.year })}
-          </span>
-        }
-      >
-        <div className="grid grid-cols-4 gap-4 max-[1023px]:grid-cols-2 max-[479px]:grid-cols-1">
-          {ledger.apartments.map((a, i) => (
-            <div
-              key={a.index}
-              className="border-border rounded-card bg-surface flex flex-col gap-1 border border-t-[6px] p-4"
-              style={{ borderTopColor: apartmentColor(a) }}
-            >
-              <span className="flex items-center gap-2 text-lg font-semibold">
-                <span className="size-3 rounded-sm" style={{ background: apartmentColor(a) }} aria-hidden="true" />
-                {a.label}
-              </span>
-              <span className="text-xl font-bold tabular-nums">{money(ledger.totals.byRentalCents[i] ?? 0)}</span>
-            </div>
-          ))}
-        </div>
-        <p className="text-text-muted">{t("income.perApartmentNote")}</p>
-      </Card>
-
-      <Card
-        title={
-          <span className="flex items-center gap-2">
-            <ChartColumn size={24} aria-hidden="true" />
-            {t("income.perMonth")}
-          </span>
-        }
-      >
-        <MonthlyChart year={ledger.year} months={view.months} apartments={ledger.apartments} />
-        {future.length > 0 && ledger.totals.totalCents !== 0 ? (
-          <p className="text-text-muted">
-            {future.length > 1
-              ? t("income.futureNote", { from: monthName(future[0]!), to: monthName(future[future.length - 1]!) })
-              : t("income.futureNoteOne", { month: monthName(future[0]!) })}
+      <Card data-testid="income-so-far" className="gap-2">
+        <span className="text-text-muted text-lg">{past ? t("income.soFarPast") : t("income.soFar")}</span>
+        <span className="text-4xl font-bold tabular-nums">{money(view.soFarCents)}</span>
+        {view.expectedCents !== 0 || change !== null ? (
+          <p className="text-text-muted text-lg">
+            {view.expectedCents !== 0 ? (
+              <>
+                {t("income.stillComing")} <b className="text-text tabular-nums">{money(view.expectedCents)}</b>
+              </>
+            ) : null}
+            {view.expectedCents !== 0 && change !== null ? " · " : null}
+            {change !== null ? (
+              <>
+                {t("income.vsLastYear")}{" "}
+                <b className={cn("tabular-nums", change > 0 ? "text-success-text" : change < 0 && "text-danger")}>
+                  {formatChange(change)}
+                </b>
+              </>
+            ) : null}
           </p>
         ) : null}
+        <p className="text-text-muted">{t("income.taxLine", { amount: money(ledger.tax.taxCents) })}</p>
       </Card>
 
-      <OccupancyCard year={ledger.year} />
+      {ledger.totals.unbucketedCount > 0 ? (
+        <div
+          role="status"
+          className="bg-warning-soft text-warning-text rounded-card flex flex-wrap items-center gap-3 px-4 py-3"
+        >
+          <TriangleAlert size={24} className="shrink-0" aria-hidden="true" />
+          <span className="flex-1">
+            {t("income.unbucketed", {
+              count: ledger.totals.unbucketedCount,
+              amount: money(ledger.totals.unbucketedCents),
+            })}
+          </span>
+          <button
+            type="button"
+            onClick={onOpenExcel}
+            className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}
+          >
+            {t("income.unbucketedOpen")}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-4 gap-4 max-[1023px]:grid-cols-2 max-[479px]:grid-cols-1">
+        {ledger.apartments.map((a, i) => (
+          <div
+            key={a.index}
+            className="border-border rounded-card bg-surface flex flex-col gap-1 border border-t-[6px] p-4"
+            style={{ borderTopColor: apartmentColor(a) }}
+          >
+            <span className="flex items-center gap-2 text-lg font-semibold">
+              <span className="size-3 rounded-sm" style={{ background: apartmentColor(a) }} aria-hidden="true" />
+              {a.label}
+            </span>
+            <span className="text-xl font-bold tabular-nums">{money(ledger.totals.byRentalCents[i] ?? 0)}</span>
+            {perApartmentTax?.[i] ? (
+              <span className="text-text-muted">
+                {t("income.apartmentTax", { amount: money(perApartmentTax[i].taxCents) })}
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
 
       <Card
         title={
           <span className="flex items-center gap-2">
             <Table2 size={24} aria-hidden="true" />
-            {t("income.exactTitle")}
+            {t("income.perMonth")}
           </span>
         }
       >
         <MonthTable ledger={ledger} view={view} />
       </Card>
-
-      <TaxCard ledger={ledger} />
 
       <div className="flex flex-wrap items-center gap-3">
         <ExportButton year={ledger.year} />
@@ -302,17 +291,20 @@ function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate 
           <FileText size={24} aria-hidden="true" />
           {t("income.report")}
         </Link>
-        <Link href="/app/stats" className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}>
-          <ChartNoAxesCombined size={24} aria-hidden="true" />
-          {t("income.statistics")}
-        </Link>
+        {devMode ? (
+          <Link href="/app/stats" className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}>
+            <ChartNoAxesCombined size={24} aria-hidden="true" />
+            {t("income.statistics")}
+          </Link>
+        ) : null}
+        <TaxFold ledger={ledger} />
       </div>
     </>
   );
 }
 
 /** Έσοδα: the year at a glance for the father, or the same year laid out like his Excel sheet. */
-export function IncomeScreen({ today }: IncomeScreenProps) {
+export function IncomeScreen({ today, devMode = false }: IncomeScreenProps) {
   const t = useTranslations();
   const errorText = useErrorText();
   const trpc = useTRPC();
@@ -372,7 +364,7 @@ export function IncomeScreen({ today }: IncomeScreenProps) {
           <ExportButton year={query.data.year} />
         </>
       ) : (
-        <IncomeBody ledger={query.data} today={today} />
+        <IncomeBody ledger={query.data} today={today} devMode={devMode} onOpenExcel={() => setMode("excel")} />
       )}
     </div>
   );

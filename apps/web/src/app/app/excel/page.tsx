@@ -1,6 +1,8 @@
 import { IncomeScreen } from "@/features/money/IncomeScreen";
 import { todayIso } from "@/server/time";
+import { currentUserPreferences } from "@/server/userPreferences";
 
-export default function ExcelPage() {
-  return <IncomeScreen today={todayIso()} />;
+export default async function ExcelPage() {
+  const prefs = await currentUserPreferences();
+  return <IncomeScreen today={todayIso()} devMode={prefs.devMode} />;
 }
