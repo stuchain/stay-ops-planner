@@ -26,6 +26,14 @@ const pastRow = (page: Page) => page.getByRole("group", { name: "Περασμέ�
 const bar = (scope: Locator | Page, guest: string) => scope.getByRole("button", { name: new RegExp(`^${guest},`) });
 const panel = (page: Page) => page.getByRole("dialog");
 
+/** The past bookings row starts folded; open it unless this browser already did. */
+async function openPastRow(page: Page): Promise<void> {
+  const row = page.getByTestId("past-unplaced-row");
+  await expect(row).toBeVisible();
+  if ((await row.getAttribute("data-open")) !== "true") await page.getByTestId("past-unplaced-toggle").click();
+  await expect(row).toHaveAttribute("data-open", "true");
+}
+
 /** Today in UTC (the e2e server runs with APP_TIMEZONE=Etc/UTC). */
 function utcDay(offset: number): Date {
   const now = new Date();
@@ -194,6 +202,7 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
 
   test("lists finished stays without an apartment under the apartments, one under the other", async ({ page }) => {
     await scrollToDay(page, SCROLL_FROM.pastUnplacedA - 3);
+    await openPastRow(page);
     const row = pastRow(page);
     await expect(row).toBeVisible();
     await expect(row.getByText("Δεν γράφτηκε το διαμέρισμα. Δεν χρειάζεται κάτι.")).toBeVisible();
@@ -213,6 +222,7 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
 
   test("records the apartment a finished stay used, then keeps it there", async ({ page }) => {
     await scrollToDay(page, SCROLL_FROM.pastUnplacedA - 3);
+    await openPastRow(page);
     await expect(async () => {
       await bar(pastRow(page), SCROLL_GUEST.pastUnplacedA).click();
       await expect(panel(page)).toBeVisible({ timeout: 2_000 });

@@ -29,6 +29,7 @@ describe("Toast", () => {
     expect(await screen.findByText("Αποθηκεύτηκε")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Προβολή" }));
     expect(onClick).toHaveBeenCalled();
+    await vi.waitFor(() => expect(screen.queryByText("Αποθηκεύτηκε")).toBeNull());
   });
 
   it("returns an id and supports every tone", () => {
@@ -59,6 +60,8 @@ describe("Toast", () => {
     expect(results.violations).toEqual([]);
     await user.click(screen.getByRole("button", { name: "Αναίρεση" }));
     expect(onUndo).toHaveBeenCalled();
+    // Let sonner finish removing the toast, so its timer does not fire after the test environment is gone.
+    await vi.waitFor(() => expect(screen.queryByText("Μετακινήθηκε στο Cosmos")).toBeNull());
   });
 
   it("keeps each tone on one duration: brief for good news, longer for problems", () => {
