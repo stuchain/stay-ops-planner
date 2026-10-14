@@ -11,6 +11,8 @@ export const DEFAULT_LOCALE: UiLocale = "el";
 
 export type UserPreferences = {
   textSize: string;
+  /** light, dark or system (follow the device). */
+  theme: string;
   locale: UiLocale;
   /** Dev mode is shown: the user switched it on AND is an admin. It decides what is shown, never what is allowed. */
   devMode: boolean;
@@ -23,13 +25,14 @@ export type UserPreferences = {
 export const currentUserPreferences = cache(async (): Promise<UserPreferences> => {
   const cookieStore = await cookies();
   const ctx = await verifyAndLoadAuthContext(cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null);
-  if (!ctx) return { textSize: "normal", locale: DEFAULT_LOCALE, devMode: false };
+  if (!ctx) return { textSize: "normal", theme: "light", locale: DEFAULT_LOCALE, devMode: false };
   const user = await prisma.user.findUnique({
     where: { id: ctx.userId },
-    select: { textSize: true, uiLocale: true, devMode: true },
+    select: { textSize: true, theme: true, uiLocale: true, devMode: true },
   });
   return {
     textSize: user?.textSize ?? "normal",
+    theme: user?.theme ?? "light",
     locale: user?.uiLocale === "en" ? "en" : DEFAULT_LOCALE,
     devMode: Boolean(user?.devMode) && ctx.role === "admin",
   };

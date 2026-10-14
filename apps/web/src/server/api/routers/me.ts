@@ -9,12 +9,15 @@ import { adminProcedure, createTRPCRouter, userProcedure } from "../trpc";
 /** Text size choices, saved in `users.text_size`. */
 export const TEXT_SIZES = ["normal", "large", "xlarge"] as const;
 
+/** Theme choices, saved in `users.theme`: light (default), dark, or follow the device. */
+export const THEMES = ["light", "dark", "system"] as const;
+
 export const meRouter = createTRPCRouter({
   /** Who is signed in and how their screens should look. */
   get: userProcedure.query(async ({ ctx }) => {
     const user = await prisma.user.findUnique({
       where: { id: ctx.user.userId },
-      select: { email: true, role: true, uiLocale: true, devMode: true, textSize: true },
+      select: { email: true, role: true, uiLocale: true, devMode: true, textSize: true, theme: true },
     });
     if (!user) throw new DomainError("UNAUTHORIZED");
     return {
@@ -23,24 +26,32 @@ export const meRouter = createTRPCRouter({
       locale: user.uiLocale,
       devMode: user.devMode,
       textSize: user.textSize,
+      theme: user.theme,
       /** When the login ends for good (12 hours after signing in), so the app can warn 5 minutes before. */
       sessionEndsAt: ctx.user.sessionEndsAt?.toISOString() ?? null,
     };
   }),
 
-  /** Language and text size, per user. Only the fields sent are changed. */
+  /** Language, text size and theme, per user. Only the fields sent are changed. */
   updatePreferences: userProcedure
-    .input(z.object({ locale: z.enum(["el", "en"]).optional(), textSize: z.enum(TEXT_SIZES).optional() }))
+    .input(
+      z.object({
+        locale: z.enum(["el", "en"]).optional(),
+        textSize: z.enum(TEXT_SIZES).optional(),
+        theme: z.enum(THEMES).optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const user = await prisma.user.update({
         where: { id: ctx.user.userId },
         data: {
           ...(input.locale ? { uiLocale: input.locale } : {}),
           ...(input.textSize ? { textSize: input.textSize } : {}),
+          ...(input.theme ? { theme: input.theme } : {}),
         },
-        select: { uiLocale: true, textSize: true },
+        select: { uiLocale: true, textSize: true, theme: true },
       });
-      return { locale: user.uiLocale, textSize: user.textSize };
+      return { locale: user.uiLocale, textSize: user.textSize, theme: user.theme };
     }),
 
   /** The signed-in user changes their own password; the current one must match. */

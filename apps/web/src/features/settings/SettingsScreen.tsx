@@ -16,10 +16,11 @@ import { HosthubCard } from "./HosthubCard";
 import { LanguageCard } from "./LanguageCard";
 import { PasswordCard } from "./PasswordCard";
 import { TextSizeCard, toTextSize } from "./TextSizeCard";
+import { ThemeCard, toTheme } from "./ThemeCard";
 
 /**
- * /app/settings: text size, phone calendar, password (folded) and language (folded) for everyone; the Hosthub
- * connection, family accounts and Dev mode for admins only.
+ * /app/settings: text size, phone calendar, password (folded) and language (folded) for everyone; the theme,
+ * Hosthub connection, family accounts and Dev mode for admins only.
  */
 export function SettingsScreen() {
   const t = useTranslations("settingsScreen");
@@ -50,6 +51,7 @@ export function SettingsScreen() {
           <LanguageCard locale={me.data.locale === "en" ? "en" : "el"} />
           {me.data.role === "admin" ? (
             <>
+              <ThemeCard theme={toTheme(me.data.theme)} />
               <HosthubCard canRefresh />
               <HosthubTokenCard />
               <FamilyCard />

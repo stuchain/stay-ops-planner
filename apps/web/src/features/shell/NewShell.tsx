@@ -62,6 +62,8 @@ const DEV_NAV = [
 
 export type NewShellProps = {
   textSize: string;
+  /** light, dark or system; anything else is light. */
+  theme?: string;
   /** Family members (viewer) get a read-only app without money screens. */
   role?: Role;
   devMode: boolean;
@@ -108,7 +110,7 @@ function ShellInner({ devMode, role, children }: { devMode: boolean; role: Role;
         }
         {...(secondary ? { secondary } : {})}
       />
-      <main className="ml-sidebar min-h-screen max-[759px]:ml-0 max-[759px]:pb-20 print:m-0 print:min-h-0 print:pb-0">
+      <main className="ml-sidebar min-h-screen phone:ml-0 phone:pb-20 print:m-0 print:min-h-0 print:pb-0">
         <OfflineBanner />
         <HosthubBanner />
         {children}
@@ -123,9 +125,14 @@ function ShellInner({ devMode, role, children }: { devMode: boolean; role: Role;
 }
 
 /** The app shell: sidebar, banners and the signed-in layout. */
-export function NewShell({ textSize, devMode, role = "operator", userId, children }: NewShellProps) {
+export function NewShell({ textSize, theme, devMode, role = "operator", userId, children }: NewShellProps) {
   return (
-    <div id="new-ui-root" data-ui="new" data-text-size={textSize}>
+    <div
+      id="new-ui-root"
+      data-ui="new"
+      data-text-size={textSize}
+      data-theme={theme === "dark" || theme === "system" ? theme : "light"}
+    >
       <ApiProvider {...(userId ? { userId } : {})}>
         <RoleProvider role={role}>
           <ShellInner devMode={devMode} role={role}>
