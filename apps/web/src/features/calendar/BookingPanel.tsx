@@ -169,7 +169,7 @@ function PlacedIn({
           <ChevronDown size={20} aria-hidden="true" className={cn("transition-transform", open && "rotate-180")} />
         </Button>
       </div>
-      <div id="move-list" hidden={!open} className="flex flex-col gap-3">
+      <div id="move-list" hidden={!open} className={open ? "flex flex-col gap-3" : "hidden"}>
         {open ? (
           <>
             <MoveButtons booking={booking} rooms={rooms} moving={moving} onMove={onMove} />

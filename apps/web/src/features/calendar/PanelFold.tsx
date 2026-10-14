@@ -49,7 +49,8 @@ export function PanelFold({ label, locked = false, testId, children }: PanelFold
         id={`${id}-body`}
         aria-labelledby={`${id}-button`}
         hidden={!shown}
-        className="flex flex-col gap-3 pt-1 pb-4"
+        // The theme has no CSS reset, so `hidden` alone would lose to `flex`.
+        className={shown ? "flex flex-col gap-3 pt-1 pb-4" : "hidden"}
       >
         {seen || shown ? children : null}
       </section>

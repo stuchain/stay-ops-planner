@@ -58,27 +58,29 @@ export function MoreMenu({ onPrint, className }: { onPrint: () => void; classNam
         <MoreHorizontal size={20} aria-hidden="true" />
         {t("more")}
       </button>
-      <div
-        id={`${id}-menu`}
-        hidden={!open}
-        className="bg-surface border-border shadow-raised rounded-card absolute top-full right-0 z-40 mt-2 flex w-60 flex-col gap-1 border p-2"
-      >
-        <Link href="/app/search" className={itemClass} onClick={() => setOpen(false)}>
-          <Search size={20} aria-hidden="true" />
-          {tSearch("open")}
-        </Link>
-        <button
-          type="button"
-          className={itemClass}
-          onClick={() => {
-            setOpen(false);
-            onPrint();
-          }}
+      {/* Rendered only while open: the theme has no CSS reset, so a `hidden` attribute loses to `flex`. */}
+      {open ? (
+        <div
+          id={`${id}-menu`}
+          className="bg-surface border-border shadow-raised rounded-card absolute top-full right-0 z-40 mt-2 flex w-60 flex-col gap-1 border p-2"
         >
-          <Printer size={20} aria-hidden="true" />
-          {t("print")}
-        </button>
-      </div>
+          <Link href="/app/search" className={itemClass} onClick={() => setOpen(false)}>
+            <Search size={20} aria-hidden="true" />
+            {tSearch("open")}
+          </Link>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              onPrint();
+            }}
+          >
+            <Printer size={20} aria-hidden="true" />
+            {t("print")}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
