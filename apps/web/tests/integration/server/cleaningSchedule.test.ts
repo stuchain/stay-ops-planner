@@ -115,7 +115,7 @@ describe("cleaning schedule use cases", () => {
     await prisma.assignment.create({
       data: { bookingId: b.id, roomId: onar.id, startDate: b.checkinDate, endDate: b.checkoutDate },
     });
-    // The next guest arrives the day Old leaves; nobody arrives the day Next leaves, so Next gets no cleaning.
+    // The next guest arrives the day Old leaves (A-A); nobody arrives the day Next leaves (A).
     const next = await prisma.booking.create({
       data: {
         channel: Channel.direct,
@@ -131,9 +131,14 @@ describe("cleaning schedule use cases", () => {
       data: { bookingId: next.id, roomId: onar.id, startDate: next.checkinDate, endDate: next.checkoutDate },
     });
     const list = await loadTurnovers(iso("2030-07-01"), 7, { includeCancelled: false }, NOW);
-    expect(list.tasks.map((t) => t.leaving.guestName)).toEqual(["Old"]);
+    expect(list.tasks.map((t) => [t.leaving.guestName, t.kind])).toEqual([
+      ["Old", "AA"],
+      ["Next", "A"],
+    ]);
+    expect(list.tasks.map((t) => t.movable)).toEqual([null, { from: "2030-07-05", to: null }]);
     await loadTurnovers(iso("2030-07-01"), 7, { includeCancelled: false }, NOW);
     expect(await prisma.cleaningTask.count({ where: { bookingId: b.id } })).toBe(1);
+    expect(await prisma.cleaningTask.count({ where: { bookingId: next.id } })).toBe(1);
   });
 
   it("lists a same-day turnover with who leaves, who arrives and the window in Athens time", async () => {
@@ -142,7 +147,7 @@ describe("cleaning schedule use cases", () => {
     await stay(onar.id, "Nikos", "2030-07-05", "2030-07-08", { adults: 2, children: 1, infants: 1 });
     const list = await loadTurnovers(iso("2030-07-01"), 10, { includeCancelled: false }, NOW);
     expect(list.today).toBe("2030-07-01");
-    expect(list.tasks).toHaveLength(1);
+    expect(list.tasks).toHaveLength(2);
     const outTask = await taskOf(out.id);
     const first = list.tasks.find((t) => t.id === outTask.id)!;
     expect(first).toMatchObject({
@@ -158,9 +163,15 @@ describe("cleaning schedule use cases", () => {
       },
       start: "11:00",
       end: "13:00",
+      kind: "AA",
+      movable: null,
     });
-    // The last stay has nobody after it, so its untouched automatic cleaning is set aside.
-    expect(list.tasks.find((t) => t.leaving.guestName === "Nikos")).toBeUndefined();
+    // The last stay has nobody after it: an A that can go to any later day.
+    expect(list.tasks.find((t) => t.leaving.guestName === "Nikos")).toMatchObject({
+      kind: "A",
+      next: null,
+      movable: { from: "2030-07-08", to: null },
+    });
   });
 
   it("starts at the requested day, hides cancelled cleanings by default and counts them", async () => {
@@ -188,32 +199,19 @@ describe("cleaning schedule use cases", () => {
     expect(list.tasks.find((t) => t.leaving.guestName === "Maria")!.next).toBeNull();
   });
 
-  it("sets aside untouched future automatic cleanings that are not changeovers, until the day becomes one", async () => {
+  it("brings back the cleanings set aside while only same-day changeovers got one", async () => {
     const { loadTurnovers } = await uc();
     const plain = await stay(onar.id, "Maria", "2030-07-02", "2030-07-05");
-    const named = await stay(cosmos.id, "Eleni", "2030-07-02", "2030-07-05");
-    await prisma.cleaningTask.updateMany({ where: { bookingId: named.id }, data: { assigneeName: "Dora" } });
-    const past = await stay(onar.id, "Old", "2030-06-20", "2030-06-25");
-
-    const list = await loadTurnovers(iso("2030-06-20"), 20, { includeCancelled: true }, NOW);
-    expect(list.tasks.map((t) => t.leaving.guestName).sort()).toEqual(["Eleni", "Old"]);
-    expect(list.cancelledCount).toBe(0);
-    const setAside = await taskOf(plain.id);
-    expect(setAside.status).toBe("cancelled");
-    expect(setAside.sourceEventId?.startsWith(TURNOVER_SET_ASIDE_PREFIX)).toBe(true);
-    expect((await taskOf(past.id)).status).toBe("todo");
-
-    // Placing the booking again does not bring it back.
-    await prisma.$transaction((tx) =>
-      ensureTurnoverCleaningTask(tx, { bookingId: plain.id, roomId: onar.id, checkoutDate: plain.checkoutDate }),
-    );
-    expect((await taskOf(plain.id)).status).toBe("cancelled");
-
-    // A guest now arrives the day Maria leaves: the cleaning is back, at the default time.
-    await stay(onar.id, "Nikos", "2030-07-05", "2030-07-08");
+    const task = await taskOf(plain.id);
+    await prisma.cleaningTask.update({
+      where: { id: task.id },
+      data: { status: "cancelled", sourceEventId: `${TURNOVER_SET_ASIDE_PREFIX}${task.sourceEventId}` },
+    });
+    const list = await loadTurnovers(iso("2030-07-01"), 7, { includeCancelled: false }, NOW);
+    expect(list.tasks.map((t) => [t.leaving.guestName, t.kind, t.day])).toEqual([["Maria", "A", "2030-07-05"]]);
     const back = await taskOf(plain.id);
     expect(back.status).toBe("todo");
-    expect(back.sourceEventId?.startsWith(TURNOVER_SET_ASIDE_PREFIX)).toBe(false);
+    expect(back.sourceEventId).toBe(task.sourceEventId);
   });
 
   it("changes status, assignee and times with the version, and refuses a stale or closed task", async () => {
@@ -334,85 +332,84 @@ describe("cleaning schedule use cases", () => {
     expect(await errorCode(removeCleaning(change))).toBe("CLEANING_CHANGEOVER");
   });
 
-  it("adds a cleaning by hand on any day, during a stay or between stays, and takes it away again", async () => {
-    const { addCleaning, loadCleaningCalendar, moveCleaningDay, removeCleaning } = await uc();
-    const during = await stay(onar.id, "Maria", "2030-07-02", "2030-07-09");
-    const { id } = await addCleaning(
-      {
-        roomId: onar.id,
-        day: iso("2030-07-05"),
-        start: "12:00",
-        assigneeName: " Eleni ",
-        notes: "Πετσέτες",
-        actorUserId: actorId,
-      },
-      NOW,
-    );
-    let task = await prisma.cleaningTask.findUniqueOrThrow({ where: { id } });
-    expect(task).toMatchObject({ taskType: "service", bookingId: during.id, assigneeName: "Eleni", notes: "Πετσέτες" });
-    expect(task.plannedStart?.toISOString()).toBe("2030-07-05T09:00:00.000Z");
+  it("adds S during a stay and A after a checkout, by their rules, and removes and restores them", async () => {
+    const { addCleaning, loadCleaningCalendar, moveCleaningDay, removeCleaning, restoreCleaning } = await uc();
+    const maria = await stay(onar.id, "Maria", "2030-07-02", "2030-07-09");
+    await stay(onar.id, "Nikos", "2030-07-12", "2030-07-15");
+    const add = (day: string, kind: "AA" | "A" | "S", notes: string | null = null) =>
+      addCleaning({ roomId: onar.id, day: iso(day), kind, notes, actorUserId: actorId }, NOW);
 
-    // A cleaning added by hand may move to any day from today, also in the middle of a stay.
+    // S: only on a day the guests stay all day, and moves only within the stay.
+    const { id } = await add("2030-07-05", "S", " Πετσέτες ");
+    let task = await prisma.cleaningTask.findUniqueOrThrow({ where: { id } });
+    expect(task).toMatchObject({ taskType: "service", bookingId: maria.id, notes: "Πετσέτες", assigneeName: null });
+    expect(task.plannedStart?.toISOString()).toBe("2030-07-05T08:00:00.000Z");
+    expect(await errorCode(add("2030-07-02", "S"))).toBe("CLEANING_NOT_IN_STAY");
+    expect(await errorCode(add("2030-07-10", "S"))).toBe("CLEANING_NOT_IN_STAY");
     await moveCleaningDay(
       { id, expectedVersion: task.updatedAt.toISOString(), actorUserId: actorId, day: iso("2030-07-03") },
       NOW,
     );
     task = await prisma.cleaningTask.findUniqueOrThrow({ where: { id } });
-    expect(task.plannedStart?.toISOString()).toBe("2030-07-03T09:00:00.000Z");
-
-    const after = await addCleaning(
-      {
-        roomId: onar.id,
-        day: iso("2030-07-12"),
-        start: "10:00",
-        assigneeName: null,
-        notes: null,
-        actorUserId: actorId,
-      },
-      NOW,
-    );
-    expect((await prisma.cleaningTask.findUniqueOrThrow({ where: { id: after.id } })).bookingId).toBe(during.id);
-
     expect(
       await errorCode(
-        addCleaning(
-          {
-            roomId: cosmos.id,
-            day: iso("2030-07-05"),
-            start: "10:00",
-            assigneeName: null,
-            notes: null,
-            actorUserId: actorId,
-          },
+        moveCleaningDay(
+          { id, expectedVersion: task.updatedAt.toISOString(), actorUserId: actorId, day: iso("2030-07-10") },
           NOW,
         ),
       ),
-    ).toBe("CLEANING_NO_STAY");
+    ).toBe("CLEANING_NOT_IN_STAY");
+
+    // A: Maria's checkout already has its cleaning; removed, it does not come back by itself, and is added again.
+    expect(await errorCode(add("2030-07-10", "A"))).toBe("CLEANING_ALREADY_THERE");
+    let turnover = await prisma.cleaningTask.findFirstOrThrow({ where: { bookingId: maria.id, taskType: "turnover" } });
+    const removed = await removeCleaning({
+      id: turnover.id,
+      expectedVersion: turnover.updatedAt.toISOString(),
+      actorUserId: actorId,
+    });
+    let calendar = await loadCleaningCalendar(iso("2030-07-01"), NOW);
+    expect(calendar.tasks.map((t) => t.kind)).toEqual(["S", "A"]); // Nikos's A on the 15th
+    await restoreCleaning({ id: turnover.id, expectedVersion: removed.version, actorUserId: actorId });
+    turnover = await prisma.cleaningTask.findUniqueOrThrow({ where: { id: turnover.id } });
+    expect(turnover.status).toBe("todo");
+    await removeCleaning({ id: turnover.id, expectedVersion: turnover.updatedAt.toISOString(), actorUserId: actorId });
+    expect(await errorCode(add("2030-07-13", "A"))).toBe("CLEANING_NO_CHECKOUT"); // during Nikos's stay
+    expect(await errorCode(add("2030-07-10", "AA"))).toBe("CLEANING_NO_CHANGEOVER");
+    const again = await add("2030-07-12", "A"); // up to the day Nikos arrives
+    expect(again.id).toBe(turnover.id);
+    turnover = await prisma.cleaningTask.findUniqueOrThrow({ where: { id: turnover.id } });
+    expect(turnover.status).toBe("todo");
+    expect(turnover.plannedStart?.toISOString()).toBe("2030-07-12T08:00:00.000Z");
+
+    expect(await errorCode(add("2030-06-20", "A"))).toBe("CLEANING_IN_PAST");
     expect(
       await errorCode(
-        addCleaning(
-          {
-            roomId: onar.id,
-            day: iso("2030-06-20"),
-            start: "10:00",
-            assigneeName: null,
-            notes: null,
-            actorUserId: actorId,
-          },
-          NOW,
-        ),
+        addCleaning({ roomId: cosmos.id, day: iso("2030-07-05"), kind: "A", notes: null, actorUserId: actorId }, NOW),
       ),
-    ).toBe("CLEANING_IN_PAST");
+    ).toBe("CLEANING_NO_CHECKOUT");
 
-    const calendar = await loadCleaningCalendar(iso("2030-07-01"), NOW);
+    calendar = await loadCleaningCalendar(iso("2030-07-01"), NOW);
     expect(calendar.rooms.map((r) => r.name)).toEqual(["Cosmos", "Onar"]);
-    expect(calendar.stays).toEqual([
-      expect.objectContaining({ roomId: onar.id, guestName: "Maria", checkin: "2030-07-02", checkout: "2030-07-09" }),
+    expect(calendar.stays.map((s) => s.guestName)).toEqual(["Maria", "Nikos"]);
+    expect(calendar.tasks.map((t) => [t.day, t.kind, t.movable])).toEqual([
+      ["2030-07-03", "S", { from: "2030-07-03", to: "2030-07-08" }],
+      ["2030-07-12", "A", { from: "2030-07-09", to: "2030-07-12" }],
+      ["2030-07-15", "A", { from: "2030-07-15", to: null }],
     ]);
-    expect(calendar.tasks.map((t) => t.day).sort()).toEqual(["2030-07-03", "2030-07-12"]);
-    expect(calendar.cleaners).toEqual(["Eleni"]);
+  });
 
-    await removeCleaning({ id, expectedVersion: task.updatedAt.toISOString(), actorUserId: actorId });
-    expect((await prisma.cleaningTask.findUniqueOrThrow({ where: { id } })).status).toBe("cancelled");
+  it("puts an A-A by hand only on the day of a changeover whose cleaning was taken away", async () => {
+    const { addCleaning } = await uc();
+    const maria = await stay(onar.id, "Maria", "2030-07-02", "2030-07-05");
+    await stay(onar.id, "Nikos", "2030-07-05", "2030-07-08");
+    expect(
+      await errorCode(
+        addCleaning({ roomId: onar.id, day: iso("2030-07-05"), kind: "AA", notes: null, actorUserId: actorId }, NOW),
+      ),
+    ).toBe("CLEANING_ALREADY_THERE");
+    await prisma.cleaningTask.updateMany({ where: { bookingId: maria.id }, data: { status: "cancelled" } });
+    await addCleaning({ roomId: onar.id, day: iso("2030-07-05"), kind: "AA", notes: null, actorUserId: actorId }, NOW);
+    expect((await taskOf(maria.id)).status).toBe("todo");
   });
 });

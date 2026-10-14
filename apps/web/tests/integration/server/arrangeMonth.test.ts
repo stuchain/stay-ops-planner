@@ -139,7 +139,7 @@ describe("arrange the month", () => {
     expect(await proposeArrangement("2030-05", NOW)).toEqual({ month: "2030-05-01", placements: [], unplaced: [] });
   });
 
-  it("applies the whole preview with audit rows, and no cleanings without a same-day arrival", async () => {
+  it("applies the whole preview with audit rows and a cleaning for each checkout", async () => {
     await room("Onar", 2);
     await room("Iris", 2);
     const a = await booking("A", "2030-07-01", "2030-07-05");
@@ -159,8 +159,8 @@ describe("arrange the month", () => {
     }
     expect(new Set(rows.map((r) => r.assignments[0]?.roomId)).size).toBe(2);
     expect(await prisma.auditEvent.count({ where: { action: "booking.arrange" } })).toBe(2);
-    // Cleanings come by themselves only for same-day changeovers; these two have none.
-    expect(await prisma.cleaningTask.count({ where: { taskType: TURNOVER_TASK_TYPE } })).toBe(0);
+    // Every checkout gets its cleaning by itself.
+    expect(await prisma.cleaningTask.count({ where: { taskType: TURNOVER_TASK_TYPE } })).toBe(2);
   });
 
   it("saves nothing when a booking changed after the preview", async () => {

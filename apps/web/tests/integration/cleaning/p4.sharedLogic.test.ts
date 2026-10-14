@@ -6,6 +6,7 @@ import {
   cancelOpenTurnoverTasks,
   ensureTurnoverCleaningTask,
   PrismaClient,
+  TURNOVER_REMOVED_PREFIX,
   validateCleaningSchedule,
 } from "@stay-ops/db";
 import { addTurnoverTask, makeAssignment, makeBooking, makeRoom } from "../helpers/cleaningFixtures";
@@ -116,24 +117,65 @@ describe("cleaning shared logic (P4-2)", () => {
     });
   });
 
-  describe("automatic cleanings are for same-day changeovers only", () => {
-    it("adds none for a checkout with nobody arriving that day", async () => {
+  describe("every checkout gets its cleaning; a changeover's stays on its day", () => {
+    const day = (bookingId: string) => turnover(bookingId).then((t) => t.plannedStart?.toISOString());
+
+    it("adds one for a checkout with nobody arriving that day", async () => {
       const room = await makeRoom(prisma, "AU1");
       const out = await stay(room.id, "au-out", "2026-07-10", "2026-07-15");
       await stay(room.id, "au-later", "2026-07-17", "2026-07-20");
       await ensure(out.id, room.id, out.checkoutDate);
-      expect(await prisma.cleaningTask.count({ where: { bookingId: out.id } })).toBe(0);
+      expect(await day(out.id)).toBe("2026-07-15T08:00:00.000Z");
     });
 
-    it("adds the cleaning for the stay before when an arrival makes it a changeover", async () => {
+    it("puts a moved cleaning back on the checkout day when an arrival makes it a changeover", async () => {
       const room = await makeRoom(prisma, "AU2");
       const out = await stay(room.id, "au2-out", "2026-07-10", "2026-07-15");
       await ensure(out.id, room.id, out.checkoutDate);
-      expect(await prisma.cleaningTask.count({ where: { bookingId: out.id } })).toBe(0);
+      const task = await turnover(out.id);
+      await prisma.cleaningTask.update({
+        where: { id: task.id },
+        data: { plannedStart: new Date("2026-07-17T08:00:00.000Z"), plannedEnd: new Date("2026-07-17T10:00:00.000Z") },
+      });
+      await ensure(out.id, room.id, out.checkoutDate);
+      expect(await day(out.id)).toBe("2026-07-17T08:00:00.000Z"); // still fits, so it stays moved
+
       const next = await stay(room.id, "au2-in", "2026-07-15", "2026-07-18");
       await ensure(next.id, room.id, next.checkoutDate);
-      expect((await turnover(out.id)).plannedStart?.toISOString()).toBe("2026-07-15T08:00:00.000Z");
-      expect(await prisma.cleaningTask.count({ where: { bookingId: next.id } })).toBe(0);
+      expect(await day(out.id)).toBe("2026-07-15T08:00:00.000Z");
+      expect(await day(next.id)).toBe("2026-07-18T08:00:00.000Z");
+    });
+
+    it("puts a moved cleaning back when a new stay covers the day it was moved to", async () => {
+      const room = await makeRoom(prisma, "AU3");
+      const out = await stay(room.id, "au3-out", "2026-07-10", "2026-07-15");
+      await ensure(out.id, room.id, out.checkoutDate);
+      const task = await turnover(out.id);
+      await prisma.cleaningTask.update({
+        where: { id: task.id },
+        data: { plannedStart: new Date("2026-07-20T08:00:00.000Z"), plannedEnd: new Date("2026-07-20T10:00:00.000Z") },
+      });
+      const later = await stay(room.id, "au3-later", "2026-07-18", "2026-07-22");
+      await ensure(later.id, room.id, later.checkoutDate);
+      expect(await day(out.id)).toBe("2026-07-15T08:00:00.000Z");
+    });
+
+    it("keeps a removed cleaning away until its day becomes a changeover", async () => {
+      const room = await makeRoom(prisma, "AU4");
+      const out = await stay(room.id, "au4-out", "2026-07-10", "2026-07-15");
+      await ensure(out.id, room.id, out.checkoutDate);
+      const task = await turnover(out.id);
+      await prisma.cleaningTask.update({
+        where: { id: task.id },
+        data: { status: "cancelled", sourceEventId: `${TURNOVER_REMOVED_PREFIX}${task.sourceEventId}` },
+      });
+      await ensure(out.id, room.id, out.checkoutDate);
+      expect((await turnover(out.id)).status).toBe("cancelled");
+      const next = await stay(room.id, "au4-in", "2026-07-15", "2026-07-18");
+      await ensure(next.id, room.id, next.checkoutDate);
+      const back = await turnover(out.id);
+      expect(back.status).toBe("todo");
+      expect(back.sourceEventId?.startsWith(TURNOVER_REMOVED_PREFIX)).toBe(false);
     });
   });
 

@@ -58,6 +58,8 @@ function task(over: Partial<TurnoverTask> & Pick<TurnoverTask, "id">): TurnoverT
     notes: null,
     version: "2030-06-09T10:00:00.000Z",
     conflictsWith: [],
+    kind: "AA",
+    movable: null,
     ...over,
   };
 }

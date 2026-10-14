@@ -110,10 +110,10 @@ describe("calendar range and move command", () => {
     const db = await prisma.booking.findUniqueOrThrow({ where: { id: b.id } });
     expect(db.version).toBe(result.booking.version);
     expect(await prisma.auditEvent.count({ where: { action: "booking.move", entityId: b.id } })).toBe(1);
-    // Nobody arrives the day Maria leaves, so no cleaning by itself; placing a guest who arrives that day adds it.
+    // Every checkout gets its cleaning by itself, and only one.
     const turnovers = () =>
       prisma.cleaningTask.count({ where: { bookingId: b.id, taskType: TURNOVER_TASK_TYPE, roomId: onar.id } });
-    expect(await turnovers()).toBe(0);
+    expect(await turnovers()).toBe(1);
     const nikos = await booking("Nikos", "2030-07-05", "2030-07-08");
     await move({ bookingId: nikos.id, roomId: onar.id, expectedVersion: 0 });
     expect(await turnovers()).toBe(1);

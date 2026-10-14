@@ -1,15 +1,26 @@
 import { createHash } from "node:crypto";
 import { BookingStatus, Prisma } from "@prisma/client";
-import { dateOnlyToDay, DEFAULT_CHECKOUT_TIME, zonedTimeToUtc } from "./settings.js";
+import { dateOnlyToDay, DEFAULT_CHECKOUT_TIME, utcToZonedDay, zonedTimeToUtc } from "./settings.js";
+
+/** The business-time-zone day of an instant, as the midnight-UTC time a date column holds. */
+function zonedDayAsDate(instant: Date): number {
+  return new Date(`${utcToZonedDay(instant)}T00:00:00Z`).getTime();
+}
 
 export const TURNOVER_TASK_TYPE = "turnover";
 export const TURNOVER_MINUTES = 120;
 
 /**
- * Key prefix of an automatic cleaning cancelled because its checkout is not a same-day changeover. It only comes
- * back when the day becomes a changeover, not just because the booking is placed again.
+ * Key prefix of an automatic cleaning cancelled on 2026-10-14 while only same-day changeovers got one. Every
+ * checkout gets one again, so these come back like any cancelled cleaning.
  */
 export const TURNOVER_SET_ASIDE_PREFIX = "set-aside:";
+
+/**
+ * Key prefix of an automatic cleaning someone removed. It stays away when the booking is placed again, and only
+ * comes back by itself when the day becomes a same-day changeover, which always gets a cleaning.
+ */
+export const TURNOVER_REMOVED_PREFIX = "removed:";
 
 /**
  * Default turnover window for a checkout day: starts at the checkout time (11:00) on that calendar day in the
@@ -46,10 +57,10 @@ export async function cancelOpenTurnoverTasks(tx: Prisma.TransactionClient, book
 }
 
 /**
- * Keeps the automatic cleanings in step after a booking is placed or changed. Cleanings are added automatically
- * only for a same-day changeover: the guest leaves and the next one arrives the same day in the same apartment
- * (Stelios, 2026-10-14). Every other cleaning is added by hand. So this looks after the booking's own checkout and
- * after the stay that ends on its arrival day, which may have just become a changeover.
+ * Keeps the automatic cleanings in step after a booking is placed or changed. Every checkout gets one (Stelios,
+ * 2026-10-14): A-A when the next guest arrives the same day, fixed to that day; A otherwise, which can move to a
+ * later day up to the next arrival. So this looks after the booking's own checkout and after the stay that ended
+ * last before each of its arrivals, whose cleaning may now be a changeover or sit inside the new stay.
  */
 export async function ensureTurnoverCleaningTask(
   tx: Prisma.TransactionClient,
@@ -71,9 +82,10 @@ export async function ensureTurnoverCleaningTask(
       where: {
         roomId: arrival.roomId,
         bookingId: { not: params.bookingId },
-        endDate: arrival.startDate,
+        endDate: { lte: arrival.startDate },
         booking: { status: { not: BookingStatus.cancelled } },
       },
+      orderBy: [{ endDate: "desc" }, { id: "asc" }],
       select: { bookingId: true, roomId: true, endDate: true },
     });
     if (before) {
@@ -99,11 +111,30 @@ export async function isSameDayChangeover(
   return next !== null;
 }
 
+/** The first arrival in the apartment on or after a checkout, by another guest whose booking still stands. */
+export async function nextArrivalAfter(
+  tx: Prisma.TransactionClient,
+  params: { bookingId: string; roomId: string; checkoutDate: Date },
+): Promise<Date | null> {
+  const next = await tx.assignment.findFirst({
+    where: {
+      roomId: params.roomId,
+      bookingId: { not: params.bookingId },
+      startDate: { gte: params.checkoutDate },
+      booking: { status: { not: BookingStatus.cancelled } },
+    },
+    orderBy: [{ startDate: "asc" }, { id: "asc" }],
+    select: { startDate: true },
+  });
+  return next?.startDate ?? null;
+}
+
 /**
  * At most one turnover cleaning task per assigned booking (DB partial unique on booking_id where turnover).
  * Skips cancelled bookings, a missing assignment, or a finished task; a cancelled task comes back when the booking
- * is placed again. Times set by hand are kept while the checkout day is the same. A new task is only made for a
- * same-day changeover.
+ * is placed again, unless someone removed it and the day is not a same-day changeover. A day moved by hand is
+ * kept while it still fits: on or after the checkout, not after the next arrival, and on the checkout day itself
+ * when that is a changeover.
  */
 async function ensureOwnTurnover(
   tx: Prisma.TransactionClient,
@@ -150,18 +181,22 @@ async function ensureOwnTurnover(
     if (existing.status === "done") {
       return;
     }
-    if (
-      existing.status === "cancelled" &&
-      existing.sourceEventId?.startsWith(TURNOVER_SET_ASIDE_PREFIX) &&
-      !(await isSameDayChangeover(tx, params))
-    ) {
+    const next = await nextArrivalAfter(tx, params);
+    const changeover = next !== null && next.getTime() === params.checkoutDate.getTime();
+    if (existing.status === "cancelled" && existing.sourceEventId?.startsWith(TURNOVER_REMOVED_PREFIX) && !changeover) {
       return;
     }
-    // A manual reschedule stays unless the checkout moved. The key carries the checkout day, so it tells
-    // whether the stored times were made for this checkout.
+    // A manual reschedule stays unless the checkout moved or the day no longer fits. The key carries the checkout
+    // day, so it tells whether the stored times were made for this checkout.
     const sameCheckout =
       existing.sourceEventId === turnoverSourceEventId(params.bookingId, params.checkoutDate, existing.roomId);
-    const keepTimes = sameCheckout && existing.plannedStart !== null && existing.plannedEnd !== null;
+    const day = existing.plannedStart ? zonedDayAsDate(existing.plannedStart) : null;
+    const fits =
+      day !== null &&
+      day >= params.checkoutDate.getTime() &&
+      (next === null || day <= next.getTime()) &&
+      (!changeover || day === params.checkoutDate.getTime());
+    const keepTimes = sameCheckout && fits && existing.plannedEnd !== null;
     await tx.cleaningTask.update({
       where: { id: existing.id },
       data: {
@@ -172,10 +207,6 @@ async function ensureOwnTurnover(
         sourceEventId,
       },
     });
-    return;
-  }
-
-  if (!(await isSameDayChangeover(tx, params))) {
     return;
   }
 

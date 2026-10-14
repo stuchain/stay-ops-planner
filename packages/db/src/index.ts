@@ -21,6 +21,8 @@ export {
   cancelOpenTurnoverTasks,
   ensureTurnoverCleaningTask,
   isSameDayChangeover,
+  nextArrivalAfter,
+  TURNOVER_REMOVED_PREFIX,
   TURNOVER_SET_ASIDE_PREFIX,
   computeTurnoverPlannedWindowUTC,
   turnoverSourceEventId,

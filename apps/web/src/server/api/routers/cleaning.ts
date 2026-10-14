@@ -8,6 +8,7 @@ import {
   loadTurnovers,
   moveCleaningDay,
   removeCleaning,
+  restoreCleaning,
   rescheduleTurnover,
   SCHEDULE_PAGE_DAYS,
   setTurnoverAssignee,
@@ -47,8 +48,7 @@ export const cleaningRouter = createTRPCRouter({
       z.object({
         roomId: z.string().min(1),
         day,
-        start: z.string().length(5),
-        assigneeName: z.string().max(80).nullable(),
+        kind: z.enum(["AA", "A", "S"]),
         notes: z.string().max(300).nullable(),
       }),
     )
@@ -58,6 +58,11 @@ export const cleaningRouter = createTRPCRouter({
   remove: operatorProcedure
     .input(z.object(change))
     .mutation(({ ctx, input }) => removeCleaning({ ...input, actorUserId: ctx.user.userId })),
+
+  /** Puts back a cleaning just removed. */
+  restore: operatorProcedure
+    .input(z.object(change))
+    .mutation(({ ctx, input }) => restoreCleaning({ ...input, actorUserId: ctx.user.userId })),
 
   /** To do, started or done. */
   setStatus: operatorProcedure

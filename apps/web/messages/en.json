@@ -77,7 +77,10 @@
     "TASK_CLOSED": "This cleaning is closed and cannot be changed.",
     "CLEANING_DOES_NOT_FIT": "That time does not fit. It has to be after the guest leaves and before the next guest arrives.",
     "CLEANING_IN_PAST": "A cleaning can't go on a day that has passed. Pick today or later.",
-    "CLEANING_NO_STAY": "This apartment has no bookings yet, so a cleaning can't be added.",
+    "CLEANING_NOT_IN_STAY": "A service goes on a day the guests are staying, not the day they arrive or leave.",
+    "CLEANING_NO_CHECKOUT": "An A goes after a guest leaves, up to the day the next guest arrives. It does not fit on this day.",
+    "CLEANING_NO_CHANGEOVER": "An A-A goes only on a day when one guest leaves and another arrives.",
+    "CLEANING_ALREADY_THERE": "This checkout already has its cleaning. Drag it to the day you want.",
     "CLEANING_CHANGEOVER": "This cleaning stays: the next guest arrives the same day."
   },
   "nav": {
@@ -1484,14 +1487,11 @@
     "upTo": "up to {count} guests",
     "nights": "{count, plural, one {# night} other {# nights}}",
     "addAt": "Cleaning in {room}, {date}",
-    "tag": "Cleaning {room}, {date}, {time}",
-    "sameDay": "the next guest arrives the same day",
+    "tag": "Cleaning {kind} in {room}, {date}",
     "legend": {
-      "auto": "Added by itself when one guest leaves and another arrives the same day",
-      "added": "Added by you",
       "done": "Done"
     },
-    "hint": "Click a day on an apartment's row to add a cleaning there. Drag a cleaning to move it to another day.",
+    "hint": "Click a day to add a cleaning, or the + on a booking for a service. Drag a cleaning to another day. The × removes it.",
     "prevDay": "Previous day",
     "nextDay": "Next day",
     "context": {
@@ -1503,31 +1503,54 @@
     "add": {
       "title": "New cleaning in {room}",
       "day": "Which day",
-      "time": "What time",
-      "morning": "Morning",
-      "noon": "Midday",
-      "afternoon": "Afternoon",
-      "otherName": "Another name",
-      "whoUnknown": "Not sure yet",
       "note": "Note (optional)",
       "notePlaceholder": "e.g. Windows, change sheets",
       "save": "Add cleaning",
-      "saved": "The cleaning was added."
+      "saved": "The cleaning was added.",
+      "kind": "What kind",
+      "notHere": {
+        "AA": "Only on a day when one guest leaves and another arrives.",
+        "A": "Only after a guest leaves, until the next one arrives.",
+        "S": "Only on a day guests are staying."
+      },
+      "alreadyThere": "This checkout already has its cleaning, {date}."
     },
     "detail": {
       "title": "Cleaning in {room}",
       "day": "Day",
       "locked": "It stays on this day: the next guest arrives the same day.",
-      "remove": "Remove cleaning",
-      "removeQuestion": "Remove this cleaning?",
       "removed": "The cleaning was removed.",
-      "moved": "The cleaning moved to {date}."
+      "moved": "The cleaning moved to {date}.",
+      "kind": "Kind",
+      "movableUntil": "Can move up to {date}, when the next guest arrives.",
+      "movableOpen": "Can move to any later day.",
+      "movableStay": "Can move to another day of the stay, up to {date}.",
+      "restored": "The cleaning is back."
     },
     "drag": {
       "help": "Drag the cleaning with the mouse to another day, or open it to change the day with the buttons.",
       "start": "Picked up the cleaning.",
       "end": "Dropped the cleaning on a new day.",
       "cancel": "The cleaning stayed where it was."
-    }
+    },
+    "kinds": {
+      "AA": {
+        "short": "A-A",
+        "name": "Leaves and arrives",
+        "help": "One guest leaves and another arrives the same day. Added by itself and stays on that day."
+      },
+      "A": {
+        "short": "A",
+        "name": "Leaves",
+        "help": "Added by itself when a guest leaves. Can move to a later day, until the next guest arrives."
+      },
+      "S": {
+        "short": "S",
+        "name": "Service",
+        "help": "A cleaning while guests are staying. Add it with the + on the booking."
+      }
+    },
+    "addService": "Service during {guest}'s stay",
+    "removeTag": "Remove cleaning {kind}, {date}"
   }
 }
