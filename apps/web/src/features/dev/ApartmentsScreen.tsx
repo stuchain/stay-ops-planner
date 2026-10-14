@@ -24,6 +24,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { ApartmentRow } from "@/api/types";
+import { compactFieldClass } from "@/ui/field";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
@@ -54,7 +55,7 @@ function draftOf(row: ApartmentRow): Draft {
   };
 }
 
-const field = "border-border bg-surface min-h-target rounded-sm border px-3 text-base";
+const field = compactFieldClass;
 
 function EditPanel({ row, onClose }: { row: ApartmentRow | null; onClose: () => void }) {
   const t = useTranslations("dev.apartments");
@@ -100,7 +101,7 @@ function EditPanel({ row, onClose }: { row: ApartmentRow | null; onClose: () => 
     >
       {draft ? (
         <form onSubmit={submit} className="flex flex-col gap-5">
-          <label className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-2">
             <span className="font-medium">{t("name")}</span>
             <input
               className={field}
@@ -110,16 +111,16 @@ function EditPanel({ row, onClose }: { row: ApartmentRow | null; onClose: () => 
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
           </label>
-          <label className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-2">
             <span className="font-medium">{t("color")}</span>
             <input
               type="color"
-              className="border-border h-12 w-24 rounded-sm border"
+              className="border-border h-12 w-24 rounded-sm border-2"
               value={draft.color}
               onChange={(e) => setDraft({ ...draft, color: e.target.value })}
             />
           </label>
-          <label className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-2">
             <span className="font-medium">{t("capacity")}</span>
             <input
               type="number"
@@ -214,7 +215,7 @@ function Row({
         </div>
       </td>
       <td className="px-3 py-2">
-        <ApartmentChip name={row.name} color={row.color ?? NEUTRAL} inactive={!row.isActive} />
+        <ApartmentChip name={row.name} color={row.color} inactive={!row.isActive} />
       </td>
       <td className="px-3 py-2 tabular-nums">{row.capacity ?? t("notSet")}</td>
       <td className="px-3 py-2">{row.preferredForLargeParty ? t("yes") : t("no")}</td>
@@ -303,7 +304,7 @@ export function ApartmentsScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       {setUpCount > 0 ? (
         <p role="status" className="bg-warning-soft text-warning-text rounded-card p-4 font-medium">

@@ -13,7 +13,6 @@ import { dateAt, dayIndex, monthsBetween, type DrawnDaysStore, type Span } from 
 
 /** Width of the sticky apartment column (ApartmentRow's label cell, w-52). */
 export const LABEL_WIDTH = 208;
-const NEUTRAL = "#5B5852";
 
 export type DropState = { state: "free" | "busy"; guest?: string } | null;
 
@@ -88,7 +87,7 @@ function DayHeader({
               key={date}
               className={cn(
                 "border-border absolute top-8 flex h-11 flex-col items-center justify-center border-l text-xs leading-tight",
-                isToday ? "bg-accent font-bold text-white" : (weekday === 0 || weekday === 6) && "bg-surface-muted",
+                isToday ? "bg-accent font-bold text-on-accent" : (weekday === 0 || weekday === 6) && "bg-surface-muted",
               )}
               style={{ left: i * dayWidth, width: dayWidth }}
               title={isOverbooked ? t("calendar.overbooked") : undefined}
@@ -146,7 +145,7 @@ const RoomTrack = memo(function RoomTrack({
     <div ref={setNodeRef}>
       <ApartmentRow
         name={room.name}
-        color={room.color ?? NEUTRAL}
+        color={room.color}
         capacity={room.capacity ?? 0}
         capacityLabel={() =>
           room.capacity === null ? t("common.noCapacity") : t("common.upToPeople", { count: room.capacity })
@@ -167,7 +166,7 @@ const RoomTrack = memo(function RoomTrack({
             <div
               key={g.start}
               data-testid="gap-nights"
-              className="border-warning bg-warning-soft text-warning-text text-base pointer-events-none absolute top-4 flex h-14 items-center justify-center overflow-hidden rounded-[10px] border-2 border-dashed px-1 font-semibold"
+              className="border-warning bg-warning-soft text-warning-text text-base pointer-events-none absolute top-4 flex h-14 items-center justify-center overflow-hidden rounded-sm border-2 border-dashed px-1 font-semibold"
               style={{
                 left: (dayIndex(span, g.start) + 0.5) * dayWidth + 2,
                 width: g.nights * dayWidth - 4,
@@ -183,7 +182,7 @@ const RoomTrack = memo(function RoomTrack({
           {rowBlocks.map((b) => (
             <div
               key={b.id}
-              className="border-text-muted bg-surface-muted text-text-muted text-xs absolute top-4 flex h-14 items-center overflow-hidden rounded-[10px] border-2 border-dashed px-3"
+              className="border-text-muted bg-surface-muted text-text-muted text-xs absolute top-4 flex h-14 items-center overflow-hidden rounded-sm border-2 border-dashed px-3"
               style={{
                 left: (dayIndex(span, b.start) + 0.5) * dayWidth + 2,
                 width: (dayIndex(span, b.end) - dayIndex(span, b.start)) * dayWidth - 4,
@@ -226,7 +225,7 @@ const RoomTrack = memo(function RoomTrack({
                 onClick={() => onOpen(b.id)}
                 aria-label={label}
                 title={label}
-                className="border-accent bg-accent-soft text-accent text-sm absolute top-4 flex h-14 items-center overflow-hidden rounded-[10px] border-2 border-dashed px-3 font-semibold"
+                className="border-accent bg-accent-soft text-accent text-sm absolute top-4 flex h-14 items-center overflow-hidden rounded-sm border-2 border-dashed px-3 font-semibold"
                 style={{ left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2, width }}
               >
                 <span className="truncate">{barName(guest, width + 36)}</span>
@@ -282,7 +281,7 @@ function PastUnplacedRow({
       data-testid="past-unplaced-row"
     >
       <div
-        className="border-border bg-surface-muted sticky left-0 z-10 flex w-52 flex-none flex-col justify-center gap-0.5 border-r px-4"
+        className="border-border bg-surface-muted sticky left-0 z-10 flex w-52 flex-none flex-col justify-center gap-1 border-r px-4"
         style={{ width: LABEL_WIDTH }}
       >
         <span className="text-base font-semibold">{t("pastUnplaced")}</span>

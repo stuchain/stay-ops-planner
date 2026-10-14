@@ -17,7 +17,7 @@ import { Button, buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 import { Skeleton } from "@/ui/Skeleton";
 import { showToast } from "@/ui/Toast";
-import { ChoiceGroup } from "../settings/ChoiceGroup";
+import { ChoiceGroup } from "@/ui/ChoiceGroup";
 
 export type GuestMessageProps = {
   booking: CalendarBooking;

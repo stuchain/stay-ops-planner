@@ -7,6 +7,7 @@ import { useId, useState, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { FamilyMemberData } from "@/api/types";
+import { fieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { cn } from "@/ui/cn";
@@ -17,7 +18,7 @@ import { showToast } from "@/ui/Toast";
 /** Same as PASSWORD_MIN_LENGTH on the server; the server has the final word. */
 const MIN_LENGTH = 8;
 
-const inputClass = "min-h-button border-border bg-surface text-text w-full max-w-md rounded-sm border-2 px-4 text-base";
+const inputClass = `${fieldClass} w-full max-w-md`;
 
 function MemberRow({ member }: { member: FamilyMemberData }) {
   const t = useTranslations("family");
@@ -155,7 +156,7 @@ export function FamilyCard() {
             </p>
           ) : null}
           <div>
-            <Button type="submit" variant="primary" size="lg" icon={UserPlus} loading={add.isPending}>
+            <Button type="submit" variant="secondary" size="lg" icon={UserPlus} loading={add.isPending}>
               {t("add")}
             </Button>
           </div>

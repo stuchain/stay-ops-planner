@@ -17,7 +17,7 @@ import { Skeleton } from "@/ui/Skeleton";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-border flex flex-col gap-0.5 border-b py-3">
+    <div className="border-border flex flex-col gap-1 border-b py-3">
       <dt className="text-text-muted text-base">{label}</dt>
       <dd className="text-xl font-semibold break-words">{children}</dd>
     </div>
@@ -52,9 +52,9 @@ function Card({ card }: { card: ArrivalCardData }) {
       className="bg-surface border-border rounded-card flex flex-col gap-4 border p-8 shadow-card print:break-after-page print:rounded-none print:border-0 print:p-0 print:shadow-none print:last:break-after-auto"
     >
       <p className="text-text-muted text-lg font-semibold tracking-wide uppercase">{t("cardTitle")}</p>
-      <h2 className="text-4xl font-bold break-words">{name}</h2>
+      <h2 className="text-2xl font-bold break-words">{name}</h2>
       <ReturningLines previous={card.previousStays} />
-      <dl className="grid grid-cols-2 gap-x-8 max-[759px]:grid-cols-1">
+      <dl className="grid grid-cols-2 gap-x-8 phone:grid-cols-1">
         <Row label={t("checkin")}>
           <DateText date={card.checkin as IsoDate} withYear locale={locale as "el" | "en"} />
         </Row>
@@ -102,7 +102,7 @@ export function ArrivalCardsScreen({ ids }: { ids: string[] }) {
   const cards = useQuery({ ...trpc.booking.arrivalCards.queryOptions({ ids }), enabled: ids.length > 0 });
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4 print:p-0">
+    <div className="flex flex-col gap-6 p-8 phone:p-4 print:p-0">
       <PageHeader
         className="print:hidden"
         title={t("title")}

@@ -57,11 +57,11 @@ type Editing = { seed: string | null };
 
 const cell =
   "h-[22px] border-r border-b border-r-[#C6C6C6] border-b-[#9A9A9A] border-dotted px-1 whitespace-nowrap overflow-hidden";
-const thickLeft = "border-l-2 border-l-black";
-const thickRight = "border-r-[3px] border-r-black";
+const thickLeft = "border-l-2 border-l-ink";
+const thickRight = "border-r-[3px] border-r-ink";
 const stickyRn = "sticky left-0 z-[2] w-10 text-center text-xs " + XL.head;
 const stickyA = "sticky left-10 z-[2] w-2 p-0 " + XL.stripe;
-const stickyB = "sticky left-12 z-[2] text-left border-r-2 border-r-black";
+const stickyB = "sticky left-12 z-[2] text-left border-r-2 border-r-ink";
 
 /** "Σαν το Excel": every booking of the year in the father's spreadsheet layout, typed into like Excel. */
 export function ExcelSheet({
@@ -239,11 +239,11 @@ export function ExcelSheet({
     ledger.tax.scope === "per_apartment" ? ledger.tax.calculations.map((c) => c.taxCents) : [null, null, null, null];
 
   return (
-    <div className="rounded-card border-border shadow-card flex min-w-0 flex-col overflow-hidden border bg-white text-black">
+    <div className="rounded-card border-border shadow-card flex min-w-0 flex-col overflow-hidden border bg-paper text-ink">
       <div className="flex flex-wrap items-center gap-2 border-b border-[#D4D4D4] bg-[#FAFAFA] p-2" style={SHEET_FONT}>
         <output
           aria-label={t("income.sheet.nameBox")}
-          className="w-16 border border-[#C8C8C8] bg-white px-1.5 py-1 text-center font-bold"
+          className="w-16 border border-[#C8C8C8] bg-white px-2 py-1 text-center font-bold"
         >
           {nameBox}
         </output>
@@ -319,7 +319,7 @@ export function ExcelSheet({
               <col
                 key={c.field}
                 // On a phone the name column is narrower, so some amounts show beside it.
-                className={c.kind === "name" ? "w-[230px] max-[759px]:w-[150px]" : undefined}
+                className={c.kind === "name" ? "w-[230px] phone:w-[150px]" : undefined}
                 style={c.kind === "name" ? undefined : { width: c.width }}
               />
             ))}
@@ -348,15 +348,11 @@ export function ExcelSheet({
             </tr>
             <tr>
               <th
-                className={cn(
-                  cell,
-                  stickyRn,
-                  "sticky top-[22px] z-[4] h-11 border-b-[3px] border-solid border-b-black",
-                )}
+                className={cn(cell, stickyRn, "sticky top-[22px] z-[4] h-11 border-b-[3px] border-solid border-b-ink")}
               >
                 {1}
               </th>
-              <th className={cn(cell, stickyA, "sticky top-[22px] z-[4] border-b-[3px] border-solid border-b-black")} />
+              <th className={cn(cell, stickyA, "sticky top-[22px] z-[4] border-b-[3px] border-solid border-b-ink")} />
               {SHEET_COLUMNS.map((c, i) => {
                 const apartment = i >= 11 ? ledger.apartments[i - 11] : null;
                 return (
@@ -365,7 +361,7 @@ export function ExcelSheet({
                     scope="col"
                     className={cn(
                       cell,
-                      "sticky top-[22px] z-[3] h-11 border-b-[3px] border-solid border-b-black bg-white pb-0.5 align-bottom text-[13px] leading-none font-bold whitespace-normal",
+                      "sticky top-[22px] z-[3] h-11 border-b-[3px] border-solid border-b-ink bg-white pb-1 align-bottom text-[13px] leading-none font-bold whitespace-normal",
                       i === 0 ? cn(stickyB, "z-[4]") : "text-center",
                       c.thick === "left" && thickLeft,
                       c.thick === "right" && thickRight,
@@ -382,7 +378,7 @@ export function ExcelSheet({
                   </th>
                 );
               })}
-              <th className={cn(cell, "sticky top-[22px] z-[3] border-b-[3px] border-solid border-b-black bg-white")} />
+              <th className={cn(cell, "sticky top-[22px] z-[3] border-b-[3px] border-solid border-b-ink bg-white")} />
             </tr>
           </thead>
           <tbody>
@@ -502,7 +498,7 @@ export function ExcelSheet({
                             onBlur={(e) => {
                               if (editing) finishEdit(e.currentTarget.value, 0, 0);
                             }}
-                            className="h-5 w-full bg-white px-0.5 text-inherit shadow-[inset_0_0_0_2px_#217346] outline-none"
+                            className="h-5 w-full bg-white px-1 text-inherit shadow-[inset_0_0_0_2px_#217346] outline-none"
                             style={{ textAlign: i === 0 ? "left" : "center" }}
                           />
                         ) : (
@@ -523,7 +519,7 @@ export function ExcelSheet({
             })}
           </tbody>
           <tfoot className="[&_td]:h-[22px] [&_td]:px-1 [&_td]:text-center [&_td]:whitespace-nowrap">
-            <tr className="[&>*]:border-t-2 [&>*]:border-t-black">
+            <tr className="[&>*]:border-t-2 [&>*]:border-t-ink">
               <th scope="row" className={cn(stickyRn, "border-solid")} />
               <td className={stickyA} />
               <th scope="row" className={cn(stickyB, "px-1 text-[13px] font-normal text-[#555555]")}>

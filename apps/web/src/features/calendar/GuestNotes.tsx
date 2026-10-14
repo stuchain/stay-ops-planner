@@ -8,15 +8,14 @@ import { useErrorText } from "@/api/errors";
 import { useOnline } from "@/api/online";
 import { useCanChange } from "@/features/shell/role";
 import type { PreviousStays } from "@/api/types";
+import { fieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { formatMonthYear, type UiLocale } from "@/ui/format";
 import { showToast } from "@/ui/Toast";
 
 const MAX_LENGTH = 2000;
 
-const inputClass =
-  "min-h-24 rounded-sm border border-border bg-surface px-4 py-2 text-base text-text w-full " +
-  "placeholder:text-text-muted";
+const inputClass = `${fieldClass.replace("min-h-button", "min-h-24")} w-full`;
 
 type Stay = PreviousStays["sure"][number];
 

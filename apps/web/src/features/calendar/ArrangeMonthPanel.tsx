@@ -18,8 +18,6 @@ import { Skeleton } from "@/ui/Skeleton";
 import { showToast } from "@/ui/Toast";
 import { recommendationText } from "./recommendation";
 
-const NEUTRAL = "#5B5852";
-
 export type ArrangeMonthPanelProps = {
   /** First day of the month to arrange, or null when the panel is closed. */
   month: IsoDate | null;
@@ -49,7 +47,7 @@ function PlacementRow({ placement, rooms }: { placement: ArrangePlacement; rooms
         </span>
         <span className="flex items-center gap-2">
           <ArrowRight size={20} aria-hidden="true" />
-          <ApartmentChip name={room?.name ?? ""} color={room?.color ?? NEUTRAL} />
+          <ApartmentChip name={room?.name ?? ""} color={room?.color} />
         </span>
       </div>
       <span className={small ? "text-warning-text text-sm font-semibold" : "text-text-muted text-sm"}>{note}</span>
@@ -161,7 +159,7 @@ export function ArrangeMonthPanel({ month, rooms, onPreview, onClose }: ArrangeM
       onOpenChange={(next) => (next ? undefined : onClose())}
       title={
         <span className="flex items-center gap-2">
-          <Wand2 size={22} aria-hidden="true" />
+          <Wand2 size={24} aria-hidden="true" />
           {t("title", { month: monthName })}
         </span>
       }

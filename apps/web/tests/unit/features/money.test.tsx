@@ -155,10 +155,10 @@ describe("IncomeScreen", () => {
     expect(warning).toHaveTextContent("12 κρατήσεις δεν μετράνε σε διαμέρισμα");
     // Statistics is for Dev mode only.
     expect(screen.getByRole("link", { name: "Στατιστικά" })).toHaveAttribute("href", "/app/stats");
-    const excel = screen.getByRole("button", { name: "Σαν το Excel" });
-    expect(excel).toHaveAttribute("aria-pressed", "false");
+    const excel = screen.getByRole("radio", { name: "Σαν το Excel" });
+    expect(excel).toHaveAttribute("aria-checked", "false");
     await userEvent.click(screen.getByRole("button", { name: "Δείτε τις κρατήσεις" }));
-    expect(screen.getByRole("button", { name: "Σαν το Excel" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "Σαν το Excel" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByTestId("excel-sheet")).toBeInTheDocument();
   });
 });

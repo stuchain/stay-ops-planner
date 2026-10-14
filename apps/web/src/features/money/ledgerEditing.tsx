@@ -8,6 +8,7 @@ import { parseEuroInput } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { readClientError, useErrorText } from "@/api/errors";
 import type { LedgerYearData } from "@/api/types";
+import { compactFieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { SidePanel } from "@/ui/SidePanel";
 import { showToast } from "@/ui/Toast";
@@ -141,7 +142,7 @@ function ManualRowPanel({
     setPayout("");
   }
 
-  const field = "border-border min-h-target w-full rounded-sm border px-3";
+  const field = `${compactFieldClass} w-full`;
   const described = (key: string, hint?: boolean) =>
     errors[key] ? `manual-${key}-error` : hint ? `manual-${key}-hint` : undefined;
   return (

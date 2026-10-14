@@ -72,7 +72,7 @@ export function HosthubCard({ canRefresh }: { canRefresh: boolean }) {
       {canRefresh ? (
         <div>
           <Button
-            variant="primary"
+            variant="secondary"
             size="lg"
             icon={RefreshCw}
             loading={running}

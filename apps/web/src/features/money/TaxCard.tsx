@@ -28,13 +28,13 @@ function BracketTable({ calc, caption }: { calc: Calculation; caption?: string }
         {caption ? <caption className="mb-2 text-left font-semibold">{caption}</caption> : null}
         <thead>
           <tr className="border-text-muted border-b-2">
-            <th scope="col" className="px-3 py-2.5 text-left font-bold">
+            <th scope="col" className="px-3 py-3 text-left font-bold">
               {t("bracket")}
             </th>
-            <th scope="col" className="px-3 py-2.5 text-right font-bold whitespace-nowrap">
+            <th scope="col" className="px-3 py-3 text-right font-bold whitespace-nowrap">
               {t("incomeInBracket")}
             </th>
-            <th scope="col" className="px-3 py-2.5 text-right font-bold">
+            <th scope="col" className="px-3 py-3 text-right font-bold">
               {t("taxCol")}
             </th>
           </tr>
@@ -42,21 +42,21 @@ function BracketTable({ calc, caption }: { calc: Calculation; caption?: string }
         <tbody>
           {calc.lines.map((line) => (
             <tr key={line.fromCents} className="border-border border-b">
-              <th scope="row" className="px-3 py-2.5 text-left font-medium">
+              <th scope="row" className="px-3 py-3 text-left font-medium">
                 {label(line)}
               </th>
-              <td className="px-3 py-2.5 text-right tabular-nums">{money(line.taxedCents)}</td>
-              <td className="px-3 py-2.5 text-right font-bold tabular-nums">{money(line.taxCents)}</td>
+              <td className="px-3 py-3 text-right tabular-nums">{money(line.taxedCents)}</td>
+              <td className="px-3 py-3 text-right font-bold tabular-nums">{money(line.taxCents)}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="border-text-muted border-t-2 font-bold">
-            <th scope="row" className="px-3 py-2.5 text-left">
+            <th scope="row" className="px-3 py-3 text-left">
               {t("estimatedTax")}
             </th>
-            <td className="px-3 py-2.5 text-right tabular-nums">{money(calc.incomeCents)}</td>
-            <td className="px-3 py-2.5 text-right tabular-nums">{money(calc.taxCents)}</td>
+            <td className="px-3 py-3 text-right tabular-nums">{money(calc.incomeCents)}</td>
+            <td className="px-3 py-3 text-right tabular-nums">{money(calc.taxCents)}</td>
           </tr>
         </tfoot>
       </table>
@@ -95,7 +95,7 @@ export function TaxFold({ ledger }: { ledger: LedgerYearData }) {
         )}
         <p>{t("taxNote")}</p>
         {!rules.confirmed ? <p className="text-warning-text">{t("taxUnconfirmed")}</p> : null}
-        <ul className="flex list-disc flex-col gap-1.5 pl-5">
+        <ul className="flex list-disc flex-col gap-2 pl-5">
           <li>{t("how.year")}</li>
           <li>{rules.incomeBasis === "gross" ? t("how.gross") : t("how.payout")}</li>
           <li>{t("how.cancelled")}</li>

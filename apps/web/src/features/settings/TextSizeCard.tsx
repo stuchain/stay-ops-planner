@@ -5,7 +5,7 @@ import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import { Card } from "@/ui/Card";
 import { showToast } from "@/ui/Toast";
-import { ChoiceGroup } from "./ChoiceGroup";
+import { ChoiceGroup } from "@/ui/ChoiceGroup";
 
 export type TextSize = "normal" | "large" | "xlarge";
 

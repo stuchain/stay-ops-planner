@@ -7,7 +7,7 @@ const toneClasses: Record<StatTone, string> = {
   neutral: "bg-surface text-text",
   success: "bg-success-soft text-success-text",
   warning: "bg-warning-soft text-warning-text",
-  danger: "bg-danger-soft text-text",
+  danger: "bg-danger-soft text-danger",
 };
 
 export interface StatProps {

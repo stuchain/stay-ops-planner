@@ -56,7 +56,7 @@ function ChannelLogo({ channel, label, muted }: { channel: BookingChannel; label
       aria-label={label}
       title={label}
       className={cn(
-        "flex size-7 flex-none items-center justify-center overflow-hidden rounded-[7px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)]",
+        "flex size-7 flex-none items-center justify-center overflow-hidden rounded-sm bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)]",
         muted && "opacity-60 grayscale",
       )}
     >
@@ -128,12 +128,12 @@ export function BookingBar({
       style={style as CSSProperties}
       data-channel={channelLook(channel)}
       className={cn(
-        "flex h-14 min-w-0 items-center overflow-clip rounded-[10px] px-3 text-left transition-[box-shadow,opacity] select-none",
+        "flex h-14 min-w-0 items-center overflow-clip rounded-sm px-3 text-left transition-[box-shadow,opacity] select-none",
         pending
           ? "border-2 border-dashed border-text-muted bg-surface-muted text-text-muted"
           : needsRoom
             ? "border-2 border-warning bg-warning-soft text-warning-text"
-            : cn(CHANNEL_STYLE[channelLook(channel)], "shadow-[0_1px_2px_rgba(0,0,0,0.15)]"),
+            : cn(CHANNEL_STYLE[channelLook(channel)], "shadow-card"),
         draggable && "cursor-grab",
         selected && "z-10 shadow-[0_0_0_3px_var(--so-surface),0_0_0_6px_var(--so-accent)]",
         dragging && "opacity-35",

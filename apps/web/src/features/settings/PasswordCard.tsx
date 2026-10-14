@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import { useId, useState, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
+import { cn } from "@/ui/cn";
+import { fieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { FoldCard } from "./FoldCard";
 
@@ -36,7 +38,7 @@ function Field({
         autoComplete={autoComplete}
         aria-describedby={hint ? `${id}-hint` : undefined}
         onChange={(e) => onChange(e.target.value)}
-        className="min-h-button border-border bg-surface text-text w-full max-w-md rounded-sm border-2 px-4 text-base"
+        className={cn(fieldClass, "w-full max-w-md")}
       />
       {hint ? (
         <p id={`${id}-hint`} className="text-text-muted text-sm">
@@ -110,7 +112,7 @@ export function PasswordCard() {
         <div>
           <Button
             type="submit"
-            variant="primary"
+            variant="secondary"
             size="lg"
             icon={KeyRound}
             loading={change.isPending}

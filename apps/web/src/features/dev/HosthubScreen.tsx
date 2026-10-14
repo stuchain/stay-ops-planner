@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { ImportErrorRow, SyncRunRow } from "@/api/types";
+import { fieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { EmptyState } from "@/ui/EmptyState";
@@ -15,8 +16,6 @@ import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { showToast } from "@/ui/Toast";
 import { cn } from "@/ui/cn";
-
-const field = "border-border bg-surface min-h-target rounded-sm border px-3 text-base";
 
 type Confirm = "full" | "reset" | null;
 
@@ -76,10 +75,10 @@ export function HosthubTokenCard() {
             {status?.name ? <span className="text-text-muted"> {t("token.named", { name: status.name })}</span> : null}
           </p>
           <form onSubmit={submit} className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-2">
               <span className="font-medium">{t("token.newToken")}</span>
               <input
-                className={field}
+                className={`${fieldClass} w-full`}
                 type="password"
                 autoComplete="off"
                 spellCheck={false}
@@ -88,19 +87,24 @@ export function HosthubTokenCard() {
                 aria-invalid={problem !== null}
               />
             </label>
-            <label className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-2">
               <span className="font-medium">{t("token.name")}</span>
-              <input className={field} value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
+              <input
+                className={`${fieldClass} w-full`}
+                value={name}
+                maxLength={120}
+                onChange={(e) => setName(e.target.value)}
+              />
             </label>
             {problem ? (
-              <p role="alert" className="bg-danger-soft text-danger-text rounded-card p-3 font-medium">
+              <p role="alert" className="bg-danger-soft text-danger rounded-card p-3 font-medium">
                 {problem}
               </p>
             ) : null}
             <div>
               <Button
                 type="submit"
-                variant="primary"
+                variant="secondary"
                 size="lg"
                 icon={Save}
                 loading={save.isPending}
@@ -182,7 +186,7 @@ function ActionsCard() {
         {data?.lastError ? (
           <>
             <dt className="text-text-muted">{t("actions.lastError")}</dt>
-            <dd className="text-danger-text break-words">{data.lastError}</dd>
+            <dd className="text-danger break-words">{data.lastError}</dd>
           </>
         ) : null}
       </dl>
@@ -323,7 +327,7 @@ function RunsCard() {
                         ? t("notFinished")
                         : t("seconds", { value: Math.max(0.1, r.durationMs / 1000).toFixed(1) })}
                     </td>
-                    <td className={cn("px-3 py-2 font-medium", r.status === "failed" && "text-danger-text")}>
+                    <td className={cn("px-3 py-2 font-medium", r.status === "failed" && "text-danger")}>
                       {t(`status.${r.status}`)}
                     </td>
                     <td className="px-3 py-2">
@@ -431,7 +435,7 @@ function ErrorsCard() {
 export function HosthubScreen() {
   const t = useTranslations("dev.hosthub");
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <HosthubTokenCard />
       <ActionsCard />

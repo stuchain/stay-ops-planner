@@ -6,13 +6,14 @@ import { useId, useState, type ReactNode } from "react";
 import type { Party } from "@stay-ops/domain";
 import type { TurnoverTask } from "@/api/types";
 import { ApartmentChip } from "@/ui/ApartmentChip";
+import { Badge } from "@/ui/Badge";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
+import { compactFieldClass } from "@/ui/field";
 import { formatDay, type UiLocale } from "@/ui/format";
 import type { TurnoverActions } from "./useTurnoverActions";
 
-const inputClass =
-  "min-h-target rounded-sm border border-border bg-surface px-3 py-2 text-base text-text placeholder:text-text-muted";
+const inputClass = compactFieldClass;
 
 function PartyLine({ party }: { party: Party | null }) {
   const t = useTranslations("turnovers");
@@ -25,7 +26,7 @@ function PartyLine({ party }: { party: Party | null }) {
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-text-muted text-sm">{label}</dt>
       <dd className="text-base font-semibold">{children}</dd>
     </div>
@@ -140,7 +141,7 @@ function Details({
 
   return (
     <div className="border-border flex flex-col gap-4 border-t pt-4">
-      <dl className="grid grid-cols-3 gap-x-6 gap-y-3 max-[1099px]:grid-cols-1">
+      <dl className="grid grid-cols-3 gap-x-6 gap-y-3 narrow:grid-cols-1">
         <Fact label={t("leaving")}>{t("leavingAt", { guest, time: task.leaving.time })}</Fact>
         <Fact label={t("nextArrival")}>
           {task.next ? (
@@ -202,25 +203,13 @@ export function TurnoverCard({ task, canEdit, actions }: TurnoverCardProps) {
       className={cn("flex flex-col gap-3 py-4 print:break-inside-avoid", cancelled && "opacity-70")}
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <ApartmentChip name={task.room.name} color={task.room.color ?? "#5B5852"} className="text-base" />
-        {task.taskType === "service" ? (
-          <span className="bg-accent-soft text-accent rounded-pill px-3 py-1 text-sm font-semibold">
-            {t("serviceTag")}
-          </span>
-        ) : null}
+        <ApartmentChip name={task.room.name} color={task.room.color} className="text-base" />
+        {task.taskType === "service" ? <Badge tone="info">{t("serviceTag")}</Badge> : null}
         <span className="min-w-0 flex-1 text-lg">
           <TimesLine task={task} />
         </span>
-        {task.status === "in_progress" ? (
-          <span className="bg-warning-soft text-warning-text rounded-pill px-3 py-1 text-sm font-semibold">
-            {t("status.in_progress")}
-          </span>
-        ) : null}
-        {cancelled ? (
-          <span className="bg-surface-muted text-text-muted border-border rounded-pill border border-dashed px-3 py-1 text-sm font-semibold">
-            {t("status.cancelled")}
-          </span>
-        ) : null}
+        {task.status === "in_progress" ? <Badge tone="info">{t("status.in_progress")}</Badge> : null}
+        {cancelled ? <Badge dashed>{t("status.cancelled")}</Badge> : null}
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="ghost"

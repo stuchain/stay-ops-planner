@@ -7,6 +7,7 @@ import { useTRPC } from "@/api/client";
 import { useOnline } from "@/api/online";
 import { useErrorText } from "@/api/errors";
 import type { BookingDetails, CalendarBooking } from "@/api/types";
+import { fieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { useCanChange } from "@/features/shell/role";
 import { showToast, undoToast } from "@/ui/Toast";
@@ -41,9 +42,7 @@ export function undoPlan(before: Draft, fields: readonly Field[]): { restore: Ch
   return { restore, reset };
 }
 
-const inputClass =
-  "min-h-button rounded-sm border border-border bg-surface px-4 py-2 text-base text-text w-full " +
-  "placeholder:text-text-muted";
+const inputClass = `${fieldClass} w-full`;
 
 function startDraft(booking: CalendarBooking, details: BookingDetails): Draft {
   return {
@@ -254,7 +253,7 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
             save();
           }}
         >
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label htmlFor={`${idBase}-name`} className="font-medium">
               {labels.guestName}
             </label>
@@ -266,10 +265,10 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
               aria-invalid={fieldErrors.guestName ? true : undefined}
               onChange={(e) => setDraft({ ...draft, guestName: e.target.value })}
             />
-            {fieldErrors.guestName ? <p className="text-danger-text">{fieldErrors.guestName}</p> : null}
+            {fieldErrors.guestName ? <p className="text-danger">{fieldErrors.guestName}</p> : null}
             {hosthubTexts.guestName ? <p className="text-text-muted">{hosthubTexts.guestName}</p> : null}
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label htmlFor={`${idBase}-people`} className="font-medium">
               {labels.partySize}
             </label>
@@ -284,10 +283,10 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
               aria-invalid={fieldErrors.partySize ? true : undefined}
               onChange={(e) => setDraft({ ...draft, partySize: e.target.value })}
             />
-            {fieldErrors.partySize ? <p className="text-danger-text">{fieldErrors.partySize}</p> : null}
+            {fieldErrors.partySize ? <p className="text-danger">{fieldErrors.partySize}</p> : null}
             {hosthubTexts.partySize ? <p className="text-text-muted">{hosthubTexts.partySize}</p> : null}
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label htmlFor={`${idBase}-notes`} className="font-medium">
               {labels.notes}
             </label>

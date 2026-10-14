@@ -20,6 +20,7 @@ import { useCanChange } from "@/features/shell/role";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
 import { Button } from "@/ui/Button";
+import { ChoiceGroup } from "@/ui/ChoiceGroup";
 import { cn } from "@/ui/cn";
 import { ErrorState } from "@/ui/ErrorState";
 import { IconButton } from "@/ui/IconButton";
@@ -281,8 +282,8 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 p-8 max-[759px]:p-4",
-        (selected || arrangeMonth) && "pr-[calc(var(--spacing-panel)+2rem)] max-[759px]:pr-4",
+        "flex flex-col gap-4 p-8 phone:p-4",
+        (selected || arrangeMonth) && "pr-[calc(var(--spacing-panel)+2rem)] phone:pr-4",
       )}
     >
       <PageHeader
@@ -292,22 +293,17 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
             <IconButton label={t("calendar.previousMonth")} icon={ChevronLeft} onClick={() => shiftMonth(-1)} />
             <Button onClick={() => scrollToDate(today)}>{t("calendar.today")}</Button>
             <IconButton label={t("calendar.nextMonth")} icon={ChevronRight} onClick={() => shiftMonth(1)} />
-            <div role="group" aria-label={t("calendar.view")} className="border-border ml-2 flex rounded-sm border">
-              {(["week", "month"] as const).map((z) => (
-                <button
-                  key={z}
-                  type="button"
-                  aria-pressed={zoom === z}
-                  onClick={() => setZoom(z)}
-                  className={cn(
-                    "min-h-target text-sm px-4 font-semibold",
-                    zoom === z ? "bg-accent text-white" : "bg-surface text-text",
-                  )}
-                >
-                  {z === "week" ? t("calendar.week") : t("calendar.month")}
-                </button>
-              ))}
-            </div>
+            <ChoiceGroup<"week" | "month">
+              size="md"
+              className="ml-2"
+              label={t("calendar.view")}
+              value={zoom}
+              onChange={setZoom}
+              choices={[
+                { value: "week", label: t("calendar.week") },
+                { value: "month", label: t("calendar.month") },
+              ]}
+            />
             <MoreMenu className="ml-2" onPrint={openPrint} />
           </div>
         }

@@ -11,10 +11,10 @@ export const buttonBase =
   "whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-55";
 
 export const buttonVariants: Record<ButtonVariant, string> = {
-  primary: "bg-accent border-accent text-white dark:text-bg hover:brightness-110 active:brightness-95",
+  primary: "bg-accent border-accent text-on-accent hover:brightness-110 active:brightness-95",
   secondary: "bg-surface border-border text-text hover:bg-surface-muted",
   ghost: "bg-transparent border-transparent text-text hover:bg-surface-muted",
-  danger: "bg-danger border-danger text-white dark:text-bg hover:brightness-110 active:brightness-95",
+  danger: "bg-danger border-danger text-on-accent hover:brightness-110 active:brightness-95",
 };
 
 export const buttonSizes: Record<ButtonSize, string> = {

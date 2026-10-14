@@ -4,6 +4,7 @@ import { Check, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import type { CleanerDay, CleanerTask } from "@/api/types";
+import { Badge } from "@/ui/Badge";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { Button } from "@/ui/Button";
 import { formatDay } from "@/ui/format";
@@ -21,7 +22,7 @@ function Party({ arrival }: { arrival: NonNullable<CleanerTask["arrival"]> }) {
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-1">
       <dt className="text-text-muted text-base">{label}</dt>
       <dd className="text-xl font-semibold">{children}</dd>
     </div>
@@ -34,12 +35,11 @@ function TaskCard({ task }: { task: CleanerTask }) {
   return (
     <li className="bg-surface rounded-card shadow-card flex flex-col gap-4 p-5 print:break-inside-avoid print:border print:border-border print:shadow-none">
       <div className="flex flex-wrap items-center gap-3">
-        <ApartmentChip name={task.apartment} color={task.color ?? "#5B5852"} className="text-xl" />
+        <ApartmentChip name={task.apartment} color={task.color} className="text-xl" />
         {task.status === "done" ? (
-          <span className="bg-success-soft text-success-text rounded-pill inline-flex items-center gap-1 px-3 py-1 text-base font-semibold">
-            <Check size={20} aria-hidden="true" />
+          <Badge tone="success" icon={Check} size="lg">
             {t("done")}
-          </span>
+          </Badge>
         ) : null}
       </div>
       <dl className="flex flex-col gap-3">

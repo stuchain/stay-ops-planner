@@ -1,16 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChartNoAxesCombined,
-  ChevronDown,
-  Download,
-  FileText,
-  Grid3x3,
-  LayoutDashboard,
-  Table2,
-  TriangleAlert,
-} from "lucide-react";
+import { ChartNoAxesCombined, ChevronDown, Download, FileText, Table2, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
@@ -18,7 +9,10 @@ import type { IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { LedgerYearData } from "@/api/types";
+import { Badge } from "@/ui/Badge";
 import { buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
+import { ChoiceGroup } from "@/ui/ChoiceGroup";
+import { compactSelectClass } from "@/ui/field";
 import { Card } from "@/ui/Card";
 import { cn } from "@/ui/cn";
 import { ErrorState } from "@/ui/ErrorState";
@@ -26,7 +20,7 @@ import { formatMoney } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { ExcelSheet } from "./ExcelSheet";
-import { apartmentColor, changeOnLastYear, formatChange, incomeView, type IncomeView } from "./incomeView";
+import { changeOnLastYear, formatChange, incomeView, ledgerApartmentColor, type IncomeView } from "./incomeView";
 import { TaxFold } from "./TaxCard";
 
 export type IncomeScreenProps = {
@@ -40,26 +34,26 @@ function MonthTable({ ledger, view }: { ledger: LedgerYearData; view: IncomeView
   const t = useTranslations();
   const locale = useLocale();
   const money = (cents: number) => formatMoney(cents, locale);
-  const cell = "px-3 py-2.5 text-right tabular-nums whitespace-nowrap";
+  const cell = "px-3 py-3 text-right tabular-nums whitespace-nowrap";
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-base max-[759px]:text-sm">
+      <table className="w-full border-collapse text-base phone:text-sm">
         <thead>
           <tr className="border-text-muted border-b-2">
-            <th scope="col" className="px-3 py-2.5 text-left font-bold">
+            <th scope="col" className="px-3 py-3 text-left font-bold">
               {t("income.colMonth")}
             </th>
             {ledger.apartments.map((a) => (
-              <th key={a.index} scope="col" className="px-3 py-2.5 text-right font-bold whitespace-nowrap">
+              <th key={a.index} scope="col" className="px-3 py-3 text-right font-bold whitespace-nowrap">
                 <span
-                  className="mr-1.5 inline-block size-3 rounded-sm align-[-1px]"
-                  style={{ background: apartmentColor(a) }}
+                  className="mr-2 inline-block size-3 rounded-sm align-[-1px]"
+                  style={{ background: ledgerApartmentColor(a) }}
                   aria-hidden="true"
                 />
                 {a.label}
               </th>
             ))}
-            <th scope="col" className="px-3 py-2.5 text-right font-bold">
+            <th scope="col" className="px-3 py-3 text-right font-bold">
               {t("income.colTotal")}
             </th>
           </tr>
@@ -74,14 +68,10 @@ function MonthTable({ ledger, view }: { ledger: LedgerYearData; view: IncomeView
                 m.kind === "expected" && "text-text-muted",
               )}
             >
-              <th scope="row" className="px-3 py-2.5 text-left font-medium whitespace-nowrap">
+              <th scope="row" className="px-3 py-3 text-left font-medium whitespace-nowrap">
                 {t("common.month", { month: m.month })}{" "}
                 {m.kind === "expected" ? <span className="text-text-muted">{t("income.monthExpected")}</span> : null}
-                {m.kind === "current" ? (
-                  <span className="bg-success-soft text-success-text rounded-full px-2 py-0.5 text-sm font-semibold">
-                    {t("income.now")}
-                  </span>
-                ) : null}
+                {m.kind === "current" ? <Badge tone="info">{t("income.now")}</Badge> : null}
               </th>
               {m.perApartment.map((v, i) => (
                 <td key={i} className={cell}>
@@ -94,7 +84,7 @@ function MonthTable({ ledger, view }: { ledger: LedgerYearData; view: IncomeView
         </tbody>
         <tfoot>
           <tr className="border-text-muted border-t-2 font-bold">
-            <th scope="row" className="px-3 py-2.5 text-left">
+            <th scope="row" className="px-3 py-3 text-left">
               {t("income.yearTotal")}
             </th>
             {ledger.totals.byRentalCents.map((v, i) => (
@@ -152,28 +142,17 @@ function useViewMode(): [IncomeViewMode, (mode: IncomeViewMode) => void] {
 
 function ViewSwitch({ mode, onChange }: { mode: IncomeViewMode; onChange: (mode: IncomeViewMode) => void }) {
   const t = useTranslations();
-  const options = [
-    { value: "normal" as const, label: t("income.sheet.viewNormal"), Icon: LayoutDashboard },
-    { value: "excel" as const, label: t("income.sheet.viewExcel"), Icon: Grid3x3 },
-  ];
   return (
-    <div role="group" aria-label={t("income.sheet.viewLabel")} className="bg-surface-muted flex gap-1 rounded-sm p-1">
-      {options.map(({ value, label, Icon }) => (
-        <button
-          key={value}
-          type="button"
-          aria-pressed={mode === value}
-          onClick={() => onChange(value)}
-          className={cn(
-            "min-h-target inline-flex items-center gap-2 rounded-sm px-4 text-base font-semibold",
-            mode === value ? "bg-surface text-accent-text shadow-card" : "text-text-muted hover:text-text",
-          )}
-        >
-          <Icon size={20} aria-hidden="true" />
-          {label}
-        </button>
-      ))}
-    </div>
+    <ChoiceGroup<IncomeViewMode>
+      size="md"
+      label={t("income.sheet.viewLabel")}
+      value={mode}
+      onChange={onChange}
+      choices={[
+        { value: "normal", label: t("income.sheet.viewNormal") },
+        { value: "excel", label: t("income.sheet.viewExcel") },
+      ]}
+    />
   );
 }
 
@@ -250,15 +229,15 @@ function IncomeBody({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-4 gap-4 max-[1023px]:grid-cols-2 max-[479px]:grid-cols-1">
+      <div className="grid grid-cols-4 gap-4 narrow:grid-cols-2 small:grid-cols-1">
         {ledger.apartments.map((a, i) => (
           <div
             key={a.index}
             className="border-border rounded-card bg-surface flex flex-col gap-1 border border-t-[6px] p-4"
-            style={{ borderTopColor: apartmentColor(a) }}
+            style={{ borderTopColor: ledgerApartmentColor(a) }}
           >
             <span className="flex items-center gap-2 text-lg font-semibold">
-              <span className="size-3 rounded-sm" style={{ background: apartmentColor(a) }} aria-hidden="true" />
+              <span className="size-3 rounded-sm" style={{ background: ledgerApartmentColor(a) }} aria-hidden="true" />
               {a.label}
             </span>
             <span className="text-xl font-bold tabular-nums">{money(ledger.totals.byRentalCents[i] ?? 0)}</span>
@@ -315,12 +294,7 @@ export function IncomeScreen({ today, devMode = false }: IncomeScreenProps) {
   const thisYear = year === Number(today.slice(0, 4));
 
   return (
-    <div
-      className={cn(
-        "mx-auto flex flex-col gap-6 p-6 max-[759px]:p-4",
-        mode === "excel" ? "max-w-[90rem]" : "max-w-6xl",
-      )}
-    >
+    <div className={cn("mx-auto flex flex-col gap-6 p-6 phone:p-4", mode === "excel" ? "max-w-[90rem]" : "max-w-6xl")}>
       <PageHeader
         title={t("income.title")}
         actions={
@@ -329,11 +303,7 @@ export function IncomeScreen({ today, devMode = false }: IncomeScreenProps) {
             <label className="flex items-center gap-3 text-base font-medium">
               {t("income.year")}
               <span className="relative">
-                <select
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  className="border-border bg-surface min-h-target appearance-none rounded-sm border py-2 pr-10 pl-4 text-base font-semibold"
-                >
+                <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={compactSelectClass}>
                   {years.map((y) => (
                     <option key={y} value={y}>
                       {y}

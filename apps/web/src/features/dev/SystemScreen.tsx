@@ -53,7 +53,7 @@ function SystemCard() {
               className="text-accent inline-flex min-h-target items-center gap-2 underline"
             >
               {t("sentryOpen")}
-              <ExternalLink size={18} aria-hidden="true" />
+              <ExternalLink size={20} aria-hidden="true" />
             </a>
           ) : (
             t("sentryNone")
@@ -126,7 +126,7 @@ function ReminderCard() {
 export function SystemScreen() {
   const t = useTranslations("dev.system");
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <SystemCard />

@@ -49,16 +49,13 @@ function NavList({
   compact?: boolean;
 }) {
   return (
-    <ul className={cn("flex flex-col gap-1", !compact && "max-[759px]:flex-row max-[759px]:gap-0")}>
+    <ul className={cn("flex flex-col gap-1", !compact && "phone:flex-row phone:gap-0")}>
       {items.map((item) => {
         const Icon = item.icon;
         return (
           <li
             key={item.href}
-            className={cn(
-              !compact && "max-[759px]:min-w-0 max-[759px]:flex-1",
-              item.hideOnPhone && "max-[759px]:hidden",
-            )}
+            className={cn(!compact && "phone:min-w-0 phone:flex-1", item.hideOnPhone && "phone:hidden")}
           >
             <Link
               href={item.href}
@@ -67,7 +64,7 @@ function NavList({
                 "flex items-center gap-3 rounded-sm px-4 font-medium",
                 compact
                   ? "text-sm h-11"
-                  : "text-base h-14 max-[759px]:h-16 max-[759px]:flex-col max-[759px]:justify-center max-[759px]:gap-0.5 max-[759px]:px-0.5 max-[759px]:text-[11px] max-[759px]:tracking-tight",
+                  : "text-base h-14 phone:h-16 phone:flex-col phone:justify-center phone:gap-1 phone:px-1 phone:text-[11px] phone:tracking-tight",
                 item.current ? "bg-accent-soft text-accent" : "text-text hover:bg-surface-muted",
               )}
             >
@@ -105,15 +102,15 @@ export function Sidebar({
     <aside
       className={cn(
         "bg-surface border-border w-sidebar fixed print:hidden inset-y-0 left-0 z-30 flex flex-col overflow-y-auto border-r",
-        "max-[759px]:inset-x-0 max-[759px]:top-auto max-[759px]:bottom-0 max-[759px]:w-full max-[759px]:border-t max-[759px]:border-r-0",
+        "phone:inset-x-0 phone:top-auto phone:bottom-0 phone:w-full phone:border-t phone:border-r-0",
         className,
       )}
     >
-      <nav aria-label={navLabel ?? t("label")} className="p-3 max-[759px]:p-1">
+      <nav aria-label={navLabel ?? t("label")} className="p-3 phone:p-1">
         <NavList items={items} Link={Link} />
       </nav>
       {secondary ? (
-        <nav aria-labelledby="sidebar-secondary" className="border-border border-t p-3 max-[759px]:hidden">
+        <nav aria-labelledby="sidebar-secondary" className="border-border border-t p-3 phone:hidden">
           <h2
             id="sidebar-secondary"
             className="text-text-muted text-xs px-4 pb-1 font-semibold tracking-wide uppercase"
@@ -124,7 +121,7 @@ export function Sidebar({
         </nav>
       ) : null}
       {footer ? (
-        <div className="border-border text-text-muted mt-auto border-t p-4 text-sm max-[759px]:hidden">{footer}</div>
+        <div className="border-border text-text-muted mt-auto border-t p-4 text-sm phone:hidden">{footer}</div>
       ) : null}
     </aside>
   );

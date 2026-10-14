@@ -18,8 +18,8 @@ import "./report.css";
 
 type Calculation = LedgerYearData["tax"]["calculations"][number];
 
-const th = "px-2 py-1.5 font-bold";
-const num = "px-2 py-1.5 text-right tabular-nums";
+const th = "px-2 py-2 font-bold";
+const num = "px-2 py-2 text-right tabular-nums";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -61,7 +61,7 @@ function BracketTable({ calc, caption }: { calc: Calculation; caption?: string }
       <tbody>
         {calc.lines.map((line) => (
           <tr key={line.fromCents} className="border-border break-inside-avoid border-b">
-            <th scope="row" className="px-2 py-1.5 text-left font-normal">
+            <th scope="row" className="px-2 py-2 text-left font-normal">
               {range(line)}
             </th>
             <td className={num}>{formatRate(line.rateBps, locale)}</td>
@@ -72,7 +72,7 @@ function BracketTable({ calc, caption }: { calc: Calculation; caption?: string }
       </tbody>
       <tfoot>
         <tr className="border-text border-t font-bold">
-          <th scope="row" className="px-2 py-1.5 text-left">
+          <th scope="row" className="px-2 py-2 text-left">
             {t("sum")}
           </th>
           <td />
@@ -126,7 +126,7 @@ function BookingsTable({ ledger }: { ledger: LedgerYearData }) {
   const channelText = (row: LedgerRowData) =>
     row.channel === null ? t("income.ledger.kind.manual") : t(`channel.${row.channel}`);
   const when = (row: LedgerRowData) => row.shown.dateRange || t("common.month", { month: row.month });
-  const cell = "px-1.5 py-1 align-top";
+  const cell = "px-2 py-1 align-top";
   return (
     <table className="w-full border-collapse text-[10pt]">
       <thead className="table-header-group">
@@ -155,7 +155,7 @@ function BookingsTable({ ledger }: { ledger: LedgerYearData }) {
         return (
           <tbody key={month}>
             <tr className="break-after-avoid">
-              <th scope="colgroup" colSpan={8} className="bg-surface-muted px-1.5 py-1 text-left text-[11pt] font-bold">
+              <th scope="colgroup" colSpan={8} className="bg-surface-muted px-2 py-1 text-left text-[11pt] font-bold">
                 {t("common.month", { month })}
               </th>
             </tr>
@@ -220,7 +220,7 @@ function Sheet({ ledger, today }: { ledger: LedgerYearData; today: IsoDate }) {
   const excluded = ledger.rows.filter((r) => !r.counts).length;
   const produced = t("produced", { date: formatDay(today, locale === "en" ? "en" : "el", true) });
   return (
-    <article className="report-sheet bg-surface text-text rounded-card shadow-card mx-auto flex w-full max-w-[210mm] flex-col gap-6 p-8 text-[11pt] max-[759px]:p-4 print:max-w-none print:rounded-none print:p-0 print:shadow-none">
+    <article className="report-sheet bg-surface text-text rounded-card shadow-card mx-auto flex w-full max-w-[210mm] flex-col gap-6 p-8 text-[11pt] phone:p-4 print:max-w-none print:rounded-none print:p-0 print:shadow-none">
       <header className="flex flex-col gap-1">
         <p className="text-text-muted text-[11pt]">{t("kicker")}</p>
         <h1 className="text-[22pt] leading-tight font-bold">{t("title", { year: ledger.year })}</h1>
@@ -233,7 +233,7 @@ function Sheet({ ledger, today }: { ledger: LedgerYearData; today: IsoDate }) {
         </div>
         {totals.unbucketedCount > 0 ? (
           <p className="border-text flex items-start gap-2 border-2 p-3 font-semibold">
-            <TriangleAlert size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <TriangleAlert size={20} className="mt-1 shrink-0" aria-hidden="true" />
             {t("unbucketed", { count: totals.unbucketedCount, amount: money(totals.unbucketedCents) })}
           </p>
         ) : null}
@@ -249,7 +249,7 @@ function Sheet({ ledger, today }: { ledger: LedgerYearData; today: IsoDate }) {
           <p className="font-semibold">{t("confirmed")}</p>
         ) : (
           <p role="alert" className="border-text flex items-start gap-2 border-2 p-3 font-bold">
-            <TriangleAlert size={22} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <TriangleAlert size={24} className="mt-1 shrink-0" aria-hidden="true" />
             {t("unconfirmed")}
           </p>
         )}
@@ -295,13 +295,13 @@ export function AccountantReport({ year, today }: AccountantReportProps) {
   const trpc = useTRPC();
   const query = useQuery(trpc.money.year.queryOptions({ year }));
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 max-[759px]:p-4 print:max-w-none print:p-0">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 phone:p-4 print:max-w-none print:p-0">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link href="/app/excel" className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}>
           <ArrowLeft size={24} aria-hidden="true" />
           {t("back")}
         </Link>
-        <div className="flex flex-col items-end gap-1 max-[759px]:items-start">
+        <div className="flex flex-col items-end gap-1 phone:items-start">
           <button
             type="button"
             disabled={!query.data}

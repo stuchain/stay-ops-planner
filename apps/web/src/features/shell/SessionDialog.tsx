@@ -124,7 +124,7 @@ export function SessionDialog() {
       <Dialog.Portal container={portalContainer()}>
         <Dialog.Overlay className="bg-text/40 fixed inset-0 z-50" />
         <Dialog.Content
-          className="bg-surface text-text shadow-raised border-border fixed top-1/2 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-md border p-6"
+          className="bg-surface text-text shadow-raised border-border fixed top-1/2 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-card border p-6"
           onInteractOutside={(event) => event.preventDefault()}
         >
           <Dialog.Title className="text-xl font-semibold">

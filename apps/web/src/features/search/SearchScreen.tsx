@@ -10,6 +10,8 @@ import { isIsoDate, type IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { SearchResultData } from "@/api/types";
+import { fieldClass } from "@/ui/field";
+import { Badge } from "@/ui/Badge";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
@@ -20,11 +22,7 @@ import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 
-const NEUTRAL = "#5B5852";
-
-const inputClass =
-  "min-h-button rounded-sm border border-border bg-surface px-4 py-2 text-lg text-text w-full " +
-  "placeholder:text-text-muted";
+const inputClass = `${fieldClass} w-full`;
 
 /** The typed text, sent once the person stops typing for a moment. */
 function useSettled<T>(value: T, ms = 300): T {
@@ -56,7 +54,7 @@ function ResultRow({ result }: { result: SearchResultData }) {
           (cancelled || pending) && "bg-surface-muted text-text-muted border-dashed",
         )}
       >
-        <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="flex min-w-0 flex-col gap-1">
           <span className="text-lg font-semibold">{name}</span>
           <span className="text-base">
             <DateText date={result.checkin} to={result.checkout} withYear showNights />
@@ -74,11 +72,9 @@ function ResultRow({ result }: { result: SearchResultData }) {
           ) : null}
         </span>
         {result.room ? (
-          <ApartmentChip name={result.room.name} color={result.room.color ?? NEUTRAL} />
+          <ApartmentChip name={result.room.name} color={result.room.color} />
         ) : (
-          <span className="bg-warning-soft text-warning-text rounded-pill px-3 py-1 text-sm font-semibold">
-            {t("noApartment")}
-          </span>
+          <Badge tone="warning">{t("noApartment")}</Badge>
         )}
       </Link>
     </li>
@@ -131,15 +127,15 @@ export function SearchScreen() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <Card>
         <form
           role="search"
-          className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] items-end gap-4 max-[1099px]:grid-cols-1"
+          className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] items-end gap-4 narrow:grid-cols-1"
           onSubmit={(event) => event.preventDefault()}
         >
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <label htmlFor={`${ids}-q`} className="text-base font-semibold">
               {t("textLabel")}
             </label>
@@ -155,7 +151,7 @@ export function SearchScreen() {
               onChange={(e) => setText(e.target.value)}
             />
           </div>
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <label htmlFor={`${ids}-from`} className="text-base font-semibold">
               {t("from")}
             </label>
@@ -167,7 +163,7 @@ export function SearchScreen() {
               onChange={(e) => setFrom(dateOrNull(e.target.value))}
             />
           </div>
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <label htmlFor={`${ids}-to`} className="text-base font-semibold">
               {t("to")}
             </label>

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import { showToast } from "@/ui/Toast";
-import { ChoiceGroup } from "./ChoiceGroup";
+import { ChoiceGroup } from "@/ui/ChoiceGroup";
 import { FoldCard } from "./FoldCard";
 
 type Locale = "el" | "en";

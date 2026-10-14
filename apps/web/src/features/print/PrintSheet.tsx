@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
@@ -48,7 +48,7 @@ function Swatch({ room }: { room: CalendarRoom }) {
   return (
     <span
       aria-hidden="true"
-      className="swatch inline-block size-4 shrink-0 border border-black"
+      className="swatch inline-block size-4 shrink-0 border border-ink"
       style={{ ["--swatch" as string]: room.color ?? "#fff", backgroundColor: room.color ?? "#fff" }}
     />
   );
@@ -72,7 +72,7 @@ function Guest({ booking }: { booking: CalendarBooking }) {
   const pendingText = t("pending");
   const noName = common("noName");
   return (
-    <span className={cn("block", pending && "text-[#444] italic")}>
+    <span className={cn("block", pending && "text-ink/75 italic")}>
       <strong className="font-bold">{booking.guestName ?? noName}</strong>
       {people ? <span>{` · ${people}`}</span> : null}
       {pending ? <span className="font-bold">{` · ${pendingText}`}</span> : null}
@@ -84,7 +84,7 @@ function Entry({ entry }: { entry: CellEntry }) {
   const t = useTranslations("printSheet");
   const label = entry.kind === "departure" ? t("departure") : entry.arrival ? t("arrival") : null;
   return (
-    <li className="border-t border-black/40 pt-1 first:border-t-0 first:pt-0">
+    <li className="border-t border-ink/40 pt-1 first:border-t-0 first:pt-0">
       {label ? <span className="block font-bold uppercase">{label}</span> : null}
       <Guest booking={entry.booking} />
     </li>
@@ -96,14 +96,14 @@ function WeekTable({ data, from }: { data: Data; from: IsoDate }) {
   const sheet = buildWeek(data, from);
   const closedText = t("closed");
   return (
-    <table className="w-full table-fixed border-collapse border-2 border-black">
+    <table className="w-full table-fixed border-collapse border-2 border-ink">
       <thead>
         <tr>
-          <th scope="col" className="w-[13%] border border-black p-2 text-left">
+          <th scope="col" className="w-[13%] border border-ink p-2 text-left">
             {t("apartment")}
           </th>
           {sheet.days.map((day) => (
-            <th key={day} scope="col" className="border border-black p-2 text-left">
+            <th key={day} scope="col" className="border border-ink p-2 text-left">
               <DateText date={day} />
             </th>
           ))}
@@ -112,11 +112,11 @@ function WeekTable({ data, from }: { data: Data; from: IsoDate }) {
       <tbody>
         {sheet.rows.map((row) => (
           <tr key={row.room.id}>
-            <th scope="row" className="border border-black p-2 text-left align-top">
+            <th scope="row" className="border border-ink p-2 text-left align-top">
               <RoomName room={row.room} />
             </th>
             {row.cells.map((cell) => (
-              <td key={cell.day} className="h-24 border border-black p-2 align-top">
+              <td key={cell.day} className="h-24 border border-ink p-2 align-top">
                 {cell.closed ? <p className="font-bold">{closedText}</p> : null}
                 <ul className="flex flex-col gap-1">
                   {cell.entries.map((entry) => (
@@ -138,21 +138,21 @@ function StayLine({ item }: { item: MonthItem }) {
   const closedText = t("closed");
   return (
     <tr>
-      <td className="w-[34%] border border-black p-2 align-top font-bold whitespace-nowrap">
+      <td className="w-[34%] border border-ink p-2 align-top font-bold whitespace-nowrap">
         <DateText date={item.start} to={item.end} />
       </td>
-      <td className="w-[14%] border border-black p-2 align-top">{common("nights", { count: item.nights })}</td>
+      <td className="w-[14%] border border-ink p-2 align-top">{common("nights", { count: item.nights })}</td>
       {item.kind === "stay" ? (
         <>
-          <td className="border border-black p-2 align-top">
+          <td className="border border-ink p-2 align-top">
             <Guest booking={item.booking} />
           </td>
-          <td className="w-[16%] border border-black p-2 align-top">
+          <td className="w-[16%] border border-ink p-2 align-top">
             {item.booking.partySize === null ? "" : common("people", { count: item.booking.partySize })}
           </td>
         </>
       ) : (
-        <td colSpan={2} className="border border-black p-2 align-top font-bold">
+        <td colSpan={2} className="border border-ink p-2 align-top font-bold">
           {closedText}
         </td>
       )}
@@ -172,9 +172,9 @@ function MonthTables({ data, from }: { data: Data; from: IsoDate }) {
             <RoomName room={room} />
           </h2>
           {items.length === 0 ? (
-            <p className="border border-black p-2">{emptyText}</p>
+            <p className="border border-ink p-2">{emptyText}</p>
           ) : (
-            <table className="w-full border-collapse border-2 border-black">
+            <table className="w-full border-collapse border-2 border-ink">
               <tbody>
                 {items.map((item) => (
                   <StayLine key={item.kind === "stay" ? item.booking.id : item.block.id} item={item} />
@@ -200,7 +200,7 @@ function Unplaced({ bookings }: { bookings: CalendarBooking[] }) {
       ) : (
         <ul className="flex flex-col gap-1">
           {bookings.map((b) => (
-            <li key={b.id} className={cn("border border-black p-2", isPending(b) && "text-[#444] italic")}>
+            <li key={b.id} className={cn("border border-ink p-2", isPending(b) && "text-ink/75 italic")}>
               <strong className="font-bold">
                 <DateText date={b.checkin} to={b.checkout} />
               </strong>
@@ -245,8 +245,8 @@ export function PrintSheetView({ view, from, data, printedAt }: PrintSheetViewPr
   const unplaced = (view === "week" ? buildWeek(data, from) : buildMonth(data, from)).unplaced;
 
   return (
-    <article className="print-sheet flex flex-col gap-4 bg-white p-6 text-black">
-      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b-2 border-black pb-2">
+    <article className="print-sheet flex flex-col gap-4 bg-paper p-6 text-ink">
+      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b-2 border-ink pb-2">
         <h1 className="text-2xl font-bold">{title}</h1>
         <p>{printed ? t("printedAt", { when: printed }) : null}</p>
       </header>
@@ -263,11 +263,13 @@ function NavLink({ href, children, current }: { href: string; children: ReactNod
       aria-current={current ? "true" : undefined}
       className={cn(
         buttonBase,
-        current ? buttonVariants.primary : buttonVariants.secondary,
+        // The chosen view has the same look as ChoiceGroup.
+        current ? "border-accent bg-accent-soft text-accent border-2" : buttonVariants.secondary,
         buttonSizes.md,
         "no-underline",
       )}
     >
+      {current ? <Check size={20} aria-hidden="true" /> : null}
       {children}
     </Link>
   );
@@ -293,16 +295,22 @@ export function PrintSheet({ view, from }: PrintSheetProps) {
   }, []);
 
   return (
-    <div className="flex flex-col gap-4 p-8 max-[759px]:p-4 print:p-0">
+    <div className="flex flex-col gap-4 p-8 phone:p-4 print:p-0">
       <style>{PRINT_CSS}</style>
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <NavLink href="/app/calendar">
           <ArrowLeft size={24} aria-hidden="true" />
           {t("back")}
         </NavLink>
-        <NavLink href={sheetHref(view, shiftSheet(view, from, -1))}>{t("previous")}</NavLink>
-        <NavLink href={sheetHref(view, shiftSheet(view, from, 1))}>{t("next")}</NavLink>
-        <div role="group" aria-label={t("view")} className="border-border flex rounded-sm border">
+        <NavLink href={sheetHref(view, shiftSheet(view, from, -1))}>
+          <ChevronLeft size={24} aria-hidden="true" />
+          {t("previous")}
+        </NavLink>
+        <NavLink href={sheetHref(view, shiftSheet(view, from, 1))}>
+          {t("next")}
+          <ChevronRight size={24} aria-hidden="true" />
+        </NavLink>
+        <div role="group" aria-label={t("view")} className="flex gap-2">
           <NavLink href={sheetHref("week", mondayOf(from))} current={view === "week"}>
             {t("week")}
           </NavLink>

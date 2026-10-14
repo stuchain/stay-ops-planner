@@ -15,23 +15,21 @@ import { Card } from "@/ui/Card";
 import { cn } from "@/ui/cn";
 import { DateText } from "@/ui/DateText";
 import { ErrorState } from "@/ui/ErrorState";
+import { fieldClass } from "@/ui/field";
 import { nightsBetween } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { busyText } from "../calendar/BookingPanel";
 import { recommendationText } from "../calendar/recommendation";
 
-const NEUTRAL = "#5B5852";
 const MAX_NIGHTS = 60;
 const MAX_GUESTS = 20;
 
-const inputClass =
-  "min-h-button rounded-sm border border-border bg-surface px-4 py-2 text-lg text-text w-full " +
-  "placeholder:text-text-muted";
+const inputClass = `${fieldClass} w-full`;
 
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-2">
       <label htmlFor={id} className="text-base font-semibold">
         {label}
       </label>
@@ -62,7 +60,7 @@ function RoomRow({ room, guests }: { room: AvailabilityRoom; guests: number | nu
     >
       <ApartmentChip
         name={room.name}
-        color={room.color ?? NEUTRAL}
+        color={room.color}
         inactive={!room.isActive}
         className={room.available ? "text-lg" : "text-base"}
       />
@@ -166,10 +164,10 @@ export function FreeScreen() {
   const problem = invalid ? t("invalidDates") : tooLong ? t("tooLong") : null;
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <Card>
-        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] items-end gap-4 max-[1099px]:grid-cols-2 max-[519px]:grid-cols-1">
+        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] items-end gap-4 narrow:grid-cols-2 small:grid-cols-1">
           <Field id={`${ids}-in`} label={t("arrival")}>
             <input
               id={`${ids}-in`}
@@ -190,7 +188,7 @@ export function FreeScreen() {
               onChange={(e) => onCheckout(e.target.value)}
             />
           </Field>
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <span id={`${ids}-guests`} className="text-base font-semibold">
               {t("guests")}
             </span>
@@ -225,7 +223,7 @@ export function FreeScreen() {
           </p>
         ) : null}
         {problem ? (
-          <p role="alert" className="text-danger-text text-base font-semibold">
+          <p role="alert" className="text-danger text-base font-semibold">
             {problem}
           </p>
         ) : null}

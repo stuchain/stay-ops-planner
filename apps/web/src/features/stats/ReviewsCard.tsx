@@ -8,6 +8,7 @@ import type { IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { ReviewSourceData } from "@/api/types";
+import { compactFieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { ErrorState } from "@/ui/ErrorState";
@@ -19,7 +20,7 @@ import { Delta } from "./Delta";
 type Platform = ReviewSourceData["platform"];
 const PLATFORMS: Platform[] = ["airbnb", "booking", "google"];
 
-const input = "border-border bg-surface min-h-target rounded-sm border px-3 py-2 text-base w-full min-w-0";
+const input = `${compactFieldClass} w-full min-w-0`;
 
 /** "4,92" or "4.92" as a number; null when empty; NaN when not a number. */
 export function parseScore(text: string): number | null {
@@ -125,7 +126,7 @@ function SourceRow({
   return (
     <li className="border-border rounded-card flex flex-col gap-3 border p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="text-lg font-semibold">{source.label ?? platformName}</span>
           <a
             href={source.url}
@@ -161,12 +162,12 @@ function SourceRow({
       </div>
 
       {latest ? (
-        <dl className="grid grid-cols-3 gap-3 max-[600px]:grid-cols-1">
+        <dl className="grid grid-cols-3 gap-3 phone:grid-cols-1">
           <div>
             <dt className="text-text-muted text-sm">{t("scoreNow")}</dt>
             <dd className="flex flex-wrap items-baseline gap-x-2">
               <span className="flex items-center gap-1 text-2xl font-bold tabular-nums">
-                <Star size={20} className="text-warning" aria-hidden="true" />
+                <Star size={24} className="fill-current" aria-hidden="true" />
                 {latest.rating === null
                   ? t("noScore")
                   : t("scoreOf", { value: number(latest.rating, 2), scale: source.scale })}
@@ -199,8 +200,14 @@ function SourceRow({
                 <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                   <span>{r.author ?? t("anonymous")}</span>
                   {r.rating !== null ? (
-                    <span className="text-warning-text" aria-label={t("stars", { value: r.rating })}>
-                      {"★".repeat(Math.round(r.rating))}
+                    <span
+                      role="img"
+                      className="text-text flex items-center gap-1"
+                      aria-label={t("stars", { value: r.rating })}
+                    >
+                      {Array.from({ length: Math.round(r.rating) }, (_, s) => (
+                        <Star key={s} size={16} className="fill-current" aria-hidden="true" />
+                      ))}
                     </span>
                   ) : null}
                   {r.publishedAt ? (
@@ -262,7 +269,7 @@ function AddSourceForm({ onAdded }: { onAdded: () => void }) {
       className="border-border flex flex-col gap-3 border-t pt-4"
     >
       <h4 className="text-base font-semibold">{t("addTitle")}</h4>
-      <div className="grid grid-cols-[10rem_1fr_14rem] gap-3 max-[860px]:grid-cols-1">
+      <div className="grid grid-cols-[10rem_1fr_14rem] gap-3 phone:grid-cols-1">
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t("platform")}
           <select className={input} value={platform} onChange={(e) => setPlatform(e.target.value as Platform)}>

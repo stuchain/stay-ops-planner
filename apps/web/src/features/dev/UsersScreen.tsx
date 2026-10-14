@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { RouterOutputs } from "@/api/types";
+import { compactFieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
@@ -16,7 +17,7 @@ import { showToast } from "@/ui/Toast";
 
 type UserRow = RouterOutputs["dev"]["users"]["list"]["users"][number];
 
-const field = "border-border bg-surface min-h-target rounded-sm border px-3 text-base";
+const field = compactFieldClass;
 
 function UserPanel({ user, onClose }: { user: UserRow | null; onClose: () => void }) {
   const t = useTranslations("dev.users");
@@ -74,7 +75,7 @@ function UserPanel({ user, onClose }: { user: UserRow | null; onClose: () => voi
         <div className="flex flex-col gap-8">
           <form onSubmit={submitPassword} className="flex flex-col gap-3">
             <h3 className="text-lg font-semibold">{t("newPassword")}</h3>
-            <label className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-2">
               <span className="font-medium">{t("passwordLabel")}</span>
               <input
                 type="text"
@@ -163,7 +164,7 @@ export function UsersScreen() {
   );
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       {list.isPending ? (
         <Skeleton variant="block" className="h-48" />

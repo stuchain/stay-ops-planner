@@ -755,6 +755,14 @@
       "xlarge": "Extra large",
       "sample": "This is how the letters look."
     },
+    "theme": {
+      "title": "Appearance",
+      "label": "Appearance",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Same as the device",
+      "hint": "Changes only your own screen."
+    },
     "hosthub": {
       "title": "Hosthub connection",
       "loading": "Loading…",
@@ -1061,8 +1069,8 @@
   },
   "printSheet": {
     "back": "Back to the calendar",
-    "previous": "‹ Previous",
-    "next": "Next ›",
+    "previous": "Previous",
+    "next": "Next",
     "view": "View",
     "week": "Week",
     "month": "Month",

@@ -33,11 +33,11 @@ export function DevModeCard({ enabled }: { enabled: boolean }) {
         <span
           aria-hidden="true"
           className={cn(
-            "inline-flex h-8 w-14 items-center rounded-full p-1 transition-colors",
+            "inline-flex h-8 w-14 items-center rounded-pill p-1 transition-colors",
             enabled ? "bg-accent justify-end" : "bg-border justify-start",
           )}
         >
-          <span className="shadow-card h-6 w-6 rounded-full bg-white" />
+          <span className="shadow-card h-6 w-6 rounded-pill bg-white" />
         </span>
         <span>{enabled ? t("dev.on") : t("dev.off")}</span>
       </button>

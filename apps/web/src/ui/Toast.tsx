@@ -98,7 +98,7 @@ export function Toaster() {
           title: "font-medium",
           description: "text-sm font-medium",
           actionButton:
-            "h-target min-w-target shrink-0 cursor-pointer rounded-sm bg-accent px-4 text-base font-semibold text-surface",
+            "h-target min-w-target shrink-0 cursor-pointer rounded-sm bg-accent px-4 text-base font-semibold text-on-accent",
         },
       }}
     />

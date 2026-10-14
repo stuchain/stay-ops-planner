@@ -11,7 +11,7 @@ export function SearchLink({ className }: { className?: string }) {
   const t = useTranslations("search");
   return (
     <Link href="/app/search" className={cn(buttonBase, buttonVariants.secondary, buttonSizes.md, className)}>
-      <Search size={20} aria-hidden="true" />
+      <Search size={24} aria-hidden="true" />
       {t("open")}
     </Link>
   );
@@ -22,7 +22,7 @@ export function WeekLink({ className }: { className?: string }) {
   const t = useTranslations("week");
   return (
     <Link href="/app/week" className={cn(buttonBase, buttonVariants.secondary, buttonSizes.md, className)}>
-      <CalendarRange size={20} aria-hidden="true" />
+      <CalendarRange size={24} aria-hidden="true" />
       {t("open")}
     </Link>
   );

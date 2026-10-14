@@ -29,8 +29,6 @@ import { recommendationText } from "./recommendation";
 import { ReturningLines } from "./ReturningGuest";
 import type { MoveRequest } from "./useMoveBooking";
 
-const NEUTRAL = "#5B5852";
-
 function noop() {}
 
 export type BookingPanelProps = {
@@ -110,7 +108,7 @@ function MoveButtons({
                 choosable && !best && "hover:bg-surface-muted",
               )}
             >
-              <ApartmentChip name={room.name} color={room.color ?? NEUTRAL} inactive={!room.isActive} />
+              <ApartmentChip name={room.name} color={room.color} inactive={!room.isActive} />
               <span
                 className={cn(
                   "text-sm min-w-[100px] flex-1",

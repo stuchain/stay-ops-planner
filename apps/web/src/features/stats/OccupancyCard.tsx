@@ -66,13 +66,13 @@ function OccupancyTable({
   lastYear: readonly RoomOccupancy[];
 }) {
   const t = useTranslations();
-  const head = "px-3 py-2.5 text-right font-bold whitespace-nowrap";
+  const head = "px-3 py-3 text-right font-bold whitespace-nowrap";
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[56rem] border-collapse text-base">
         <thead>
           <tr className="border-text-muted border-b-2">
-            <th scope="col" className="bg-surface sticky left-0 px-3 py-2.5 text-left font-bold">
+            <th scope="col" className="bg-surface sticky left-0 px-3 py-3 text-left font-bold">
               {t("stats.occupancy.colApartment")}
             </th>
             {MONTHS.map((m) => (
@@ -92,7 +92,7 @@ function OccupancyTable({
             return (
               <tr key={a.id} className="border-border border-b">
                 <th scope="row" className="bg-surface sticky left-0 px-3 py-2 text-left align-top">
-                  <ApartmentChip name={a.name} color={a.color ?? "var(--color-text-muted)"} />
+                  <ApartmentChip name={a.name} color={a.color} />
                 </th>
                 {now.map((month, m) => (
                   <Cell key={m} now={month} before={before[m]} />

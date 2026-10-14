@@ -8,6 +8,7 @@ import { cents, parseEuroInput, taxFor, type IncomeBasis, type TaxScope } from "
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { TaxRulesEditData } from "@/api/types";
+import { compactFieldClass, compactSelectClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { cn } from "@/ui/cn";
@@ -28,7 +29,7 @@ import {
 } from "./taxRulesDraft";
 
 const EXAMPLE_INCOME_CENTS = cents(2_000_000);
-const input = "border-border bg-surface min-h-target rounded-sm border px-3 text-base tabular-nums";
+const input = `${compactFieldClass} tabular-nums`;
 
 function Choice<T extends string>({
   legend,
@@ -158,16 +159,16 @@ function EditorForm({ data }: { data: TaxRulesEditData }) {
           <table className="w-full border-collapse text-base" aria-describedby="tax-brackets-hint">
             <thead>
               <tr className="border-text-muted border-b-2 text-left">
-                <th scope="col" className="px-3 py-2.5 font-bold max-[479px]:hidden">
+                <th scope="col" className="px-3 py-3 font-bold small:hidden">
                   {t("from")}
                 </th>
-                <th scope="col" className="px-3 py-2.5 max-[479px]:px-1.5 font-bold">
+                <th scope="col" className="px-3 py-3 small:px-2 font-bold">
                   {t("upTo")}
                 </th>
-                <th scope="col" className="px-3 py-2.5 max-[479px]:px-1.5 font-bold">
+                <th scope="col" className="px-3 py-3 small:px-2 font-bold">
                   {t("rate")}
                 </th>
-                <th scope="col" className="px-3 py-2.5 max-[479px]:px-1.5">
+                <th scope="col" className="px-3 py-3 small:px-2">
                   <span className="sr-only">{t("actions")}</span>
                 </th>
               </tr>
@@ -180,18 +181,18 @@ function EditorForm({ data }: { data: TaxRulesEditData }) {
                 const rateError = errorFor(i, "rate");
                 return (
                   <tr key={i} className="border-border border-b align-top">
-                    <td className="px-3 py-3 whitespace-nowrap tabular-nums max-[479px]:hidden">
+                    <td className="px-3 py-3 whitespace-nowrap tabular-nums small:hidden">
                       <span className="min-h-target flex items-center">
                         {fromCents[i] === null ? "…" : money(fromCents[i]!)}
                       </span>
                     </td>
-                    <td className="px-3 py-3 max-[479px]:px-1.5">
+                    <td className="px-3 py-3 small:px-2">
                       {open ? (
                         <span className="text-text-muted min-h-target flex items-center">{t("andAbove")}</span>
                       ) : (
                         <div className="flex flex-col gap-1">
                           <input
-                            className={cn(input, "w-36 max-[479px]:w-28", limitError && "border-danger")}
+                            className={cn(input, "w-36 small:w-28", limitError && "border-danger")}
                             inputMode="decimal"
                             aria-label={t("upToAria", { n })}
                             aria-invalid={limitError ? true : undefined}
@@ -207,10 +208,10 @@ function EditorForm({ data }: { data: TaxRulesEditData }) {
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-3 max-[479px]:px-1.5">
+                    <td className="px-3 py-3 small:px-2">
                       <div className="flex flex-col gap-1">
                         <input
-                          className={cn(input, "w-24 max-[479px]:w-20", rateError && "border-danger")}
+                          className={cn(input, "w-24 small:w-20", rateError && "border-danger")}
                           inputMode="decimal"
                           aria-label={t("rateAria", { n })}
                           aria-invalid={rateError ? true : undefined}
@@ -229,7 +230,7 @@ function EditorForm({ data }: { data: TaxRulesEditData }) {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-3 py-3 max-[479px]:px-1.5 text-right">
+                    <td className="px-3 py-3 small:px-2 text-right">
                       <IconButton
                         label={t("remove", { n })}
                         icon={Trash2}
@@ -256,7 +257,7 @@ function EditorForm({ data }: { data: TaxRulesEditData }) {
       </Card>
 
       <Card>
-        <div className="grid grid-cols-2 gap-6 max-[759px]:grid-cols-1">
+        <div className="grid grid-cols-2 gap-6 phone:grid-cols-1">
           <Choice
             legend={t("scope")}
             name="tax-scope"
@@ -335,7 +336,7 @@ export function TaxRulesEditor({ initialYear }: { initialYear: number }) {
   const years = query.data?.years ?? [year];
 
   return (
-    <div className="flex max-w-4xl flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex max-w-4xl flex-col gap-6 p-8 phone:p-4">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
@@ -343,11 +344,7 @@ export function TaxRulesEditor({ initialYear }: { initialYear: number }) {
           <label className="flex items-center gap-3 text-base font-medium">
             {t("year")}
             <span className="relative">
-              <select
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                className="border-border bg-surface min-h-target appearance-none rounded-sm border py-2 pr-10 pl-4 text-base font-semibold"
-              >
+              <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={compactSelectClass}>
                 {years.map((y) => (
                   <option key={y} value={y}>
                     {y}

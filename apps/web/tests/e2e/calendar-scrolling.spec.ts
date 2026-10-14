@@ -256,7 +256,7 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
   test("keeps the same first day when switching between month and week", async ({ page }) => {
     await scrollToDay(page, SCROLL_FROM.longStay + 5);
     const before = await grid(page).evaluate((el, w) => Math.floor(el.scrollLeft / w), MONTH_DAY_WIDTH);
-    await page.getByRole("button", { name: "Εβδομάδα", exact: true }).click();
+    await page.getByRole("radio", { name: "Εβδομάδα", exact: true }).click();
     await expect
       .poll(() => grid(page).evaluate((el, w) => Math.floor(el.scrollLeft / w), WEEK_DAY_WIDTH))
       .toBeGreaterThanOrEqual(before);
@@ -264,7 +264,7 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
     expect(Math.abs(week - before)).toBeLessThanOrEqual(3);
     await expect(bar(room(page, ROOM.alpha), SCROLL_GUEST.longStay)).toBeVisible();
 
-    await page.getByRole("button", { name: "Μήνας", exact: true }).click();
+    await page.getByRole("radio", { name: "Μήνας", exact: true }).click();
     await expect
       .poll(async () =>
         Math.abs((await grid(page).evaluate((el, w) => Math.floor(el.scrollLeft / w), MONTH_DAY_WIDTH)) - before),

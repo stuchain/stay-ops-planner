@@ -7,6 +7,7 @@ import { Fragment, useMemo, useState, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { RouterInputs } from "@/api/types";
+import { compactFieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState } from "@/ui/ErrorState";
@@ -29,7 +30,7 @@ function toFilters(draft: Draft): Filters {
   return out;
 }
 
-const field = "border-border bg-surface min-h-target rounded-sm border px-3 text-base";
+const field = compactFieldClass;
 
 function Json({ label, value }: { label: string; value: unknown }) {
   if (value === null || value === undefined) return null;
@@ -162,7 +163,7 @@ export function HistoryScreen() {
   const set = (key: keyof Draft) => (e: { target: { value: string } }) => setDraft({ ...draft, [key]: e.target.value });
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
@@ -177,15 +178,15 @@ export function HistoryScreen() {
         onSubmit={apply}
         className="bg-surface shadow-card rounded-card grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3"
       >
-        <label className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-2">
           <span className="font-medium">{t("from")}</span>
           <input type="date" className={field} value={draft.from} onChange={set("from")} />
         </label>
-        <label className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-2">
           <span className="font-medium">{t("to")}</span>
           <input type="date" className={field} value={draft.to} onChange={set("to")} />
         </label>
-        <label className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-2">
           <span className="font-medium">{t("entityType")}</span>
           <select className={field} value={draft.entityType} onChange={set("entityType")}>
             <option value="">{t("any")}</option>
@@ -196,7 +197,7 @@ export function HistoryScreen() {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-2">
           <span className="font-medium">{t("action")}</span>
           <select className={field} value={draft.action} onChange={set("action")}>
             <option value="">{t("any")}</option>
@@ -207,7 +208,7 @@ export function HistoryScreen() {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-2">
           <span className="font-medium">{t("user")}</span>
           <select className={field} value={draft.userId} onChange={set("userId")}>
             <option value="">{t("anyUser")}</option>
@@ -218,7 +219,7 @@ export function HistoryScreen() {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-2">
           <span className="font-medium">{t("bookingId")}</span>
           <input className={field} value={draft.bookingId} onChange={set("bookingId")} autoComplete="off" />
         </label>

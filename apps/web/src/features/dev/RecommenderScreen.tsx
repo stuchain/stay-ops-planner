@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { IsoDate, ReasonCode, RuleName } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
+import { compactFieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 import { ConfirmButton } from "@/ui/ConfirmButton";
@@ -18,7 +19,7 @@ import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { showToast } from "@/ui/Toast";
 
-const field = "border-border bg-surface min-h-target rounded-sm border px-3 text-base";
+const field = compactFieldClass;
 
 /** The rules being edited (the saved shape, but mutable). */
 type RecommenderConfig = { rules: { rule: RuleName; weight: number }[] };
@@ -177,10 +178,10 @@ function BookingPicker({ selectedId, onSelect }: { selectedId: string | null; on
         </h2>
         <p className="text-text-muted">{t("pickHint")}</p>
       </div>
-      <label className="flex max-w-md flex-col gap-1.5">
+      <label className="flex max-w-md flex-col gap-2">
         <span className="font-medium">{t("search")}</span>
         <span className="relative">
-          <Search size={18} aria-hidden="true" className="text-text-muted absolute top-1/2 left-3 -translate-y-1/2" />
+          <Search size={20} aria-hidden="true" className="text-text-muted absolute top-1/2 left-3 -translate-y-1/2" />
           <input
             type="search"
             className={cn(field, "w-full pl-10")}
@@ -271,13 +272,13 @@ function RankingTable({ bookingId, config }: { bookingId: string; config: Recomm
                 <td className="px-3 py-3 tabular-nums">{index + 1}</td>
                 <td className="px-3 py-3 font-medium">
                   {names.get(row.roomId) ?? row.roomId}
-                  {row.recommended ? <span className="text-accent-text ml-2 text-sm">{t("recommended")}</span> : null}
+                  {row.recommended ? <span className="text-accent ml-2 text-sm">{t("recommended")}</span> : null}
                 </td>
                 <td className="px-3 py-3">
                   {row.available ? (
                     t("available")
                   ) : (
-                    <span className="text-danger-text">
+                    <span className="text-danger">
                       {t("notAvailable")}
                       {row.blockedByGuest ? ` (${row.blockedByGuest})` : ""}
                     </span>
@@ -320,7 +321,7 @@ export function RecommenderScreen() {
   }, [config.data]);
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       {!draft || !config.data ? (
         config.error ? (

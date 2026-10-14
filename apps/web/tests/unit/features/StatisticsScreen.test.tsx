@@ -143,11 +143,11 @@ describe("StatisticsScreen", () => {
     show();
     const user = userEvent.setup();
     await screen.findByRole("heading", { name: "Μήνα με μήνα" });
-    await user.click(screen.getByRole("button", { name: "Νύχτες" }));
+    await user.click(screen.getByRole("radio", { name: "Νύχτες" }));
     expect(screen.getByRole("list", { name: "Νύχτες ανά μήνα, φέτος και πέρσι" })).toBeInTheDocument();
     expect(screen.getByRole("listitem", { name: "Ιούλιος: 2030 3, 2029 2" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Όλη η χρονιά" }));
-    expect(screen.getByRole("button", { name: "Όλη η χρονιά" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("radio", { name: "Όλη η χρονιά" }));
+    expect(screen.getByRole("radio", { name: "Όλη η χρονιά" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("types a score for an Airbnb page and checks it first", async () => {

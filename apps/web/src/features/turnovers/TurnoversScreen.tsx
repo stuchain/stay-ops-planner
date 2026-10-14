@@ -8,6 +8,7 @@ import { addDays, type IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { TurnoverList, TurnoverTask } from "@/api/types";
+import { Badge } from "@/ui/Badge";
 import { Button } from "@/ui/Button";
 import { DateText } from "@/ui/DateText";
 import { ErrorState } from "@/ui/ErrorState";
@@ -97,7 +98,7 @@ function DaySection({
     >
       <h2 id={headingId} className="flex flex-wrap items-baseline gap-3 text-lg font-semibold">
         <DateText date={day} withYear />
-        {tag ? <span className="bg-accent-soft text-accent rounded-pill px-3 py-0.5 text-sm">{tag}</span> : null}
+        {tag ? <Badge tone="info">{tag}</Badge> : null}
       </h2>
       <ul className="divide-border flex flex-col divide-y">
         {tasks.map((task) => (
@@ -172,7 +173,7 @@ export function TurnoversScreen() {
   const hasTasks = (list.data?.tasks.length ?? 0) > 0;
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader
         title={t("title")}
         actions={

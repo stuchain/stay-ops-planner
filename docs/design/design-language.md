@@ -17,15 +17,17 @@ Phase 1A, task P1A-1. The rules every new screen follows. Values live in [`apps/
 
 - Face: **Commissioner** (full Greek, designed by a Greek type designer), falling back to Inter, Segoe UI, system UI.
 - Base 18 px. Scale: 14 / 16 / 18 / 22 / 28 / 36. Line height 1.5 for text, 1.25 for headings.
-- 14 px only for secondary labels (day numbers, captions), never for something he must act on.
+- Heading levels, always the same: page title 28 semibold (`PageHeader`), section 22 semibold (`Card` titles, day headings), group 18 semibold, big numbers 36 bold.
+- 14 px only for secondary labels (day numbers, captions), never smaller, and never for something he must act on. One exception: the phone tab labels are 11 px so six tabs fit (phones are Stelios only).
+- Printed documents (the accountant's report) are sized in pt so the paper looks the same whatever the screen's Text size.
 - Text size setting: Κανονικά (100%), Μεγάλα (112.5%), Πολύ μεγάλα (125%), scaling everything.
 - Numbers that line up use tabular figures.
 
 ## Colour
 
-- Warm-grey page, white cards, one accent (deep blue) for primary buttons and the current page.
-- Semantic colours: success (green, "free", "done"), warning (amber, "needs a decision"), danger (red, errors only).
-- **One fixed colour per apartment, used everywhere** (calendar row and bars, chips, money bars, Excel export):
+- Warm-grey page, white cards, one accent (deep blue) for primary buttons and the current page. Text on a blue or red fill uses `on-accent` (white in light, near-black in dark).
+- Semantic colours: success (green, "free", "done"), warning (orange, "needs a decision"; orange so it never looks like Helios), danger (red, errors only).
+- **One fixed colour per apartment, used everywhere** (calendar row labels, chips, money bars, Excel export). Booking bars are coloured by channel instead (Airbnb red, Booking.com blue, direct light yellow; Stelios, 11 Oct 2026). On screen, apartment colours go through `ui/apartmentColor.ts`, which gives a lighter step of the same hue in dark mode:
 
   | Apartment | Colour |
   |---|---|
@@ -35,12 +37,24 @@ Phase 1A, task P1A-1. The rules every new screen follows. Values live in [`apps/
   | Helios | amber `#A65F00` |
 
 - Colour is never the only signal: every apartment colour comes with its name, every state with a word.
-- All text meets WCAG AA (4.5:1); ratios are in `apps/web/src/ui/tokens.ts`. Light theme is the default; a dark theme exists for Stelios.
+- All text meets WCAG AA (4.5:1); ratios are in `apps/web/src/ui/tokens.ts`. Light theme is the default. Admins can pick Φωτεινή / Σκούρα / Όπως η συσκευή in Settings (saved per user in `users.theme`), so the owner's screens stay light.
+- Only colours defined in `ui/theme.css` exist (Tailwind's own list is reset); `tests/unit/ui/colourClasses.test.ts` fails on any other colour class. Printable sheets use `paper` / `ink`, black on white whatever the theme.
 
 ## Shape and space
 
-- 8 px grid. Cards have 12 px radius and a soft shadow. Panels and dialogs use the stronger "raised" shadow.
+- 4 px steps on an 8 px grid (4, 8, 12, 16, 24, 32, 48, 64); no 2, 6 or 10 px gaps.
+- Corners: 4 px (`rounded-xs`) for small marks only (colour dots, chart bars), 8 px (`rounded-sm`) for buttons, fields and badges' inner parts, 12 px (`rounded-card`) for cards, panels and dialogs, pill for badges and chips.
+- Cards have a soft shadow. Panels and dialogs use the stronger "raised" shadow.
+- Breakpoints, by name only: `narrow` below 1100 px (side-by-side blocks stack), `phone` below 760 px (bottom tabs), `small` below 480 px.
 - Minimum click target 44 px; main buttons 56 px tall. No action is only on hover.
+- Settings-style pages (one column of forms) are at most 48 rem wide; every other screen uses the full content width.
+
+## Components
+
+- **Buttons:** one blue (primary) button per screen, for the thing the screen is for ("Βάλτε τις σε διαμέρισμα" on Σήμερα). Everything else is the plain (secondary) button. Print is plain, except on pages that exist only to print (the print sheet, arrival cards).
+- **Choosing one of a few:** always `ui/ChoiceGroup` (light blue fill, blue border and a tick), in Settings, the calendar's Week/Month and the statistics tabs. `size="md"` in toolbars.
+- **Small labels:** always `ui/Badge` with a tone: neutral (facts, "Εκτίμηση"), info ("Σήμερα", "Τώρα"), success (done), warning (needs him), danger.
+- **Text boxes:** `fieldClass` from `ui/field.ts` (56 px, 2 px border) on his forms; `compactFieldClass` (44 px) in tables, toolbars and Dev screens.
 - Booking bars are 56 px tall on 88 px rows, so they are easy to hit.
 
 ## Motion
@@ -50,7 +64,7 @@ Phase 1A, task P1A-1. The rules every new screen follows. Values live in [`apps/
 
 ## Icons
 
-Lucide only, 24 px in the sidebar and buttons, 2 px stroke, always next to a word.
+Lucide only (no text arrows or ★ characters), 2 px stroke, always next to a word. Three sizes: 24 px in the sidebar, buttons and card titles; 20 px next to body text; 16 px next to small (14–16 px) text.
 
 ## Interaction rules
 

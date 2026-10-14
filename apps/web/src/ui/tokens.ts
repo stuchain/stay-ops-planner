@@ -26,7 +26,8 @@ export const space = {
   scale: { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 24, 6: 32, 7: 48, 8: 64 },
 } as const;
 
-export const radius = { sm: 8, card: 12, pill: 999 } as const;
+/** xs is for small marks only: colour dots and chart bars. */
+export const radius = { xs: 4, sm: 8, card: 12, pill: 999 } as const;
 
 export const shadow = {
   card: "0 1px 2px rgba(28,27,25,.06), 0 2px 8px rgba(28,27,25,.06)",
@@ -66,12 +67,15 @@ export const color = {
     success: "#15803D", // white text 5.0:1
     successSoft: "#DCFCE7",
     successText: "#14532D", // on successSoft 8.3:1
-    warning: "#A65F00",
-    warningSoft: "#FFF4DB",
-    warningText: "#7A4A00", // on warningSoft 6.9:1
+    /** Orange, not amber, so a warning never looks like the Helios colour. 5.2:1 on white. */
+    warning: "#C2410C",
+    warningSoft: "#FFEDD5",
+    warningText: "#9A3412", // on warningSoft 6.4:1
     danger: "#B42318", // white text 6.6:1
     dangerSoft: "#FDECEA",
     focus: "#1E4B8F",
+    /** Text and icons on an accent or danger fill. */
+    onAccent: "#FFFFFF",
   },
   dark: {
     bg: "#161616",
@@ -85,24 +89,29 @@ export const color = {
     success: "#4ADE80",
     successSoft: "#14301F",
     successText: "#BBF7D0",
-    warning: "#F5B544",
-    warningSoft: "#3A2A0E",
-    warningText: "#FCD9A0",
+    warning: "#FB923C",
+    warningSoft: "#3A1E0E",
+    warningText: "#FED7AA",
     danger: "#F87171",
     dangerSoft: "#3B1717",
     focus: "#8DB4F2",
+    onAccent: "#161616", // on accent 8.6:1
   },
 } as const;
 
 /**
  * One fixed colour per apartment, used everywhere: calendar row and bars,
  * chips, money bars and the Excel export. White bold text on each passes AA.
+ * `dark` is the same hue a step lighter, used on screen in the dark theme (at least 3:1 on the dark surface).
  */
 export const apartment = {
-  Onar: { name: "Onar", color: "#0F766E", soft: "#E6F4F2" }, // teal, 5.5:1
-  Cosmos: { name: "Cosmos", color: "#4338CA", soft: "#ECEBFB" }, // indigo, 7.9:1
-  Iris: { name: "Iris", color: "#BE185D", soft: "#FCE8F0" }, // rose, 6.0:1
-  Helios: { name: "Helios", color: "#A65F00", soft: "#FFF1DC" }, // amber, 4.9:1
+  Onar: { name: "Onar", color: "#0F766E", soft: "#E6F4F2", dark: "#2DD4BF" }, // teal, 5.5:1
+  Cosmos: { name: "Cosmos", color: "#4338CA", soft: "#ECEBFB", dark: "#A5B4FC" }, // indigo, 7.9:1
+  Iris: { name: "Iris", color: "#BE185D", soft: "#FCE8F0", dark: "#F472B6" }, // rose, 6.0:1
+  Helios: { name: "Helios", color: "#A65F00", soft: "#FFF1DC", dark: "#EAB308" }, // amber, 4.9:1
 } as const;
+
+/** Paper and ink for printable sheets: black on white whatever the theme. */
+export const paper = { paper: "#FFFFFF", ink: "#000000" } as const;
 
 export type ApartmentName = keyof typeof apartment;

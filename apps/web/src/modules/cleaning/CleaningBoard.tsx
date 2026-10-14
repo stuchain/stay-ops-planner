@@ -2,11 +2,12 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { cn } from "@/ui/cn";
+import { compactFieldClass } from "@/ui/field";
 
 // Dev mode only: the board keeps its own English text until Phase 4; styled with the new design tokens.
 const BTN = cn(buttonBase, buttonVariants.secondary, buttonSizes.md);
 const BTN_PRIMARY = cn(buttonBase, buttonVariants.primary, buttonSizes.md);
-const INPUT = "min-h-target rounded-sm border border-border bg-surface px-3 text-sm text-text";
+const INPUT = compactFieldClass;
 const LABEL = "flex flex-col gap-1 text-sm font-semibold";
 const MUTED = "text-text-muted text-sm";
 
@@ -163,7 +164,7 @@ export function CleaningBoard() {
         <h1>Cleaning board</h1>
       </header>
       {flash && (
-        <div className="bg-danger-soft text-text rounded-sm px-4 py-3 text-sm" role="alert">
+        <div className="bg-danger-soft text-danger rounded-sm px-4 py-3 text-sm" role="alert">
           {flash}
         </div>
       )}

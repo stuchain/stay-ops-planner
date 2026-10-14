@@ -14,7 +14,22 @@
 @source "../features";
 @source "../modules/cleaning";
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where([data-theme="system"], [data-theme="system"] *) {
+      @slot;
+    }
+  }
+}
+
+/* Breakpoints, named once: narrow below 1100 px (side-by-side blocks stack), phone below 760 px (sidebar becomes
+   bottom tabs), small below 480 px (the narrowest phones). Declared widest first so the narrower one wins. */
+@custom-variant narrow (@media (width < 1100px));
+@custom-variant phone (@media (width < 760px));
+@custom-variant small (@media (width < 480px));
 
 @theme inline {
   --color-*: initial;
@@ -38,13 +53,17 @@
   --color-danger: var(--so-danger);
   --color-danger-soft: var(--so-danger-soft);
   --color-focus: var(--so-focus);
-  --color-onar: #0f766e;
+  --color-on-accent: var(--so-on-accent);
+  --color-paper: #ffffff;
+  --color-ink: #000000;
+  /* Apartment colours: the approved light values, a lighter step in dark mode (see tokens.ts and ui/apartmentColor.ts). */
+  --color-onar: var(--so-apt-onar);
   --color-onar-soft: #e6f4f2;
-  --color-cosmos: #4338ca;
+  --color-cosmos: var(--so-apt-cosmos);
   --color-cosmos-soft: #ecebfb;
-  --color-iris: #be185d;
+  --color-iris: var(--so-apt-iris);
   --color-iris-soft: #fce8f0;
-  --color-helios: #a65f00;
+  --color-helios: var(--so-apt-helios);
   --color-helios-soft: #fff1dc;
 
   --font-sans: "Commissioner Variable", "Commissioner", "Inter", "Segoe UI", system-ui, sans-serif;
@@ -63,6 +82,7 @@
   --text-xl--line-height: 1.25;
   --text-2xl--line-height: 1.25;
 
+  --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-card: 12px;
   --radius-pill: 999px;
@@ -94,12 +114,17 @@
   --so-success: #15803d;
   --so-success-soft: #dcfce7;
   --so-success-text: #14532d;
-  --so-warning: #a65f00;
-  --so-warning-soft: #fff4db;
-  --so-warning-text: #7a4a00;
+  --so-warning: #c2410c;
+  --so-warning-soft: #ffedd5;
+  --so-warning-text: #9a3412;
   --so-danger: #b42318;
   --so-danger-soft: #fdecea;
   --so-focus: #1e4b8f;
+  --so-on-accent: #ffffff;
+  --so-apt-onar: #0f766e;
+  --so-apt-cosmos: #4338ca;
+  --so-apt-iris: #be185d;
+  --so-apt-helios: #a65f00;
 }
 
 /*
@@ -115,6 +140,7 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
   font-size: 122.22%;
 }
 
+/* Theme setting (Settings > Εμφάνιση): light (default), dark, or follow the device ("system"). */
 [data-ui="new"][data-theme="dark"] {
   --so-bg: #161616;
   --so-surface: #202020;
@@ -127,12 +153,46 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
   --so-success: #4ade80;
   --so-success-soft: #14301f;
   --so-success-text: #bbf7d0;
-  --so-warning: #f5b544;
-  --so-warning-soft: #3a2a0e;
-  --so-warning-text: #fcd9a0;
+  --so-warning: #fb923c;
+  --so-warning-soft: #3a1e0e;
+  --so-warning-text: #fed7aa;
   --so-danger: #f87171;
   --so-danger-soft: #3b1717;
   --so-focus: #8db4f2;
+  --so-on-accent: #161616;
+  --so-apt-onar: #2dd4bf;
+  --so-apt-cosmos: #a5b4fc;
+  --so-apt-iris: #f472b6;
+  --so-apt-helios: #eab308;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-ui="new"][data-theme="system"] {
+    --so-bg: #161616;
+    --so-surface: #202020;
+    --so-surface-muted: #1b1b1b;
+    --so-border: #343330;
+    --so-text: #f2f1ee;
+    --so-text-muted: #b6b2aa;
+    --so-accent: #8db4f2;
+    --so-accent-soft: #1d2a3f;
+    --so-success: #4ade80;
+    --so-success-soft: #14301f;
+    --so-success-text: #bbf7d0;
+    --so-warning: #fb923c;
+    --so-warning-soft: #3a1e0e;
+    --so-warning-text: #fed7aa;
+    --so-danger: #f87171;
+    --so-danger-soft: #3b1717;
+    --so-focus: #8db4f2;
+    --so-on-accent: #161616;
+    --so-apt-onar: #2dd4bf;
+    --so-apt-cosmos: #a5b4fc;
+    --so-apt-iris: #f472b6;
+    --so-apt-helios: #eab308;
+    color-scheme: dark;
+  }
 }
 
 /* A small reset, scoped to the new shell instead of Tailwind's global preflight. */
@@ -222,7 +282,8 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
 
 @media print {
   [data-ui="new"],
-  [data-ui="new"][data-theme="dark"] {
+  [data-ui="new"][data-theme="dark"],
+  [data-ui="new"][data-theme="system"] {
     --so-bg: #ffffff;
     --so-surface: #ffffff;
     --so-surface-muted: #ffffff;
@@ -231,6 +292,11 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
     --so-text-muted: #222222;
     --so-accent: #000000;
     --so-warning-text: #000000;
+    --so-apt-onar: #0f766e;
+    --so-apt-cosmos: #4338ca;
+    --so-apt-iris: #be185d;
+    --so-apt-helios: #a65f00;
+    color-scheme: light;
   }
 
   [data-ui="new"] aside,

@@ -4,6 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { Inbox, Wand2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { CalendarBooking } from "@/api/types";
+import { Badge } from "@/ui/Badge";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 import { DraggableBar } from "./DraggableBar";
@@ -37,9 +38,7 @@ export function Tray({ bookings, selectedId, acceptsDrop, onOpen, onArrange, arr
         <h2 id="tray-title" className="text-base flex items-center gap-2 font-semibold">
           <Inbox size={24} strokeWidth={2} aria-hidden="true" />
           {t("title")}
-          <span className="bg-warning-soft text-warning-text text-sm rounded-pill px-2.5 py-0.5">
-            {bookings.length}
-          </span>
+          <Badge tone="warning">{bookings.length}</Badge>
         </h2>
         {onArrange && bookings.length > 0 ? (
           <Button icon={Wand2} onClick={onArrange} disabled={arrangeDisabled}>

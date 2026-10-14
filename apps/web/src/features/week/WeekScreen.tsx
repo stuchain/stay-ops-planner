@@ -11,6 +11,7 @@ import { addDays, isIsoDate, type IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { TodayStay, TurnoverTask, WeekDayData, WeekSummaryData } from "@/api/types";
+import { Badge } from "@/ui/Badge";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
@@ -19,8 +20,6 @@ import { formatDay, formatRange } from "@/ui/format";
 import { IconButton } from "@/ui/IconButton";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
-
-const NEUTRAL = "#5B5852";
 
 /** A4 portrait, black on white, one day never split across pages when it fits. */
 const PRINT_CSS = `
@@ -56,7 +55,7 @@ function StayItem({ stay, kind }: { stay: TodayStay; kind: "arrival" | "departur
       <Link
         href={`/app/calendar?booking=${stay.id}&date=${stay.checkin}`}
         className={cn(
-          "hover:bg-surface-muted flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm px-2 py-1.5",
+          "hover:bg-surface-muted flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm px-2 py-2",
           pending && "text-text-muted",
         )}
       >
@@ -73,7 +72,7 @@ function StayItem({ stay, kind }: { stay: TodayStay; kind: "arrival" | "departur
         </span>
         <span className="swatch-chip">
           {stay.room ? (
-            <ApartmentChip name={stay.room.name} color={stay.room.color ?? NEUTRAL} />
+            <ApartmentChip name={stay.room.name} color={stay.room.color} />
           ) : (
             <span className="text-warning-text text-sm font-semibold">{t("noApartment")}</span>
           )}
@@ -86,7 +85,7 @@ function StayItem({ stay, kind }: { stay: TodayStay; kind: "arrival" | "departur
 function CleaningItem({ task }: { task: TurnoverTask }) {
   const t = useTranslations("week");
   return (
-    <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2 py-1.5">
+    <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2 py-2">
       <span className="min-w-0">
         <span className="font-semibold">
           {task.start}–{task.end}
@@ -99,7 +98,7 @@ function CleaningItem({ task }: { task: TurnoverTask }) {
         </span>
       </span>
       <span className="swatch-chip">
-        <ApartmentChip name={task.room.name} color={task.room.color ?? NEUTRAL} />
+        <ApartmentChip name={task.room.name} color={task.room.color} />
       </span>
     </li>
   );
@@ -118,14 +117,14 @@ function Day({ day, today }: { day: WeekDayData; today: IsoDate }) {
         day.date === today && "ring-accent ring-2",
       )}
     >
-      <h2 id={headingId} className="text-lg font-bold">
+      <h2 id={headingId} className="flex flex-wrap items-center gap-3 text-lg font-semibold">
         {formatDay(day.date, locale, true)}
-        {day.date === today ? <span className="text-accent ml-2 text-base font-semibold">{t("today")}</span> : null}
+        {day.date === today ? <Badge tone="info">{t("today")}</Badge> : null}
       </h2>
       {quiet ? (
         <p className="text-text-muted">{t("quietDay")}</p>
       ) : (
-        <div className="grid grid-cols-3 gap-4 max-[1099px]:grid-cols-1 print:grid-cols-3">
+        <div className="grid grid-cols-3 gap-4 narrow:grid-cols-1 print:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-1">
             <Line icon={LogIn} title={t("arrivals")} count={day.arrivals.length} />
             {day.arrivals.length === 0 ? (
@@ -207,7 +206,7 @@ export function WeekScreen() {
   const from = week.data?.from;
 
   return (
-    <div className="week-sheet flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="week-sheet flex flex-col gap-6 p-8 phone:p-4">
       <style>{PRINT_CSS}</style>
       <PageHeader
         title={t("title")}
@@ -227,7 +226,7 @@ export function WeekScreen() {
               disabled={!from}
               onClick={() => from && go(addDays(from, 7))}
             />
-            <Button icon={Printer} variant="primary" onClick={() => window.print()} disabled={!week.data}>
+            <Button icon={Printer} onClick={() => window.print()} disabled={!week.data}>
               {t("print")}
             </Button>
           </div>

@@ -15,6 +15,7 @@ import {
   type MessageLanguage,
 } from "@/i18n/guestMessages/defaults";
 import { fillTemplate, resolveTemplate, sampleContext } from "@/i18n/guestMessages/fill";
+import { compactFieldClass } from "@/ui/field";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 import { ConfirmButton } from "@/ui/ConfirmButton";
@@ -22,7 +23,7 @@ import { ErrorState } from "@/ui/ErrorState";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { showToast } from "@/ui/Toast";
-import { ChoiceGroup } from "../settings/ChoiceGroup";
+import { ChoiceGroup } from "@/ui/ChoiceGroup";
 
 const SCOPE_ALL = "all";
 
@@ -113,13 +114,9 @@ function Editor({ data }: Props) {
         choices={MESSAGE_LANGUAGES.map((value) => ({ value, label: tLang(value) }))}
         onChange={choose(setLang)}
       />
-      <label className="flex max-w-md flex-col gap-1.5">
+      <label className="flex max-w-md flex-col gap-2">
         <span className="font-medium">{t("scope")}</span>
-        <select
-          className="border-border bg-surface min-h-target rounded-sm border px-3 text-base"
-          value={scope}
-          onChange={(e) => choose(setScope)(e.target.value)}
-        >
+        <select className={compactFieldClass} value={scope} onChange={(e) => choose(setScope)(e.target.value)}>
           <option value={SCOPE_ALL}>{t("scopeAll")}</option>
           {(apartments.data ?? []).map((a) => (
             <option key={a.id} value={a.id}>
@@ -145,7 +142,7 @@ function Editor({ data }: Props) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <h2 className="font-medium">{t("placeholders")}</h2>
+        <h2 className="text-base font-semibold">{t("placeholders")}</h2>
         <ul className="flex flex-wrap gap-2">
           {PLACEHOLDERS.map((name) => (
             <li key={name}>
@@ -166,7 +163,7 @@ function Editor({ data }: Props) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <h2 className="font-medium">{t("preview")}</h2>
+        <h2 className="text-base font-semibold">{t("preview")}</h2>
         <p data-testid="preview" className="bg-surface-muted rounded-card p-4 text-lg whitespace-pre-wrap">
           {preview}
         </p>
@@ -210,7 +207,7 @@ export function MessagesScreen() {
   const trpc = useTRPC();
   const templates = useQuery(trpc.dev.messageTemplates.queryOptions());
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       {templates.data ? (
         <Editor data={templates.data} />

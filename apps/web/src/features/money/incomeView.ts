@@ -1,4 +1,5 @@
 import type { LedgerApartmentData, LedgerYearData } from "@/api/types";
+import { apartmentColor } from "@/ui/apartmentColor";
 
 /** A month already lived, the one we are in, or one still to come (from bookings already made). */
 export type MonthKind = "actual" | "current" | "expected";
@@ -70,11 +71,10 @@ export function formatChange(fraction: number): string {
   return `${percent > 0 ? "+" : "−"}${Math.abs(percent)}%`;
 }
 
-/** Apartment colour, from the room settings or the design tokens. */
-export function apartmentColor(a: LedgerApartmentData): string {
-  return (
-    a.color ?? ["var(--color-onar)", "var(--color-cosmos)", "var(--color-iris)", "var(--color-helios)"][a.index - 1]!
-  );
+/** Apartment colour on screen, from the room settings or else the column's design colour; follows the theme. */
+export function ledgerApartmentColor(a: LedgerApartmentData): string {
+  if (a.color) return apartmentColor(a.color);
+  return ["var(--so-apt-onar)", "var(--so-apt-cosmos)", "var(--so-apt-iris)", "var(--so-apt-helios)"][a.index - 1]!;
 }
 
 /** "15%" or "22,5%" in Greek; "22.5%" in English. */

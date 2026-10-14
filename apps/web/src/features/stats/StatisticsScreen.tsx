@@ -18,8 +18,10 @@ import type { IsoDate, MonthStats, YearStats } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import type { StatisticsData } from "@/api/types";
+import { compactSelectClass } from "@/ui/field";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 import { Card } from "@/ui/Card";
+import { ChoiceGroup } from "@/ui/ChoiceGroup";
 import { cn } from "@/ui/cn";
 import { ErrorState } from "@/ui/ErrorState";
 import { formatDay, formatMoney, type UiLocale } from "@/ui/format";
@@ -178,7 +180,7 @@ function Headlines({ now, before, leadTimeKnown }: { now: YearStats; before: Yea
     },
   ];
   return (
-    <div className="grid grid-cols-4 gap-4 max-[1100px]:grid-cols-3 max-[860px]:grid-cols-2 max-[479px]:grid-cols-1">
+    <div className="grid grid-cols-4 gap-4 narrow:grid-cols-3 phone:grid-cols-2 small:grid-cols-1">
       {tiles.map((tile) => (
         <Tile key={tile.label} {...tile} />
       ))}
@@ -210,28 +212,19 @@ function MonthCompare({ data }: { data: StatisticsData }) {
   const metrics: MonthMetric[] = ["income", "nights", "occupancy", "bookings"];
   return (
     <Card title={<CardTitle icon={ChartColumn}>{t("stats.months.title")}</CardTitle>}>
-      <div role="group" aria-label={t("stats.months.metric")} className="flex flex-wrap gap-1">
-        {metrics.map((m) => (
-          <button
-            key={m}
-            type="button"
-            aria-pressed={metric === m}
-            onClick={() => setMetric(m)}
-            className={cn(
-              "min-h-target rounded-sm px-3 text-base font-medium",
-              metric === m ? "bg-accent dark:text-bg text-white" : "bg-surface-muted text-text",
-            )}
-          >
-            {t(`stats.months.${m}`)}
-          </button>
-        ))}
-      </div>
+      <ChoiceGroup<MonthMetric>
+        size="md"
+        label={t("stats.months.metric")}
+        value={metric}
+        onChange={setMetric}
+        choices={metrics.map((m) => ({ value: m, label: t(`stats.months.${m}`) }))}
+      />
       <ul className="flex flex-wrap gap-2 text-sm" aria-hidden="true">
-        <li className="border-border flex items-center gap-2 rounded-full border px-3 py-1">
+        <li className="border-border flex items-center gap-2 rounded-pill border px-3 py-1">
           <span className="bg-accent size-3 rounded-sm" />
           {data.year}
         </li>
-        <li className="border-border flex items-center gap-2 rounded-full border px-3 py-1">
+        <li className="border-border flex items-center gap-2 rounded-pill border px-3 py-1">
           <span className="bg-text-muted size-3 rounded-sm opacity-50" />
           {data.year - 1}
         </li>
@@ -239,7 +232,7 @@ function MonthCompare({ data }: { data: StatisticsData }) {
       <div
         role="list"
         aria-label={t("stats.months.chartLabel", { metric: t(`stats.months.${metric}`) })}
-        className="grid grid-cols-12 gap-2 max-[759px]:grid-cols-1 max-[759px]:gap-1"
+        className="grid grid-cols-12 gap-2 phone:grid-cols-1 phone:gap-1"
       >
         {rows.map((r) => (
           <div
@@ -252,22 +245,22 @@ function MonthCompare({ data }: { data: StatisticsData }) {
               year: data.year,
               lastYear: data.year - 1,
             })}
-            className="flex min-w-0 flex-col items-center gap-1 max-[759px]:flex-row max-[759px]:gap-3"
+            className="flex min-w-0 flex-col items-center gap-1 phone:flex-row phone:gap-3"
           >
-            <span className="text-xs font-semibold whitespace-nowrap tabular-nums max-[759px]:order-3 max-[759px]:w-24 max-[759px]:text-right">
+            <span className="text-xs font-semibold whitespace-nowrap tabular-nums phone:order-3 phone:w-24 phone:text-right">
               {show(r.now)}
             </span>
-            <div className="flex h-40 w-full items-end justify-center gap-0.5 max-[759px]:order-2 max-[759px]:h-auto max-[759px]:flex-1 max-[759px]:flex-col max-[759px]:items-start">
+            <div className="flex h-40 w-full items-end justify-center gap-1 phone:order-2 phone:h-auto phone:flex-1 phone:flex-col phone:items-start">
               <span
-                className="bg-accent block h-(--bar) w-2/5 max-w-6 rounded-t-[3px] max-[759px]:h-2.5 max-[759px]:w-(--bar) max-[759px]:max-w-none max-[759px]:rounded-t-none max-[759px]:rounded-r-[3px]"
+                className="bg-accent block h-(--bar) w-2/5 max-w-6 rounded-t-xs phone:h-2.5 phone:w-(--bar) phone:max-w-none phone:rounded-t-none phone:rounded-r-xs"
                 style={{ "--bar": `${(r.now / max) * 100}%` } as CSSProperties}
               />
               <span
-                className="bg-text-muted block h-(--bar) w-2/5 max-w-6 rounded-t-[3px] opacity-50 max-[759px]:h-2.5 max-[759px]:w-(--bar) max-[759px]:max-w-none max-[759px]:rounded-t-none max-[759px]:rounded-r-[3px]"
+                className="bg-text-muted block h-(--bar) w-2/5 max-w-6 rounded-t-xs opacity-50 phone:h-2.5 phone:w-(--bar) phone:max-w-none phone:rounded-t-none phone:rounded-r-xs"
                 style={{ "--bar": `${(r.before / max) * 100}%` } as CSSProperties}
               />
             </div>
-            <span className="text-sm font-medium max-[759px]:order-1 max-[759px]:w-24">
+            <span className="text-sm font-medium phone:order-1 phone:w-24">
               {t("income.monthShort", { month: r.month })}
             </span>
           </div>
@@ -278,8 +271,8 @@ function MonthCompare({ data }: { data: StatisticsData }) {
   );
 }
 
-const cell = "px-3 py-2.5 text-right tabular-nums whitespace-nowrap align-top";
-const head = "px-3 py-2.5 text-right font-bold whitespace-nowrap";
+const cell = "px-3 py-3 text-right tabular-nums whitespace-nowrap align-top";
+const head = "px-3 py-3 text-right font-bold whitespace-nowrap";
 
 function ChannelTable({ data }: { data: StatisticsData }) {
   const t = useTranslations();
@@ -291,7 +284,7 @@ function ChannelTable({ data }: { data: StatisticsData }) {
         <table className="w-full min-w-[44rem] border-collapse text-base">
           <thead>
             <tr className="border-text-muted border-b-2">
-              <th scope="col" className="px-3 py-2.5 text-left font-bold">
+              <th scope="col" className="px-3 py-3 text-left font-bold">
                 {t("stats.channels.channel")}
               </th>
               <th scope="col" className={head}>
@@ -319,7 +312,7 @@ function ChannelTable({ data }: { data: StatisticsData }) {
               const before = data.lastYear.byChannel[i]!;
               return (
                 <tr key={c.channel} className="border-border border-b">
-                  <th scope="row" className="px-3 py-2.5 text-left font-semibold">
+                  <th scope="row" className="px-3 py-3 text-left font-semibold">
                     {t(`channel.${c.channel}`)}
                   </th>
                   <td className={cell}>
@@ -359,7 +352,7 @@ function ApartmentTable({ data }: { data: StatisticsData }) {
         <table className="w-full min-w-[44rem] border-collapse text-base">
           <thead>
             <tr className="border-text-muted border-b-2">
-              <th scope="col" className="bg-surface sticky left-0 px-3 py-2.5 text-left font-bold">
+              <th scope="col" className="bg-surface sticky left-0 px-3 py-3 text-left font-bold">
                 {t("stats.apartments.apartment")}
               </th>
               <th scope="col" className={head}>
@@ -387,8 +380,8 @@ function ApartmentTable({ data }: { data: StatisticsData }) {
               const avg = (r: typeof now) => (r.nights > 0 ? Math.round(r.incomeCents / r.nights) : null);
               return (
                 <tr key={a.id} className="border-border border-b">
-                  <th scope="row" className="bg-surface sticky left-0 px-3 py-2.5 text-left align-top">
-                    <ApartmentChip name={a.name} color={a.color ?? "var(--color-text-muted)"} />
+                  <th scope="row" className="bg-surface sticky left-0 px-3 py-3 text-left align-top">
+                    <ApartmentChip name={a.name} color={a.color} />
                   </th>
                   <td className={cell}>
                     <span className="block">{number(now.bookings)}</span>
@@ -457,13 +450,13 @@ function Distribution({
             })}
           >
             <span className="font-medium">{label}</span>
-            <span className="flex flex-col gap-0.5" aria-hidden="true">
+            <span className="flex flex-col gap-1" aria-hidden="true">
               <span
-                className="bg-accent block h-3 w-(--bar) min-w-0.5 rounded-r-[3px]"
+                className="bg-accent block h-3 w-(--bar) min-w-0.5 rounded-r-xs"
                 style={{ "--bar": `${((now[i] ?? 0) / max) * 100}%` } as CSSProperties}
               />
               <span
-                className="bg-text-muted block h-2 w-(--bar) min-w-0.5 rounded-r-[3px] opacity-50"
+                className="bg-text-muted block h-2 w-(--bar) min-w-0.5 rounded-r-xs opacity-50"
                 style={{ "--bar": `${((before[i] ?? 0) / max) * 100}%` } as CSSProperties}
               />
             </span>
@@ -489,7 +482,7 @@ function Patterns({ data }: { data: StatisticsData }) {
       <p className="text-text-muted text-sm">
         {t("stats.patterns.legend", { year: data.year, lastYear: data.year - 1 })}
       </p>
-      <div className="grid grid-cols-2 gap-8 max-[860px]:grid-cols-1">
+      <div className="grid grid-cols-2 gap-8 phone:grid-cols-1">
         <Distribution
           title={t("stats.patterns.stayLength")}
           labels={[0, 1, 2, 3, 4, 5].map((i) => t("stats.patterns.stayBucket", { bucket: i }))}
@@ -561,7 +554,7 @@ function Records({ data }: { data: StatisticsData }) {
   ];
   return (
     <Card title={<CardTitle icon={Trophy}>{t("stats.records.title")}</CardTitle>}>
-      <dl className="grid grid-cols-5 gap-4 max-[1100px]:grid-cols-3 max-[600px]:grid-cols-1">
+      <dl className="grid grid-cols-5 gap-4 narrow:grid-cols-3 phone:grid-cols-1">
         {items.map((i) => (
           <div key={i.label} className="border-border rounded-card flex flex-col gap-1 border p-4">
             <dt className="text-text-muted text-sm font-medium">{i.label}</dt>
@@ -583,7 +576,7 @@ function YearsTable({ data }: { data: StatisticsData }) {
         <table className="w-full min-w-[40rem] border-collapse text-base">
           <thead>
             <tr className="border-text-muted border-b-2">
-              <th scope="col" className="px-3 py-2.5 text-left font-bold">
+              <th scope="col" className="px-3 py-3 text-left font-bold">
                 {t("years.year")}
               </th>
               <th scope="col" className={head}>
@@ -611,7 +604,7 @@ function YearsTable({ data }: { data: StatisticsData }) {
               const prev = data.years[i - 1];
               return (
                 <tr key={y.year} className={cn("border-border border-b", y.year === data.year && "bg-accent-soft")}>
-                  <th scope="row" className="px-3 py-2.5 text-left font-semibold">
+                  <th scope="row" className="px-3 py-3 text-left font-semibold">
                     {y.year}
                   </th>
                   <td className={cell}>
@@ -642,7 +635,7 @@ function StatisticsBody({ data }: { data: StatisticsData }) {
   return (
     <>
       <p className="text-text-muted flex items-start gap-2">
-        <CalendarRange size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <CalendarRange size={20} className="mt-1 shrink-0" aria-hidden="true" />
         {data.through
           ? t("periodToDate", { day: formatDay(data.through, locale), year: data.year, lastYear: data.year - 1 })
           : t("periodWhole", { year: data.year, lastYear: data.year - 1 })}
@@ -655,7 +648,7 @@ function StatisticsBody({ data }: { data: StatisticsData }) {
       <Records data={data} />
       <YearsTable data={data} />
       <p className="text-text-muted flex items-start gap-2 text-sm">
-        <Users size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <Users size={20} className="mt-1 shrink-0" aria-hidden="true" />
         {t("rules")}
       </p>
     </>
@@ -679,38 +672,28 @@ export function StatisticsScreen({ today }: StatisticsScreenProps) {
   const choices = [...new Set([...years, currentYear, year])].sort((a, b) => b - a);
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 max-[759px]:p-4">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 phone:p-4">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
         actions={
           <>
             {year === currentYear ? (
-              <div role="group" aria-label={t("periodLabel")} className="flex gap-1">
-                {[true, false].map((v) => (
-                  <button
-                    key={String(v)}
-                    type="button"
-                    aria-pressed={toDate === v}
-                    onClick={() => setToDate(v)}
-                    className={cn(
-                      "min-h-target rounded-sm px-3 text-base font-medium",
-                      toDate === v ? "bg-accent dark:text-bg text-white" : "bg-surface-muted text-text",
-                    )}
-                  >
-                    {v ? t("toDate") : t("wholeYear")}
-                  </button>
-                ))}
-              </div>
+              <ChoiceGroup<`${boolean}`>
+                size="md"
+                label={t("periodLabel")}
+                value={`${toDate}`}
+                onChange={(v) => setToDate(v === `${true}`)}
+                choices={[true, false].map((v) => ({
+                  value: `${v}` as const,
+                  label: v ? t("toDate") : t("wholeYear"),
+                }))}
+              />
             ) : null}
             <label className="flex items-center gap-3 text-base font-medium">
               {t("year")}
               <span className="relative">
-                <select
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  className="border-border bg-surface min-h-target appearance-none rounded-sm border py-2 pr-10 pl-4 text-base font-semibold"
-                >
+                <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={compactSelectClass}>
                   {choices.map((y) => (
                     <option key={y} value={y}>
                       {y}

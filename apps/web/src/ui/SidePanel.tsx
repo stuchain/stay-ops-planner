@@ -58,7 +58,7 @@ export function SidePanel({
           }}
           className={cn(
             "bg-surface text-text shadow-raised border-border w-panel fixed inset-y-0 right-0 z-50 flex max-w-full flex-col border-l",
-            "max-[759px]:w-full max-[759px]:border-l-0",
+            "phone:w-full phone:border-l-0",
             "transition-transform duration-200 ease-out starting:translate-x-full",
             className,
           )}

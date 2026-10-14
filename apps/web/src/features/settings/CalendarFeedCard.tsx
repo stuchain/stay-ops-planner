@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
+import { fieldClass } from "@/ui/field";
 import { Button, buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { cn } from "@/ui/cn";
@@ -64,7 +65,7 @@ export function CalendarFeedCard() {
       ) : !links ? (
         <div>
           <Button
-            variant="primary"
+            variant="secondary"
             size="lg"
             icon={CalendarPlus}
             loading={create.isPending}
@@ -86,7 +87,7 @@ export function CalendarFeedCard() {
                 readOnly
                 value={links.https}
                 onFocus={(e) => e.currentTarget.select()}
-                className="min-h-button border-border bg-surface text-text w-full max-w-md rounded-sm border-2 px-4 text-base"
+                className={cn(fieldClass, "w-full max-w-md")}
               />
               <Button size="lg" icon={Copy} onClick={() => void copy(links.https)}>
                 {t("copy")}
@@ -105,7 +106,7 @@ export function CalendarFeedCard() {
             <p className="text-base">{t("iphoneSteps")}</p>
             <div>
               <a href={links.webcal} className={linkButton}>
-                <CalendarPlus size={20} aria-hidden="true" />
+                <CalendarPlus size={24} aria-hidden="true" />
                 {t("iphoneButton")}
               </a>
             </div>
@@ -116,7 +117,7 @@ export function CalendarFeedCard() {
             <p className="text-base">{t("googleSteps")}</p>
             <div>
               <a href={links.google} target="_blank" rel="noreferrer" className={linkButton}>
-                <CalendarPlus size={20} aria-hidden="true" />
+                <CalendarPlus size={24} aria-hidden="true" />
                 {t("googleButton")}
               </a>
             </div>

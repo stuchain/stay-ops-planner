@@ -146,7 +146,7 @@ test.describe("hardening @calendar", () => {
     const name = `E2E Επιστροφή ${Date.now()}`;
     await login(page);
     await page.goto("/app/excel");
-    await page.getByRole("button", { name: "Σαν το Excel" }).click();
+    await page.getByRole("radio", { name: "Σαν το Excel" }).click();
     await page.getByRole("button", { name: "Νέα εγγραφή" }).click();
 
     const panel = page.getByRole("dialog", { name: "Νέα χειροκίνητη εγγραφή" });

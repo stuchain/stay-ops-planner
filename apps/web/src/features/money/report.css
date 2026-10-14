@@ -20,7 +20,8 @@
   }
 
   [data-ui="new"],
-  [data-ui="new"][data-theme="dark"] {
+  [data-ui="new"][data-theme="dark"],
+  [data-ui="new"][data-theme="system"] {
     --so-bg: #fff;
     --so-surface: #fff;
     --so-surface-muted: #eee;

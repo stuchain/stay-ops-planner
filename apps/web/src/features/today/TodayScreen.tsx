@@ -10,6 +10,7 @@ import { useErrorText } from "@/api/errors";
 import type { TodayGap, TodayStay, TodaySummary } from "@/api/types";
 import { arrivalCardsHref } from "@/features/arrivalCards/ids";
 import { ApartmentChip } from "@/ui/ApartmentChip";
+import { Badge } from "@/ui/Badge";
 import { buttonBase, buttonSizes, buttonVariants } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { cn } from "@/ui/cn";
@@ -58,19 +59,17 @@ function StayRow({ stay, line, showKind = false }: { stay: TodayStay; line: Line
           {pending ? <span className="text-warning-text text-sm font-semibold">{t("pendingLabel")}</span> : null}
           {line === "arrival"
             ? noteLines.map((text, i) => (
-                <span key={i} className="text-sm flex items-start gap-1.5 break-words whitespace-pre-wrap">
-                  <StickyNote size={16} aria-hidden="true" className="mt-0.5 flex-none" />
+                <span key={i} className="text-sm flex items-start gap-2 break-words whitespace-pre-wrap">
+                  <StickyNote size={16} aria-hidden="true" className="mt-1 flex-none" />
                   {text}
                 </span>
               ))
             : null}
         </span>
         {stay.room ? (
-          <ApartmentChip name={stay.room.name} color={stay.room.color ?? "#5B5852"} />
+          <ApartmentChip name={stay.room.name} color={stay.room.color} />
         ) : (
-          <span className="bg-warning-soft text-warning-text rounded-pill px-3 py-1 text-sm font-semibold">
-            {t("needsApartment")}
-          </span>
+          <Badge tone="warning">{t("needsApartment")}</Badge>
         )}
       </Link>
     </li>
@@ -237,7 +236,7 @@ export function TodayScreen() {
   const summary = useQuery({ ...trpc.today.summary.queryOptions(), refetchInterval: 60_000 });
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
+    <div className="flex flex-col gap-6 p-8 phone:p-4">
       <PageHeader
         title={t("title")}
         subtitle={summary.data ? <DateText date={summary.data.today} withYear /> : undefined}
