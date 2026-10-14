@@ -7,13 +7,15 @@ import {
   ChartNoAxesCombined,
   ChevronDown,
   Download,
+  Grid3x3,
+  LayoutDashboard,
   FileText,
   Table2,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { IsoDate } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
@@ -26,7 +28,7 @@ import { formatMoney } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { incomeView, type IncomeView } from "./incomeView";
-import { LedgerTable } from "./LedgerTable";
+import { ExcelSheet } from "./ExcelSheet";
 import { apartmentColor, MonthlyChart } from "./MonthlyChart";
 import { OccupancyCard } from "./OccupancyCard";
 import { EstimatePill, TaxCard } from "./TaxCard";
@@ -125,12 +127,78 @@ function MonthTable({ ledger, view }: { ledger: LedgerYearData; view: IncomeView
   );
 }
 
+function ExportButton({ year }: { year: number }) {
+  const t = useTranslations();
+  return (
+    <a
+      href={`/api/money/export?year=${year}`}
+      download
+      className={cn(buttonBase, buttonVariants.primary, buttonSizes.lg, "self-start")}
+    >
+      <Download size={24} aria-hidden="true" />
+      {t("income.export")}
+    </a>
+  );
+}
+
+type IncomeViewMode = "normal" | "excel";
+const VIEW_KEY = "stayops.money.view";
+
+/** The father picks a side once; the screen opens on it next time (on this device). */
+function useViewMode(): [IncomeViewMode, (mode: IncomeViewMode) => void] {
+  const [mode, setMode] = useState<IncomeViewMode>("normal");
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(VIEW_KEY) === "excel") setMode("excel");
+    } catch {
+      // Storage blocked: start on the normal view.
+    }
+  }, []);
+  return [
+    mode,
+    (next) => {
+      setMode(next);
+      try {
+        window.localStorage.setItem(VIEW_KEY, next);
+      } catch {
+        // Not remembered, still switched.
+      }
+    },
+  ];
+}
+
+function ViewSwitch({ mode, onChange }: { mode: IncomeViewMode; onChange: (mode: IncomeViewMode) => void }) {
+  const t = useTranslations();
+  const options = [
+    { value: "normal" as const, label: t("income.sheet.viewNormal"), Icon: LayoutDashboard },
+    { value: "excel" as const, label: t("income.sheet.viewExcel"), Icon: Grid3x3 },
+  ];
+  return (
+    <div role="group" aria-label={t("income.sheet.viewLabel")} className="bg-surface-muted flex gap-1 rounded-sm p-1">
+      {options.map(({ value, label, Icon }) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={mode === value}
+          onClick={() => onChange(value)}
+          className={cn(
+            "min-h-target inline-flex items-center gap-2 rounded-sm px-4 text-base font-semibold",
+            mode === value ? "bg-surface text-accent-text shadow-card" : "text-text-muted hover:text-text",
+          )}
+        >
+          <Icon size={20} aria-hidden="true" />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate }) {
   const t = useTranslations();
   const locale = useLocale();
   const money = (cents: number) => formatMoney(cents, locale);
   const view = useMemo(() => incomeView(ledger, today), [ledger, today]);
-  const [showDetails, setShowDetails] = useState(false);
   const past = ledger.year < Number(today.slice(0, 4));
   const future = view.futureMonths;
   const monthName = (m: number) => t("common.month", { month: m });
@@ -226,14 +294,7 @@ function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate 
       <TaxCard ledger={ledger} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <a
-          href={`/api/money/export?year=${ledger.year}`}
-          download
-          className={cn(buttonBase, buttonVariants.primary, buttonSizes.lg)}
-        >
-          <Download size={24} aria-hidden="true" />
-          {t("income.export")}
-        </a>
+        <ExportButton year={ledger.year} />
         <Link
           href={`/app/excel/report?year=${ledger.year}`}
           className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}
@@ -245,32 +306,12 @@ function IncomeBody({ ledger, today }: { ledger: LedgerYearData; today: IsoDate 
           <ChartNoAxesCombined size={24} aria-hidden="true" />
           {t("income.statistics")}
         </Link>
-        <button
-          type="button"
-          aria-expanded={showDetails}
-          aria-controls="income-details"
-          onClick={() => setShowDetails((v) => !v)}
-          className={cn(buttonBase, buttonVariants.secondary, buttonSizes.lg)}
-        >
-          {t("income.details")}
-          <ChevronDown
-            size={24}
-            aria-hidden="true"
-            className={cn("transition-transform", showDetails && "rotate-180")}
-          />
-        </button>
       </div>
-
-      {showDetails ? (
-        <div id="income-details">
-          <LedgerTable ledger={ledger} />
-        </div>
-      ) : null}
     </>
   );
 }
 
-/** Έσοδα: the year at a glance for the father, with the detailed ledger one click away. */
+/** Έσοδα: the year at a glance for the father, or the same year laid out like his Excel sheet. */
 export function IncomeScreen({ today }: IncomeScreenProps) {
   const t = useTranslations();
   const errorText = useErrorText();
@@ -278,33 +319,43 @@ export function IncomeScreen({ today }: IncomeScreenProps) {
   const [year, setYear] = useState(Number(today.slice(0, 4)));
   const query = useQuery({ ...trpc.money.year.queryOptions({ year }), placeholderData: (prev) => prev });
   const years = query.data?.years ?? [year];
+  const [mode, setMode] = useViewMode();
+  const thisYear = year === Number(today.slice(0, 4));
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 max-[759px]:p-4">
+    <div
+      className={cn(
+        "mx-auto flex flex-col gap-6 p-6 max-[759px]:p-4",
+        mode === "excel" ? "max-w-[90rem]" : "max-w-6xl",
+      )}
+    >
       <PageHeader
         title={t("income.title")}
         actions={
-          <label className="flex items-center gap-3 text-base font-medium">
-            {t("income.year")}
-            <span className="relative">
-              <select
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                className="border-border bg-surface min-h-target appearance-none rounded-sm border py-2 pr-10 pl-4 text-base font-semibold"
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={20}
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2"
-              />
-            </span>
-          </label>
+          <div className="flex flex-wrap items-center gap-4">
+            <ViewSwitch mode={mode} onChange={setMode} />
+            <label className="flex items-center gap-3 text-base font-medium">
+              {t("income.year")}
+              <span className="relative">
+                <select
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  className="border-border bg-surface min-h-target appearance-none rounded-sm border py-2 pr-10 pl-4 text-base font-semibold"
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={20}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2"
+                />
+              </span>
+            </label>
+          </div>
         }
       />
       {query.error && !query.data ? (
@@ -315,6 +366,11 @@ export function IncomeScreen({ today }: IncomeScreenProps) {
           <Skeleton variant="block" className="h-40" />
           <Skeleton variant="block" className="h-72" />
         </div>
+      ) : mode === "excel" ? (
+        <>
+          <ExcelSheet ledger={query.data} currentMonth={thisYear ? Number(today.slice(5, 7)) : null} onYear={setYear} />
+          <ExportButton year={query.data.year} />
+        </>
       ) : (
         <IncomeBody ledger={query.data} today={today} />
       )}

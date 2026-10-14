@@ -146,7 +146,7 @@ test.describe("hardening @calendar", () => {
     const name = `E2E Επιστροφή ${Date.now()}`;
     await login(page);
     await page.goto("/app/excel");
-    await page.getByRole("button", { name: "Λεπτομέρειες" }).click();
+    await page.getByRole("button", { name: "Σαν το Excel" }).click();
     await page.getByRole("button", { name: "Νέα εγγραφή" }).click();
 
     const panel = page.getByRole("dialog", { name: "Νέα χειροκίνητη εγγραφή" });
@@ -163,10 +163,12 @@ test.describe("hardening @calendar", () => {
     await page.keyboard.press("Escape");
     const row = page.getByRole("row").filter({ hasText: name });
     await expect(row).toBeVisible();
-    await expect(row).toContainText("1.234,56");
+    // Written the way his Excel shows it, without thousands dots.
+    await expect(row).toContainText("-1234,56");
 
-    await row.getByRole("button", { name: `Διαγραφή: ${name}` }).click();
-    await expect(page.getByText(`Να διαγραφεί η εγγραφή «${name}»;`)).toBeVisible();
+    // Deleting asks first, in the bar above the sheet.
+    await row.getByRole("gridcell", { name: /ΟΝΟΜΑ ΚΑΙ ΑΤΟΜΑ/ }).click();
+    await page.getByRole("button", { name: "Διαγραφή γραμμής" }).click();
     await page.getByRole("button", { name: "Ναι, διαγραφή" }).click();
     await expect(page.getByText("Η εγγραφή διαγράφηκε")).toBeVisible();
     await expect(page.getByRole("row").filter({ hasText: name })).toHaveCount(0);

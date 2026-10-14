@@ -184,7 +184,7 @@
     "taxHint": "For the whole year's income: {amount}",
     "perApartment": "Income per apartment, {year}",
     "perApartmentNote": "Income counts for the apartment the guest booked. Direct bookings count for the apartment they stayed in.",
-    "unbucketed": "{count, plural, one {# booking does not count for any apartment} other {# bookings do not count for any apartment}} ({amount}). See Details.",
+    "unbucketed": "{count, plural, one {# booking does not count for any apartment} other {# bookings do not count for any apartment}} ({amount}). See them in “Like Excel”.",
     "perMonth": "Income per month",
     "chartLabel": "Income per month, {year}",
     "legendActual": "Income received",
@@ -219,8 +219,6 @@
       "perApartment": "Tax is worked out in brackets separately for each apartment: each slice of income is taxed at its own bracket's rate."
     },
     "export": "Export to Excel",
-    "details": "Details",
-    "detailsHint": "Every booking of the year, in the accountant's columns. Select a cell to correct it.",
     "empty": "No bookings for {year}.",
     "ledger": {
       "tableLabel": "Income details {year}",
@@ -331,7 +329,48 @@
       "empty": "There are no apartments."
     },
     "report": "Report for the accountant",
-    "statistics": "Statistics"
+    "statistics": "Statistics",
+    "sheet": {
+      "viewLabel": "View",
+      "viewNormal": "Normal",
+      "viewExcel": "Like Excel",
+      "tableLabel": "Income {year}, like Excel",
+      "hint": "Double-click a cell, or just start typing, to change it. Enter saves, Esc cancels. For a new row, type the name in an empty line of the month.",
+      "col": {
+        "name": "NAME AND GUESTS",
+        "passport": "PASSPORT",
+        "dateRange": "ARRIVAL - DEPARTURE",
+        "nights": "NIGHTS",
+        "airbnbCents": "AIRBNB AMOUNT",
+        "bookingCents": "BOOKING AMOUNT",
+        "contractCents": "CONTRACT AMOUNT",
+        "soloCents": "DIRECT AMOUNT",
+        "prepaymentCents": "DEPOSIT",
+        "payoutCents": "NET",
+        "rentalIndex": "ROOM NO"
+      },
+      "band": {
+        "nights": "NIGHTS",
+        "airbnb": "AIRBNB",
+        "booking": "BOOKING",
+        "prepayment": "DEPOSIT"
+      },
+      "totals": "TOTALS",
+      "tax": "TAX",
+      "cellLabel": "{cell}, {column}",
+      "fromHosthub": "From Hosthub: {value}",
+      "empty": "empty",
+      "revert": "Restore",
+      "manualRow": "Row added by hand",
+      "deleteRow": "Delete row",
+      "badApartment": "Type 1, 2, 3 or 4",
+      "nameFirst": "Type the name first, in the NAME column",
+      "zoomIn": "Bigger",
+      "zoomOut": "Smaller",
+      "zoomLevel": "Size {percent}%",
+      "years": "Year",
+      "nameBox": "Cell"
+    }
   },
   "dev": {
     "nav": {
