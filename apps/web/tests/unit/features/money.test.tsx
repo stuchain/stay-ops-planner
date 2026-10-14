@@ -11,6 +11,9 @@ import { latinWords, render, screen } from "../intl";
 
 const ledgers = new Map<number, LedgerYearData>();
 
+// The Excel view has its own tests; here only the switch to it matters.
+vi.mock("@/features/money/ExcelSheet", () => ({ ExcelSheet: () => <div data-testid="excel-sheet" /> }));
+
 vi.mock("@/api/client", () => ({
   useTRPC: () => ({
     money: {
@@ -28,7 +31,6 @@ vi.mock("@/api/client", () => ({
   }),
 }));
 
-vi.mock("@/features/money/LedgerTable", () => ({ LedgerTable: () => null }));
 
 // jsdom has no layout: opening the details scrolls to them.
 Element.prototype.scrollIntoView = vi.fn();
@@ -146,18 +148,19 @@ describe("IncomeScreen", () => {
     expect(await screen.findByTestId("income-so-far")).not.toHaveTextContent("Σε σχέση με πέρσι");
   });
 
-  it("warns about bookings outside an apartment, with a button that opens them", async () => {
+  it("warns about bookings outside an apartment, with a button that opens the Excel view", async () => {
     ledgers.clear();
     ledgers.set(2026, fakeLedger("total", { unbucketedCount: 12 }));
     showIncome(true);
     const warning = await screen.findByRole("status");
     expect(warning).toHaveTextContent("12 κρατήσεις δεν μετράνε σε διαμέρισμα");
-    const details = screen.getByRole("button", { name: /^Λεπτομέρειες/ });
-    expect(details).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(screen.getByRole("button", { name: "Δείτε τις κρατήσεις" }));
-    expect(details).toHaveAttribute("aria-expanded", "true");
     // Statistics is for Dev mode only.
     expect(screen.getByRole("link", { name: "Στατιστικά" })).toHaveAttribute("href", "/app/stats");
+    const excel = screen.getByRole("button", { name: "Σαν το Excel" });
+    expect(excel).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(screen.getByRole("button", { name: "Δείτε τις κρατήσεις" }));
+    expect(screen.getByRole("button", { name: "Σαν το Excel" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("excel-sheet")).toBeInTheDocument();
   });
 });
 
