@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Copy, MessageCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTRPC } from "@/api/client";
 import type { CalendarBooking } from "@/api/types";
 import {
@@ -26,11 +26,13 @@ export type GuestMessageProps = {
   phone: string | null;
 };
 
-/** A ready message for the guest (welcome, directions, Wi-Fi, check-in) to copy or send on WhatsApp. */
+/**
+ * Inside the panel's "Στείλτε μήνυμα" row: a ready message for the guest (welcome, directions, Wi-Fi, check-in)
+ * to copy or send on WhatsApp. The language starts from the phone: Greek for +30, English for other countries.
+ */
 export function GuestMessage({ booking, roomName, phone }: GuestMessageProps) {
   const t = useTranslations("guestMessage");
   const trpc = useTRPC();
-  const id = useId();
   const templates = useQuery(trpc.booking.messageTemplates.queryOptions());
   const [kind, setKind] = useState<MessageKind>("welcome");
   const [lang, setLang] = useState<MessageLanguage>(() => defaultLanguage(phone));
@@ -63,10 +65,7 @@ export function GuestMessage({ booking, roomName, phone }: GuestMessageProps) {
   }
 
   return (
-    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-3">
-      <h3 id={`${id}-title`} className="text-base font-semibold">
-        {t("title")}
-      </h3>
+    <div className="flex flex-col gap-3">
       <ChoiceGroup
         label={t("kindLabel")}
         value={kind}
@@ -109,6 +108,6 @@ export function GuestMessage({ booking, roomName, phone }: GuestMessageProps) {
       ) : (
         <Skeleton variant="block" className="h-40" />
       )}
-    </section>
+    </div>
   );
 }

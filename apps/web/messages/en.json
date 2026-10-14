@@ -116,14 +116,14 @@
     "tray": {
       "title": "Need an apartment",
       "dropHere": "Drop the booking here to take it out of its apartment.",
-      "allPlaced": "Every upcoming booking has an apartment."
+      "allPlaced": "Every upcoming booking has an apartment.",
+      "arrange": "Place them automatically"
     },
     "toast": {
       "moved": "Moved to {room}",
       "removed": "The booking was taken out of {room}"
     },
     "perNight": "{price}/night",
-    "arrangeButton": "Arrange the month",
     "proposed": "Proposed: {guest}",
     "arrange": {
       "title": "Arrange: {month}",
@@ -137,17 +137,15 @@
       "cancel": "Cancel",
       "applied": "{count, plural, one {# booking placed} other {# bookings placed}}"
     },
-    "print": "Print"
+    "print": "Print",
+    "more": "More"
   },
   "booking": {
     "title": "Booking",
     "people": "People",
-    "channel": "Channel",
-    "apartment": "Apartment",
     "amount": "Amount",
     "notes": "Notes",
     "needsApartment": "Needs an apartment",
-    "moveTo": "Move to",
     "moveToAria": "Move to {room}. {note}",
     "removeFromApartment": "Take it out of the apartment",
     "isHereNow": "It is here now",
@@ -168,7 +166,15 @@
     "confirmStarted": "{guest} has been staying in {room} since {date}.",
     "confirmRemove": "Take them out of the apartment?",
     "confirmMove": "Move them to {room} for the remaining nights?",
-    "confirmYes": "Yes, move"
+    "confirmYes": "Yes, move",
+    "from": "From: <b>{channel}</b>",
+    "whichApartment": "Which apartment?",
+    "inRoom": "In {room}",
+    "changeApartment": "Change apartment",
+    "here": "Here",
+    "sendMessage": "Send a message",
+    "priceRow": "Price · {price}",
+    "editDetails": "Change details"
   },
   "income": {
     "title": "Income",
@@ -1033,7 +1039,6 @@
     "noneFoundText": "These bookings may have been removed. Go back and try again."
   },
   "guestMessage": {
-    "title": "Message to the guest",
     "kindLabel": "Which message",
     "languageLabel": "Language",
     "kind": {
@@ -1220,7 +1225,6 @@
   },
   "gapNights": {
     "label": "{count, plural, one {1 empty night} other {# empty nights}}",
-    "hint": "{count, plural, one {One empty night between two bookings: with a 2-night minimum stay it can't be booked.} other {# empty nights between two bookings.}}",
     "title": "Gap nights",
     "intro": "Single empty nights between bookings in the next {days} days. With a 2-night minimum stay they can't be booked: a move may help.",
     "none": "No gap nights in the next {days} days."

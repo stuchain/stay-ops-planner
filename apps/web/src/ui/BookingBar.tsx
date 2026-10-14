@@ -8,6 +8,8 @@ export type BookingChannel = "airbnb" | "booking" | "direct" | "other";
 
 type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" | "draggable"> & {
   guest: string;
+  /** The name written on the bar when it should be shorter than `guest` (the label and tooltip keep `guest`). */
+  shownGuest?: string | undefined;
   checkin: IsoDate;
   checkout: IsoDate;
   /** Sets the bar's colour and logo: Airbnb red, Booking.com blue, everything else Heaven's Door yellow. */
@@ -83,6 +85,7 @@ function ChannelLogo({ channel, label, muted }: { channel: BookingChannel; label
 /** A 56px booking bar. Position it in the track through `style` / `className`. */
 export function BookingBar({
   guest,
+  shownGuest,
   checkin,
   checkout,
   channel,
@@ -144,7 +147,7 @@ export function BookingBar({
       >
         <ChannelLogo channel={channel} label={channelLabel} muted={pending || needsRoom} />
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-bold">{guest}</span>
+          <span className="truncate text-sm font-bold">{shownGuest ?? guest}</span>
           <span className="truncate text-xs">{[nights, status, detail].filter(Boolean).join(" · ")}</span>
         </span>
       </span>

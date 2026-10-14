@@ -9,14 +9,13 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, Printer, Wand2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { canPlace, isIsoDate, type IsoDate, type Occupant } from "@stay-ops/domain";
 import { useErrorText } from "@/api/errors";
 import { useOnline } from "@/api/online";
-import { SearchLink } from "@/features/search/QuickLinks";
 import { useCanChange } from "@/features/shell/role";
 import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
@@ -28,6 +27,7 @@ import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { sheetStart } from "@/features/print/layout";
 import { ArrangeMonthPanel } from "./ArrangeMonthPanel";
+import { MoreMenu } from "./MoreMenu";
 import { BookingPanel } from "./BookingPanel";
 import { useUnsavedGuard } from "./useUnsavedGuard";
 import { CalendarGrid, LABEL_WIDTH, type DropState } from "./CalendarGrid";
@@ -161,10 +161,14 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const selected = selectedId ? (data.bookings.get(selectedId) ?? null) : null;
   const dragging = draggingId ? (data.bookings.get(draggingId) ?? null) : null;
   const roomIds = useMemo(() => data.rooms.filter((r) => r.isActive).map((r) => r.id), [data.rooms]);
-  const dropStates = useMemo(
-    () => dropStatesFor(dragging ?? selected, data.bookings, data.blocks, roomIds),
-    [dragging, selected, data.bookings, data.blocks, roomIds],
-  );
+  // While dragging, every row says whether the bar can go there. With the panel open the panel lists the
+  // apartments itself, so the rows only light up the free ones, and only for a booking that has no apartment yet.
+  const dropStates = useMemo(() => {
+    if (dragging) return dropStatesFor(dragging, data.bookings, data.blocks, roomIds);
+    if (!selected || selected.assignment) return new Map<string, DropState>();
+    const states = dropStatesFor(selected, data.bookings, data.blocks, roomIds);
+    return new Map([...states].filter(([, s]) => s?.state === "free"));
+  }, [dragging, selected, data.bookings, data.blocks, roomIds]);
 
   const scrollToDate = useCallback(
     (date: IsoDate, smooth = true) => {
@@ -304,15 +308,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 </button>
               ))}
             </div>
-            <SearchLink className="ml-2" />
-            <Button icon={Printer} onClick={openPrint}>
-              {t("calendar.print")}
-            </Button>
-            {canChange ? (
-              <Button icon={Wand2} onClick={openArrange} disabled={!online}>
-                {t("calendar.arrangeButton")}
-              </Button>
-            ) : null}
+            <MoreMenu className="ml-2" onPrint={openPrint} />
           </div>
         }
       />
@@ -329,6 +325,9 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
           selectedId={selectedId}
           acceptsDrop={Boolean(dragging?.assignment)}
           onOpen={select}
+          {...(canChange && data.unassigned.some((b) => b.status !== "pending" && b.checkout > (data.today ?? today))
+            ? { onArrange: openArrange, arrangeDisabled: !online }
+            : {})}
         />
 
         {data.error && data.rooms.length === 0 ? (

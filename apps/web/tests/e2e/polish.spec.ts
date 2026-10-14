@@ -82,7 +82,8 @@ test.describe("Polish pass @calendar", () => {
       await bar.click();
       await expect(panel).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 20_000 });
-    await panel.getByRole("button", { name: "Αλλαγή" }).click();
+    await panel.getByRole("button", { name: "Αλλαγή στοιχείων" }).click();
+    await panel.getByRole("button", { name: "Αλλαγή", exact: true }).click();
     const field = panel.getByLabel("Όνομα επισκέπτη");
     await field.focus();
     await page.keyboard.press("ArrowLeft");

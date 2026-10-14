@@ -10,6 +10,7 @@ import type { CalendarBooking } from "@/api/types";
 import { BookingBar } from "@/ui/BookingBar";
 import { formatMoney, type UiLocale } from "@/ui/format";
 import { motion } from "@/ui/tokens";
+import { barName } from "./barName";
 
 export type DraggableBarProps = {
   booking: CalendarBooking;
@@ -52,6 +53,7 @@ function DraggableBarInner({
   const tCalendar = useTranslations("calendar");
   const locale = useLocale() as UiLocale;
   const pending = booking.status === "pending";
+  const guest = booking.guestName ?? t("noName");
   const online = useOnline();
   const canChange = useCanChange();
   const priceDetail =
@@ -82,7 +84,8 @@ function DraggableBarInner({
           })}
     >
       <BookingBar
-        guest={booking.guestName ?? t("noName")}
+        guest={guest}
+        shownGuest={barName(guest, typeof style?.width === "number" ? style.width : undefined)}
         checkin={booking.checkin}
         checkout={booking.checkout}
         channel={booking.channel}

@@ -239,17 +239,12 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
     return showErrors && errors[field] ? t(errors[field] as "nameRequired") : null;
   }
   return (
-    <section aria-labelledby={`${idBase}-title`} className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <h3 id={`${idBase}-title`} className="text-base font-semibold">
-          {t("title")}
-        </h3>
-        {editing || !canChange ? null : (
-          <Button onClick={open} size="md" disabled={!online}>
-            {t("change")}
-          </Button>
-        )}
-      </div>
+    <div className="flex flex-col gap-2">
+      {editing || !canChange ? null : (
+        <Button onClick={open} size="md" disabled={!online} className="self-start">
+          {t("change")}
+        </Button>
+      )}
 
       {editing ? (
         <form
@@ -318,6 +313,6 @@ export function BookingEdit({ booking, details, onDirtyChange }: BookingEditProp
       ) : (
         <dl className="divide-border divide-y">{FIELDS.map(row)}</dl>
       )}
-    </section>
+    </div>
   );
 }

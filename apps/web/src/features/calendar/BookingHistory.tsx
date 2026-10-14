@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { useId } from "react";
 import { useTRPC } from "@/api/client";
 import { Skeleton } from "@/ui/Skeleton";
 import { historySentence, type UiLocale } from "./historyText";
@@ -12,13 +11,9 @@ export function BookingHistory({ bookingId }: { bookingId: string }) {
   const t = useTranslations("history");
   const locale = useLocale() as UiLocale;
   const trpc = useTRPC();
-  const id = useId();
   const history = useQuery(trpc.booking.history.queryOptions({ bookingId }));
   return (
-    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-2">
-      <h3 id={`${id}-title`} className="text-base font-semibold">
-        {t("title")}
-      </h3>
+    <div className="flex flex-col gap-2">
       {history.isPending ? (
         <Skeleton variant="block" className="h-20" />
       ) : history.error || history.data.length === 0 ? (
@@ -32,6 +27,6 @@ export function BookingHistory({ bookingId }: { bookingId: string }) {
           ))}
         </ul>
       )}
-    </section>
+    </div>
   );
 }

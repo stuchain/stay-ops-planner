@@ -74,6 +74,13 @@ async function openPanel(page: Page, target: Locator): Promise<void> {
   }).toPass({ timeout: 20_000 });
 }
 
+/** A placed booking's panel shows its apartment; the list of others opens with "Αλλαγή διαμερίσματος". */
+async function showMoves(page: Page): Promise<void> {
+  const toggle = panel(page).getByRole("button", { name: "Αλλαγή διαμερίσματος" });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
+
 async function expectInRoom(page: Page, roomName: string, guest: string): Promise<void> {
   await expect(bar(room(page, roomName), guest)).toBeVisible();
   await expect(bar(tray(page), guest)).toHaveCount(0);
@@ -144,7 +151,7 @@ for (const viewport of VIEWPORTS) {
 
       await expect(panel(page)).toBeVisible();
       await expect(panel(page).getByRole("heading", { name: GUEST.trayClick })).toBeVisible();
-      await expect(panel(page).getByRole("heading", { name: "Μετακίνηση σε" })).toBeVisible();
+      await expect(panel(page).getByRole("heading", { name: "Σε ποιο διαμέρισμα;" })).toBeVisible();
       await expect(moveButton(page, ROOM.alpha)).toBeEnabled();
       await moveButton(page, ROOM.alpha).click();
 
@@ -153,7 +160,7 @@ for (const viewport of VIEWPORTS) {
         toast(page, `Μετακινήθηκε στο ${ROOM.alpha}`).getByRole("button", { name: "Αναίρεση" }),
       ).toBeVisible();
       await expectInRoom(page, ROOM.alpha, GUEST.trayClick);
-      await expect(panel(page).getByText(ROOM.alpha, { exact: true }).first()).toBeVisible();
+      await expect(panel(page).getByRole("heading", { name: `Στο ${ROOM.alpha}` })).toBeVisible();
 
       await reload(page);
       await expectInRoom(page, ROOM.alpha, GUEST.trayClick);
@@ -183,6 +190,7 @@ for (const viewport of VIEWPORTS) {
 
       await openPanel(page, bar(room(page, ROOM.gamma), GUEST.boundary));
       await expect(panel(page).getByRole("heading", { name: GUEST.boundary })).toBeVisible();
+      await showMoves(page);
       await expect(moveButton(page, ROOM.gamma)).toBeDisabled();
       await moveButton(page, ROOM.alpha).click();
 
@@ -196,6 +204,7 @@ for (const viewport of VIEWPORTS) {
 
       // Undo in a fresh move, so the toast belongs to this page load.
       await openPanel(page, bar(room(page, ROOM.alpha), GUEST.boundary));
+      await showMoves(page);
       await moveButton(page, ROOM.beta).click();
       const movedAgain = toast(page, `Μετακινήθηκε στο ${ROOM.beta}`);
       await expect(movedAgain).toBeVisible();
@@ -212,6 +221,7 @@ for (const viewport of VIEWPORTS) {
 
     test("undo puts the first move back where it was", async ({ page }) => {
       await openPanel(page, bar(room(page, ROOM.gamma), GUEST.boundary));
+      await showMoves(page);
       await moveButton(page, ROOM.alpha).click();
       const moved = toast(page, `Μετακινήθηκε στο ${ROOM.alpha}`);
       await expect(moved).toBeVisible();
@@ -228,11 +238,13 @@ for (const viewport of VIEWPORTS) {
     test("shows who is in a busy apartment and does not move a booking there", async ({ page }) => {
       await openPanel(page, bar(room(page, ROOM.beta), GUEST.moverInBeta));
       await expect(panel(page)).toBeVisible();
+      await showMoves(page);
 
       const busy = moveButton(page, ROOM.alpha);
       await expect(busy).toBeDisabled();
       await expect(busy).toHaveAccessibleName(`Μετακίνηση στο ${ROOM.alpha}. Κλεισμένο: ${GUEST.placedInAlpha}`);
-      await expect(room(page, ROOM.alpha)).toContainText(`Κλεισμένο: ${GUEST.placedInAlpha}`);
+      // The panel lists who is where; the rows do not repeat it for a booking that already has an apartment.
+      await expect(room(page, ROOM.alpha)).not.toContainText("Κλεισμένο");
       await expect(moveButton(page, ROOM.gamma)).toBeEnabled();
 
       // Dropping on the busy row opens the panel instead of moving.
@@ -251,6 +263,7 @@ for (const viewport of VIEWPORTS) {
 
     test("tells the person in Greek when the server says the apartment is taken", async ({ page }) => {
       await openPanel(page, bar(room(page, ROOM.beta), GUEST.moverInBeta));
+      await showMoves(page);
       const toGamma = moveButton(page, ROOM.gamma);
       await expect(toGamma).toBeEnabled();
 
@@ -273,7 +286,7 @@ for (const viewport of VIEWPORTS) {
       await expect(
         panel(page).getByText("Η κράτηση δεν έχει επιβεβαιωθεί ακόμα, οπότε δεν μπαίνει σε διαμέρισμα."),
       ).toBeVisible();
-      await expect(panel(page).getByRole("heading", { name: "Μετακίνηση σε" })).toHaveCount(0);
+      await expect(panel(page).getByRole("heading", { name: "Σε ποιο διαμέρισμα;" })).toHaveCount(0);
       await expect(panel(page).getByRole("button", { name: /^Μετακίνηση στο/ })).toHaveCount(0);
 
       // It cannot be dragged either.
@@ -301,6 +314,7 @@ for (const viewport of VIEWPORTS) {
       // Month boundary move.
       await scrollToBar(page, GUEST.boundary);
       await openPanel(page, bar(room(page, ROOM.gamma), GUEST.boundary));
+      await showMoves(page);
       await moveButton(page, ROOM.beta).click();
       await expect(toast(page, `Μετακινήθηκε στο ${ROOM.beta}`).first()).toBeVisible();
       await expectInRoom(page, ROOM.beta, GUEST.boundary);
@@ -309,6 +323,7 @@ for (const viewport of VIEWPORTS) {
       await page.getByRole("button", { name: "Σήμερα" }).click();
       await expect(bar(room(page, ROOM.alpha), GUEST.trayClick)).toBeVisible();
       await openPanel(page, bar(room(page, ROOM.alpha), GUEST.trayClick));
+      await showMoves(page);
       await panel(page).getByRole("button", { name: "Βγάλτε την από το διαμέρισμα" }).click();
       await expectInTray(page, GUEST.trayClick);
 

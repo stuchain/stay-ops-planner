@@ -1,14 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useId } from "react";
 import type { BookingDetails } from "@/api/types";
 import { MoneyText } from "@/ui/MoneyText";
 
 /** The price in plain words: what the guest pays and what is left for the owner. Read only. */
 export function BookingPrice({ price }: { price: BookingDetails["price"] }) {
   const t = useTranslations("bookingEdit");
-  const id = useId();
   const rows: (readonly ["channelFee" | "cleaningFee" | "taxes" | "guestPaid", number | null])[] = price
     ? [
         ["channelFee", price.channelFeeCents],
@@ -18,10 +16,7 @@ export function BookingPrice({ price }: { price: BookingDetails["price"] }) {
       ]
     : [];
   return (
-    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-2">
-      <h3 id={`${id}-title`} className="text-base font-semibold">
-        {t("priceTitle")}
-      </h3>
+    <div className="flex flex-col gap-2">
       {price === null ? (
         <p className="text-text-muted">{t("noPrice")}</p>
       ) : (
@@ -67,6 +62,6 @@ export function BookingPrice({ price }: { price: BookingDetails["price"] }) {
           </details>
         </>
       )}
-    </section>
+    </div>
   );
 }

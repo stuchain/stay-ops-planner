@@ -1,9 +1,10 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { Inbox } from "lucide-react";
+import { Inbox, Wand2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { CalendarBooking } from "@/api/types";
+import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
 import { DraggableBar } from "./DraggableBar";
 
@@ -13,10 +14,13 @@ export type TrayProps = {
   /** A placed booking is being dragged: dropping here takes it out of its apartment. */
   acceptsDrop: boolean;
   onOpen: (bookingId: string) => void;
+  /** "Βάλτε τις αυτόματα": opens the month's automatic placement. Only given when something can be placed. */
+  onArrange?: () => void;
+  arrangeDisabled?: boolean;
 };
 
 /** "Χρειάζονται διαμέρισμα": new bookings waiting for an apartment, above the rows. */
-export function Tray({ bookings, selectedId, acceptsDrop, onOpen }: TrayProps) {
+export function Tray({ bookings, selectedId, acceptsDrop, onOpen, onArrange, arrangeDisabled = false }: TrayProps) {
   const t = useTranslations("calendar.tray");
   const { setNodeRef, isOver } = useDroppable({ id: "tray", disabled: !acceptsDrop });
   return (
@@ -29,11 +33,20 @@ export function Tray({ bookings, selectedId, acceptsDrop, onOpen }: TrayProps) {
         isOver && "bg-warning-soft",
       )}
     >
-      <h2 id="tray-title" className="text-base mb-3 flex items-center gap-2 font-semibold">
-        <Inbox size={24} strokeWidth={2} aria-hidden="true" />
-        {t("title")}
-        <span className="bg-warning-soft text-warning-text text-sm rounded-pill px-2.5 py-0.5">{bookings.length}</span>
-      </h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="tray-title" className="text-base flex items-center gap-2 font-semibold">
+          <Inbox size={24} strokeWidth={2} aria-hidden="true" />
+          {t("title")}
+          <span className="bg-warning-soft text-warning-text text-sm rounded-pill px-2.5 py-0.5">
+            {bookings.length}
+          </span>
+        </h2>
+        {onArrange && bookings.length > 0 ? (
+          <Button icon={Wand2} onClick={onArrange} disabled={arrangeDisabled}>
+            {t("arrange")}
+          </Button>
+        ) : null}
+      </div>
       {bookings.length === 0 ? (
         <p className="text-text-muted text-sm">{acceptsDrop ? t("dropHere") : t("allPlaced")}</p>
       ) : (

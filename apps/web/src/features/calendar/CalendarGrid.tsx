@@ -7,6 +7,7 @@ import { shortGaps, type GapNights, type IsoDate } from "@stay-ops/domain";
 import type { CalendarBlock, CalendarBooking, CalendarRoom } from "@/api/types";
 import { ApartmentRow } from "@/ui/ApartmentRow";
 import { cn } from "@/ui/cn";
+import { barName } from "./barName";
 import { DraggableBar } from "./DraggableBar";
 import { dateAt, dayIndex, monthsBetween, type DrawnDaysStore, type Span } from "./timeline";
 
@@ -166,16 +167,17 @@ const RoomTrack = memo(function RoomTrack({
             <div
               key={g.start}
               data-testid="gap-nights"
-              className="border-warning bg-warning-soft text-warning-text text-xs pointer-events-none absolute top-4 flex h-14 items-center justify-center overflow-hidden rounded-[10px] border-2 border-dashed px-1 font-semibold"
+              className="border-warning bg-warning-soft text-warning-text text-base pointer-events-none absolute top-4 flex h-14 items-center justify-center overflow-hidden rounded-[10px] border-2 border-dashed px-1 font-semibold"
               style={{
                 left: (dayIndex(span, g.start) + 0.5) * dayWidth + 2,
                 width: g.nights * dayWidth - 4,
               }}
               role="img"
-              aria-label={t("gapNights.hint", { count: g.nights })}
-              title={t("gapNights.hint", { count: g.nights })}
+              aria-label={t("gapNights.label", { count: g.nights })}
+              title={t("gapNights.label", { count: g.nights })}
             >
-              <span className="truncate">{t("gapNights.label", { count: g.nights })}</span>
+              {/* Just the number: the words never fit in one night's width. */}
+              <span aria-hidden="true">{g.nights}</span>
             </div>
           ))}
           {rowBlocks.map((b) => (
@@ -210,7 +212,12 @@ const RoomTrack = memo(function RoomTrack({
             />
           ))}
           {rowProposed.map((b) => {
-            const label = t("calendar.proposed", { guest: b.guestName ?? t("common.noName") });
+            const guest = b.guestName ?? t("common.noName");
+            const label = t("calendar.proposed", { guest });
+            const width = Math.max(
+              dayWidth - 4,
+              (dayIndex(span, b.checkout) - dayIndex(span, b.checkin)) * dayWidth - 4,
+            );
             return (
               <button
                 key={b.id}
@@ -220,15 +227,9 @@ const RoomTrack = memo(function RoomTrack({
                 aria-label={label}
                 title={label}
                 className="border-accent bg-accent-soft text-accent text-sm absolute top-4 flex h-14 items-center overflow-hidden rounded-[10px] border-2 border-dashed px-3 font-semibold"
-                style={{
-                  left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2,
-                  width: Math.max(
-                    dayWidth - 4,
-                    (dayIndex(span, b.checkout) - dayIndex(span, b.checkin)) * dayWidth - 4,
-                  ),
-                }}
+                style={{ left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2, width }}
               >
-                <span className="truncate">{b.guestName ?? t("common.noName")}</span>
+                <span className="truncate">{barName(guest, width + 36)}</span>
               </button>
             );
           })}

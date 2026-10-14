@@ -11,7 +11,6 @@ import type { PreviousStays } from "@/api/types";
 import { Button } from "@/ui/Button";
 import { formatMonthYear, type UiLocale } from "@/ui/format";
 import { showToast } from "@/ui/Toast";
-import { ReturningLines } from "./ReturningGuest";
 
 const MAX_LENGTH = 2000;
 
@@ -49,7 +48,8 @@ function EarlierNotes({ stays, title }: { stays: Stay[]; title: string }) {
 }
 
 /**
- * The booking panel's guest section: earlier stays of the same guest, the notes the team wrote on them, and this
+ * Inside the panel's "Σημείωση για τον επισκέπτη" row (which names it, so the box's label is for screen readers):
+ * the notes the team wrote on the guest's earlier stays, and this
  * booking's own note about the guest, which comes back when the guest books again.
  */
 export function GuestNotes({ bookingId, note }: { bookingId: string; note: string | null }) {
@@ -78,18 +78,12 @@ export function GuestNotes({ bookingId, note }: { bookingId: string; note: strin
   const changed = draft.trim() !== (note ?? "").trim();
 
   return (
-    <section aria-labelledby={`${id}-title`} className="flex flex-col gap-3">
-      {previous.data ? <ReturningLines previous={previous.data} /> : null}
+    <div className="flex flex-col gap-3">
       {previous.data ? <EarlierNotes stays={previous.data.sure} title={t("earlier")} /> : null}
       {previous.data ? <EarlierNotes stays={previous.data.maybe} title={t("earlierMaybe")} /> : null}
       {!canChange ? (
         note ? (
-          <div className="flex flex-col gap-1">
-            <h3 id={`${id}-title`} className="text-base font-semibold">
-              {t("title")}
-            </h3>
-            <p className="break-words whitespace-pre-wrap">{note}</p>
-          </div>
+          <p className="break-words whitespace-pre-wrap">{note}</p>
         ) : null
       ) : (
         <form
@@ -99,7 +93,7 @@ export function GuestNotes({ bookingId, note }: { bookingId: string; note: strin
             if (changed) save.mutate({ bookingId, note: draft });
           }}
         >
-          <label id={`${id}-title`} htmlFor={`${id}-note`} className="text-base font-semibold">
+          <label htmlFor={`${id}-note`} className="sr-only">
             {t("title")}
           </label>
           <p id={`${id}-help`} className="text-text-muted text-sm">
@@ -129,6 +123,6 @@ export function GuestNotes({ bookingId, note }: { bookingId: string; note: strin
           ) : null}
         </form>
       )}
-    </section>
+    </div>
   );
 }
