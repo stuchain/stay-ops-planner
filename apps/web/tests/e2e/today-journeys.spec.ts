@@ -47,9 +47,9 @@ for (const viewport of [{ width: 1366, height: 768 }] as const) {
 
       // A cancelled booking never shows, and tomorrow's guests are not in today's cards.
       await expect(page.getByText(GUEST.cancelledTomorrow)).toHaveCount(0);
-      await expect(page.getByRole("region", { name: "Σήμερα", exact: true }).getByText(GUEST.arrivesTomorrow)).toHaveCount(
-        0,
-      );
+      await expect(
+        page.getByRole("region", { name: "Σήμερα", exact: true }).getByText(GUEST.arrivesTomorrow),
+      ).toHaveCount(0);
 
       // The fixtures' tray bookings show as the one warning card at the top.
       await expect(page.getByRole("region", { name: "Χρειάζονται διαμέρισμα" })).toContainText(/κρατήσ/);

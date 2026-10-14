@@ -31,7 +31,6 @@ vi.mock("@/api/client", () => ({
   }),
 }));
 
-
 // jsdom has no layout: opening the details scrolls to them.
 Element.prototype.scrollIntoView = vi.fn();
 

@@ -210,10 +210,7 @@ function Summary({ data }: { data: TodaySummary }) {
           aria-label={t("needs")}
           className="ring-warning ring-2"
         >
-          <Link
-            href="/app/calendar"
-            className={cn(buttonBase, buttonVariants.primary, buttonSizes.lg, "self-start")}
-          >
+          <Link href="/app/calendar" className={cn(buttonBase, buttonVariants.primary, buttonSizes.lg, "self-start")}>
             <CalendarDays size={24} aria-hidden="true" />
             {t("placeThem")}
           </Link>
