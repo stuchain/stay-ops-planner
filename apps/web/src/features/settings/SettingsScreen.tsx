@@ -14,13 +14,14 @@ import { DevModeCard } from "./DevModeCard";
 import { FamilyCard } from "./FamilyCard";
 import { HosthubCard } from "./HosthubCard";
 import { LanguageCard } from "./LanguageCard";
+import { PaperCalendarCard } from "./PaperCalendarCard";
 import { PasswordCard } from "./PasswordCard";
 import { TextSizeCard, toTextSize } from "./TextSizeCard";
 import { ThemeCard, toTheme } from "./ThemeCard";
 
 /**
  * /app/settings: text size, phone calendar, password (folded) and language (folded) for everyone; the theme,
- * Hosthub connection, family accounts and Dev mode for admins only.
+ * Hosthub connection, family accounts, the Excel calendar and Dev mode for admins only.
  */
 export function SettingsScreen() {
   const t = useTranslations("settingsScreen");
@@ -55,6 +56,7 @@ export function SettingsScreen() {
               <HosthubCard canRefresh />
               <HosthubTokenCard />
               <FamilyCard />
+              <PaperCalendarCard />
               <DevModeCard enabled={me.data.devMode} />
             </>
           ) : null}

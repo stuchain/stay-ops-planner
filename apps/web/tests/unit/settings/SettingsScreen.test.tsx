@@ -51,8 +51,10 @@ describe("SettingsScreen", () => {
     expect(screen.getByText("Γλώσσα · Ελληνικά")).toBeTruthy();
     expect(screen.getByText("Σύνδεση με το Hosthub")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ενημέρωση τώρα" })).toBeTruthy();
-    expect(latinWords(container.textContent ?? "", ["English"])).toEqual([]);
+    // "Excel" is the file's name, as on the money screen ("Σαν το Excel").
+    expect(latinWords(container.textContent ?? "", ["English", "Excel"])).toEqual([]);
     expect(screen.getByText("Οικογένεια")).toBeTruthy();
+    expect(screen.getByText("Διαμερίσματα από το Excel ημερολόγιο")).toBeTruthy();
     expect(screen.queryByText(/stelios@example\.com/)).toBeNull();
   });
 
@@ -77,6 +79,7 @@ describe("SettingsScreen", () => {
     expect(screen.queryByText("Λειτουργία προγραμματιστή")).toBeNull();
     expect(screen.queryByText("Σύνδεση με το Hosthub")).toBeNull();
     expect(screen.queryByText("Οικογένεια")).toBeNull();
+    expect(screen.queryByTestId("paper-calendar-card")).toBeNull();
   });
 
   it("names the current language in its folded heading", async () => {

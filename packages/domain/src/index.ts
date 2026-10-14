@@ -11,3 +11,4 @@ export * from "./gaps.js";
 export * from "./errors.js";
 export * from "./stats.js";
 export * from "./pieces.js";
+export * from "./paperCalendar.js";
