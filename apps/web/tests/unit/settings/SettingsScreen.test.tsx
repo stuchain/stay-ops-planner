@@ -44,22 +44,45 @@ function setup(role: Role, locale: "el" | "en" = "el") {
 }
 
 describe("SettingsScreen", () => {
-  it("is fully Greek and shows every card for an admin", async () => {
+  it("is fully Greek and shows every card for an admin, Hosthub included", async () => {
     const { ui } = setup("admin");
     const { container } = render(ui);
     await screen.findByText("Λειτουργία προγραμματιστή");
-    expect(screen.getByText("Γλώσσα")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Αλλαγή κωδικού" })).toBeTruthy();
+    expect(screen.getByText("Γλώσσα · Ελληνικά")).toBeTruthy();
+    expect(screen.getByText("Σύνδεση με το Hosthub")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ενημέρωση τώρα" })).toBeTruthy();
-    expect(latinWords(container.textContent ?? "", ["stelios@example.com", "English"])).toEqual([]);
+    expect(latinWords(container.textContent ?? "", ["English"])).toEqual([]);
     expect(screen.getByText("Οικογένεια")).toBeTruthy();
+    expect(screen.queryByText(/stelios@example\.com/)).toBeNull();
   });
 
-  it("hides Dev mode from everyone but admins", async () => {
+  it("puts text size first, then phone calendar, password and language, and folds the last two", async () => {
+    const { ui } = setup("operator");
+    const { container } = render(ui);
+    await screen.findByText("Γλώσσα · Ελληνικά");
+    const text = container.textContent ?? "";
+    const order = ["Μέγεθος γραμμάτων", "Ημερολόγιο στο κινητό", "Αλλαγή κωδικού", "Γλώσσα · Ελληνικά"].map((s) =>
+      text.indexOf(s),
+    );
+    expect(order.every((at) => at >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(screen.getByTestId("settings-password")).not.toHaveAttribute("open");
+    expect(screen.getByTestId("settings-language")).not.toHaveAttribute("open");
+  });
+
+  it("hides Hosthub and Dev mode from everyone but admins", async () => {
     const { ui } = setup("operator");
     render(ui);
-    await screen.findByRole("button", { name: "Αλλαγή κωδικού" });
+    await screen.findByText("Γλώσσα · Ελληνικά");
     expect(screen.queryByText("Λειτουργία προγραμματιστή")).toBeNull();
+    expect(screen.queryByText("Σύνδεση με το Hosthub")).toBeNull();
+    expect(screen.queryByText("Οικογένεια")).toBeNull();
+  });
+
+  it("names the current language in its folded heading", async () => {
+    const { ui } = setup("operator", "en");
+    render(ui);
+    expect(await screen.findByText("Γλώσσα · English")).toBeTruthy();
   });
 
   it("saves the text size and refreshes the language on choosing", async () => {

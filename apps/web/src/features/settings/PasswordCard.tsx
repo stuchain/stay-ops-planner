@@ -5,7 +5,7 @@ import { useId, useState, type FormEvent } from "react";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
 import { Button } from "@/ui/Button";
-import { Card } from "@/ui/Card";
+import { FoldCard } from "./FoldCard";
 
 /** Same as PASSWORD_MIN_LENGTH on the server; the server has the final word. */
 const MIN_LENGTH = 8;
@@ -47,7 +47,10 @@ function Field({
   );
 }
 
-/** Current password, new password twice. Messages are in words; the server checks the current one. */
+/**
+ * Current password, new password twice, folded under its heading until opened. Messages are in words; the server
+ * checks the current one.
+ */
 export function PasswordCard() {
   const t = useTranslations("settingsScreen.password");
   const errorText = useErrorText();
@@ -83,7 +86,7 @@ export function PasswordCard() {
   }
 
   return (
-    <Card title={t("title")}>
+    <FoldCard summary={t("title")} testId="settings-password">
       <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
         <Field label={t("current")} value={current} onChange={setCurrent} autoComplete="current-password" />
         <Field
@@ -117,6 +120,6 @@ export function PasswordCard() {
           </Button>
         </div>
       </form>
-    </Card>
+    </FoldCard>
   );
 }

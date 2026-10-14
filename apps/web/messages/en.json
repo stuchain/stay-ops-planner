@@ -754,13 +754,13 @@
   },
   "settingsScreen": {
     "title": "Settings",
-    "signedInAs": "Signed in as {email}",
     "saved": "Saved.",
     "language": {
       "title": "Language",
       "el": "Ελληνικά",
       "en": "English",
-      "label": "Language of the app"
+      "label": "Language of the app",
+      "summary": "Language · {language}"
     },
     "textSize": {
       "title": "Text size",
@@ -920,7 +920,6 @@
     "subtitle": "Enter the dates and the number of people. You will see which apartment is free.",
     "arrival": "Arrival",
     "departure": "Departure",
-    "nights": "Nights",
     "guests": "People",
     "fewerGuests": "One person fewer",
     "moreGuests": "One more person",
@@ -1133,11 +1132,9 @@
   },
   "turnovers": {
     "title": "Cleaning",
-    "subtitle": "What needs cleaning and when",
     "loading": "Loading the cleaning schedule",
     "todayTag": "Today",
     "tomorrowTag": "Tomorrow",
-    "nothingThisDay": "Nothing to clean on this day.",
     "previousDays": "Earlier days",
     "nextDays": "Next days",
     "showCancelled": "Show cancelled ({count})",
@@ -1161,25 +1158,38 @@
       "done": "Done",
       "cancelled": "Cancelled"
     },
-    "markStarted": "Start",
     "markDone": "Done",
     "reopen": "Not done yet",
     "assignee": "Who cleans",
     "assigneeNone": "Not set",
     "assigneePlaceholder": "Name",
     "change": "Change",
-    "save": "Save",
     "cancel": "Cancel",
-    "editTime": "Change time",
     "timeFrom": "From",
     "timeTo": "To",
     "conflict": "{name}: another cleaning at the same time.",
     "notes": "Note",
     "print": "Print",
+    "line": {
+      "sameDay": "Leave {leave} · <b>next guests {arrive} same day</b>",
+      "otherDay": "Leave {leave} · next guests {date}",
+      "nobody": "Leave {leave} · nobody comes next"
+    },
+    "empty": {
+      "todayAndTomorrow": "No cleaning today or tomorrow.",
+      "one": "{day}: no cleaning.",
+      "range": "{from} to {to}: no cleaning."
+    },
+    "details": "Details",
+    "saveTime": "Save time",
+    "saveAssignee": "Save name",
+    "close": "Close",
     "link": {
-      "create": "Link for the cleaner",
+      "open": "Send the schedule to the cleaner",
+      "whichDay": "For which day?",
+      "noDays": "There is no cleaning on these days.",
       "creating": "Creating the link",
-      "ready": "Send this link to the cleaner. It shows this day only and works until {date}.",
+      "ready": "Send this link to the cleaner. It shows {day} only and works until {date}.",
       "field": "Link for the cleaner",
       "copy": "Copy link",
       "copied": "The link was copied.",

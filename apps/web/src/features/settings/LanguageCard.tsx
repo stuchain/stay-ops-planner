@@ -3,13 +3,16 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTRPC } from "@/api/client";
 import { useErrorText } from "@/api/errors";
-import { Card } from "@/ui/Card";
 import { showToast } from "@/ui/Toast";
 import { ChoiceGroup } from "./ChoiceGroup";
+import { FoldCard } from "./FoldCard";
 
 type Locale = "el" | "en";
 
-/** Greek or English. Saved on the user; the server renders the new language after a refresh. */
+/**
+ * Greek or English, folded under "Γλώσσα · Ελληνικά" since it is rarely changed. Saved on the user; the server
+ * renders the new language after a refresh.
+ */
 export function LanguageCard({ locale }: { locale: Locale }) {
   const t = useTranslations("settingsScreen");
   const errorText = useErrorText();
@@ -26,7 +29,7 @@ export function LanguageCard({ locale }: { locale: Locale }) {
     }),
   );
   return (
-    <Card title={t("language.title")}>
+    <FoldCard summary={t("language.summary", { language: t(`language.${locale}`) })} testId="settings-language">
       <ChoiceGroup<Locale>
         label={t("language.label")}
         value={locale}
@@ -37,6 +40,6 @@ export function LanguageCard({ locale }: { locale: Locale }) {
         ]}
         onChange={(next) => save.mutate({ locale: next })}
       />
-    </Card>
+    </FoldCard>
   );
 }

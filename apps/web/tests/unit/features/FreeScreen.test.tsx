@@ -85,7 +85,8 @@ describe("FreeScreen", () => {
     expect(await screen.findByText("Ελεύθερα: 2 από 4")).toBeInTheDocument();
     expect(screen.getByLabelText("Άφιξη")).toHaveValue("2030-06-10");
     expect(screen.getByLabelText("Αναχώρηση")).toHaveValue("2030-06-12");
-    expect(screen.getByLabelText("Νύχτες")).toHaveValue(2);
+    expect(screen.queryByLabelText("Νύχτες")).not.toBeInTheDocument();
+    expect(screen.getByText(/· 2 νύχτες/)).toBeInTheDocument();
     expect(calls.at(-1)).toEqual({ checkin: "2030-06-10", checkout: "2030-06-12", guests: 2 });
 
     const free = within(screen.getByRole("region", { name: "Ελεύθερα" }));
@@ -101,20 +102,20 @@ describe("FreeScreen", () => {
     expect(screen.getByRole("link", { name: "Δείτε στο ημερολόγιο" })).toHaveAttribute("href", "/app/calendar");
   });
 
-  it("keeps nights and departure in sync and re-asks when guests change", async () => {
+  it("counts the nights from the two dates, keeps them for a new arrival and re-asks when guests change", async () => {
     const user = userEvent.setup();
     show();
     await screen.findByText("Ελεύθερα: 2 από 4");
 
-    await user.clear(screen.getByLabelText("Νύχτες"));
-    await user.type(screen.getByLabelText("Νύχτες"), "5");
-    expect(screen.getByLabelText("Αναχώρηση")).toHaveValue("2030-06-15");
+    fireEvent.change(screen.getByLabelText("Αναχώρηση"), { target: { value: "2030-06-15" } });
+    await waitFor(() => expect(screen.getByText(/· 5 νύχτες/)).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: "Ένα άτομο ακόμα" }));
     await waitFor(() => expect(calls.at(-1)).toEqual({ checkin: "2030-06-10", checkout: "2030-06-15", guests: 3 }));
 
-    fireEvent.change(screen.getByLabelText("Αναχώρηση"), { target: { value: "2030-06-13" } });
-    await waitFor(() => expect(screen.getByLabelText("Νύχτες")).toHaveValue(3));
+    fireEvent.change(screen.getByLabelText("Άφιξη"), { target: { value: "2030-06-12" } });
+    expect(screen.getByLabelText("Αναχώρηση")).toHaveValue("2030-06-17");
+    await waitFor(() => expect(screen.getByText(/· 5 νύχτες/)).toBeInTheDocument());
   });
 
   it("warns about a small apartment and about bookings without an apartment", async () => {

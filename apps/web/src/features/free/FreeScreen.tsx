@@ -54,15 +54,22 @@ function RoomRow({ room, guests }: { room: AvailabilityRoom; guests: number | nu
   return (
     <li
       className={cn(
-        "rounded-sm flex flex-wrap items-center gap-x-4 gap-y-2 border px-4 py-3",
+        "rounded-sm flex flex-wrap items-center gap-x-4 gap-y-2 border",
+        room.available ? "px-5 py-4" : "px-4 py-2",
         room.available && room.recommended ? "border-accent bg-accent-soft border-2" : "border-border bg-surface",
         !room.available && "bg-surface-muted text-text-muted",
       )}
     >
-      <ApartmentChip name={room.name} color={room.color ?? NEUTRAL} inactive={!room.isActive} className="text-base" />
+      <ApartmentChip
+        name={room.name}
+        color={room.color ?? NEUTRAL}
+        inactive={!room.isActive}
+        className={room.available ? "text-lg" : "text-base"}
+      />
       <span
         className={cn(
-          "min-w-0 flex-1 text-base",
+          "min-w-0 flex-1",
+          room.available ? "text-lg" : "text-base",
           small && "text-warning-text font-semibold",
           room.available && room.recommended && !small && "text-accent font-semibold",
         )}
@@ -90,7 +97,7 @@ function Results({ data, guests }: { data: AvailabilityData; guests: number | nu
       ) : null}
       {free.length > 0 ? (
         <section aria-label={t("freeSection")} className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t("freeSection")}</h2>
+          <h2 className="text-xl font-bold">{t("freeSection")}</h2>
           <ul className="flex flex-col gap-2">
             {free.map((room) => (
               <RoomRow key={room.roomId} room={room} guests={guests} />
@@ -100,7 +107,7 @@ function Results({ data, guests }: { data: AvailabilityData; guests: number | nu
       ) : null}
       {busy.length > 0 ? (
         <section aria-label={t("busySection")} className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t("busySection")}</h2>
+          <h2 className="text-text-muted text-base font-semibold">{t("busySection")}</h2>
           <ul className="flex flex-col gap-2">
             {busy.map((room) => (
               <RoomRow key={room.roomId} room={room} guests={guests} />
@@ -126,30 +133,20 @@ export function FreeScreen() {
 
   // Until the person picks an arrival, it is today (as the server sees it).
   const [pickedCheckin, setPickedCheckin] = useState<IsoDate | null>(null);
+  // The stay length follows from the two dates; it is kept so a new arrival keeps the same number of nights.
   const [nights, setNights] = useState(2);
-  const [nightsText, setNightsText] = useState("2");
   const [guests, setGuests] = useState(2);
 
   const checkin = pickedCheckin ?? summary.data?.today ?? null;
   const checkout = checkin ? addDays(checkin, nights) : null;
 
-  const setNightsValue = (value: number) => {
-    setNights(value);
-    setNightsText(String(value));
-  };
-  const onNights = (text: string) => {
-    setNightsText(text);
-    const n = Number(text);
-    if (text !== "" && Number.isInteger(n) && n >= 1) setNights(n);
-  };
   const onCheckin = (value: string) => {
     if (isIsoDate(value)) setPickedCheckin(value);
   };
   const onCheckout = (value: string) => {
     if (!checkin || !isIsoDate(value)) return;
     const n = nightsBetween(checkin, value);
-    if (n >= 1) setNightsValue(n);
-    else setNightsValue(0);
+    setNights(n >= 1 ? n : 0);
   };
 
   const tooLong = nights > MAX_NIGHTS;
@@ -172,7 +169,7 @@ export function FreeScreen() {
     <div className="flex flex-col gap-6 p-8 max-[759px]:p-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <Card>
-        <div className="grid grid-cols-[repeat(4,minmax(0,1fr))] items-end gap-4 max-[1099px]:grid-cols-2 max-[519px]:grid-cols-1">
+        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] items-end gap-4 max-[1099px]:grid-cols-2 max-[519px]:grid-cols-1">
           <Field id={`${ids}-in`} label={t("arrival")}>
             <input
               id={`${ids}-in`}
@@ -191,18 +188,6 @@ export function FreeScreen() {
               min={checkin ? addDays(checkin, 1) : undefined}
               disabled={checkin === null}
               onChange={(e) => onCheckout(e.target.value)}
-            />
-          </Field>
-          <Field id={`${ids}-nights`} label={t("nights")}>
-            <input
-              id={`${ids}-nights`}
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={MAX_NIGHTS}
-              className={inputClass}
-              value={nightsText}
-              onChange={(e) => onNights(e.target.value)}
             />
           </Field>
           <div className="flex min-w-0 flex-col gap-1.5">
