@@ -1,15 +1,16 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { Plus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Plus, Scissors } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { memo, useMemo, useSyncExternalStore, type CSSProperties } from "react";
-import { shortGaps, type GapNights, type IsoDate } from "@stay-ops/domain";
+import { addDays, shortGaps, type GapNights, type IsoDate } from "@stay-ops/domain";
 import type { CalendarBlock, CalendarBooking, CalendarRoom } from "@/api/types";
 import { ApartmentRow } from "@/ui/ApartmentRow";
 import { cn } from "@/ui/cn";
+import { formatDay, type UiLocale } from "@/ui/format";
 import { barName } from "./barName";
-import { DraggableBar } from "./DraggableBar";
+import { DraggableBar, type BarPiece } from "./DraggableBar";
 import { dateAt, dayIndex, monthsBetween, type DrawnDaysStore, type Span } from "./timeline";
 
 /** Width of the sticky apartment column (ApartmentRow's label cell, w-52). */
@@ -17,7 +18,24 @@ export const LABEL_WIDTH = 208;
 
 export type DropState = { state: "free" | "busy"; guest?: string } | null;
 
+/** A booking, or some of its nights, on the way to an apartment (dragged, picked from the tray, or cut off). */
+export type Placement = {
+  booking: CalendarBooking;
+  from: IsoDate;
+  to: IsoDate;
+  /** The apartment those nights are in now; null while the booking has none. */
+  roomId: string | null;
+};
+
+/** One bar in an apartment row: a whole stay, or one apartment's part of a stay that changed apartment. */
+type RowBar = { booking: CalendarBooking; piece: BarPiece };
+
+/** Where a stay continues in another apartment: a dashed line on that day between the two rows. */
+type Joint = { bookingId: string; day: IsoDate; part: "top" | "bottom" | "full" };
+
 const EMPTY: CalendarBooking[] = [];
+const EMPTY_BARS: RowBar[] = [];
+const EMPTY_JOINTS: Joint[] = [];
 const EMPTY_BLOCKS: CalendarBlock[] = [];
 const EMPTY_GAPS: GapNights[] = [];
 
@@ -35,8 +53,15 @@ export type CalendarGridProps = {
   dropStates: Map<string, DropState>;
   /** "Τακτοποίησε τον μήνα" preview: booking id to the apartment it would go to. */
   proposed?: Map<string, string>;
-  /** The booking being placed (dragged, or picked from the tray): every row outlines its dates, free or taken. */
-  placing?: CalendarBooking | null;
+  /** The booking (or nights) being placed: every row outlines those dates, free or taken. */
+  placing?: Placement | null;
+  /** Nights cut off a stay and waiting for an apartment: drawn faded in their row until placed. */
+  cut?: Placement | null;
+  /**
+   * Scissors on the selected bar, one on each day the stay could change apartment; pressing one cuts off the
+   * nights from that day to the end of that piece. Left out, no scissors (viewers, past stays, while placing).
+   */
+  onCut?: ((bookingId: string, day: IsoDate) => void) | undefined;
   /** Puts `placing` in that apartment; without it (no right to change) the free outlines are only drawn. */
   onPlace?: ((roomId: string) => void) | undefined;
   /** A move is running or there is no internet: the free outlines are there but can't be pressed yet. */
@@ -123,16 +148,19 @@ type RoomTrackProps = {
   today: IsoDate;
   selectedId: string | null;
   drop: DropState;
-  rowBookings: CalendarBooking[];
+  rowBars: RowBar[];
+  /** Dashed lines where a stay continues in another apartment. */
+  rowJoints: Joint[];
   rowBlocks: CalendarBlock[];
   rowProposed: CalendarBooking[];
   /** Single empty nights between stays, still to come: they cannot be sold. */
   rowGaps: GapNights[];
-  /** The stay being placed, outlined at its dates when this row has a drop state. */
-  spot: CalendarBooking | null;
+  /** The stay (or nights) being placed, outlined at its dates when this row has a drop state. */
+  spot: Placement | null;
   onPlace: ((roomId: string) => void) | undefined;
   placeDisabled: boolean;
   onOpen: (bookingId: string) => void;
+  onCut: ((bookingId: string, day: IsoDate) => void) | undefined;
 };
 
 /** One apartment row with all its loaded bars; does not depend on the scroll position, so scrolling never redraws it. */
@@ -143,7 +171,8 @@ const RoomTrack = memo(function RoomTrack({
   today,
   selectedId,
   drop,
-  rowBookings,
+  rowBars,
+  rowJoints,
   rowBlocks,
   rowProposed,
   rowGaps,
@@ -151,6 +180,7 @@ const RoomTrack = memo(function RoomTrack({
   onPlace,
   placeDisabled,
   onOpen,
+  onCut,
 }: RoomTrackProps) {
   const t = useTranslations();
   const { setNodeRef, isOver } = useDroppable({
@@ -159,9 +189,9 @@ const RoomTrack = memo(function RoomTrack({
     disabled: !room.isActive,
   });
   const todayIndex = dayIndex(span, today);
-  const spotStyle = (stay: CalendarBooking) => ({
-    left: (dayIndex(span, stay.checkin) + 0.5) * dayWidth + 2,
-    width: Math.max(dayWidth - 4, (dayIndex(span, stay.checkout) - dayIndex(span, stay.checkin)) * dayWidth - 4),
+  const spotStyle = (stay: Placement) => ({
+    left: (dayIndex(span, stay.from) + 0.5) * dayWidth + 2,
+    width: Math.max(dayWidth - 4, (dayIndex(span, stay.to) - dayIndex(span, stay.from)) * dayWidth - 4),
   });
   return (
     <div ref={setNodeRef}>
@@ -219,20 +249,47 @@ const RoomTrack = memo(function RoomTrack({
           ))}
           {/* Every loaded bar stays mounted: adding and removing bars while scrolling made drag-and-drop
               redraw all of them, which is what made scrolling stutter. Only the day header follows the scroll. */}
-          {rowBookings.map((b) => (
+          {rowJoints.map((j) => (
+            <div
+              key={`${j.bookingId}:${j.day}`}
+              data-testid="stay-joint"
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute z-[1] w-0 border-l-2 border-dashed border-l-[#7A4CC2]",
+                // The bar's middle is 44px down (top-4 + half of h-14).
+                j.part === "bottom" ? "top-11 bottom-0" : j.part === "top" ? "top-0 h-11" : "inset-y-0",
+              )}
+              style={{ left: (dayIndex(span, j.day) + 0.5) * dayWidth - 1 }}
+            />
+          ))}
+          {rowBars.map(({ booking: b, piece }) => (
             <DraggableBar
               stickyLeft={LABEL_WIDTH + 12}
-              key={b.id}
+              key={`${b.id}:${piece.start}`}
               booking={b}
+              piece={piece}
               selected={b.id === selectedId}
               onOpen={onOpen}
               className="absolute top-4"
               style={{
-                left: (dayIndex(span, b.checkin) + 0.5) * dayWidth + 2,
-                width: Math.max(dayWidth - 4, (dayIndex(span, b.checkout) - dayIndex(span, b.checkin)) * dayWidth - 4),
+                left: (dayIndex(span, piece.start) + 0.5) * dayWidth + 2,
+                width: Math.max(dayWidth - 4, (dayIndex(span, piece.end) - dayIndex(span, piece.start)) * dayWidth - 4),
               }}
             />
           ))}
+          {onCut
+            ? rowBars
+                .filter(({ booking: b, piece }) => b.id === selectedId && !piece.lifted)
+                .flatMap(({ booking: b, piece }) => cutDays(piece.start, piece.end).map((day) => ({ b, day })))
+                .map(({ b, day }) => (
+                  <CutButton
+                    key={`cut:${day}`}
+                    day={day}
+                    left={(dayIndex(span, day) + 0.5) * dayWidth}
+                    onCut={() => onCut(b.id, day)}
+                  />
+                ))
+            : null}
           {rowProposed.map((b) => {
             const guest = b.guestName ?? t("common.noName");
             const label = t("calendar.proposed", { guest });
@@ -334,6 +391,37 @@ function PlaceSpot({
   );
 }
 
+/** The days inside a piece where the guest could have changed apartment (every night but the first). */
+function cutDays(start: IsoDate, end: IsoDate): IsoDate[] {
+  const out: IsoDate[] = [];
+  for (let d = addDays(start, 1); d < end; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+
+/** Scissors on the selected bar at a day boundary: the stay changes apartment from this day. */
+function CutButton({ day, left, onCut }: { day: IsoDate; left: number; onCut: () => void }) {
+  const t = useTranslations("calendar");
+  const locale = useLocale() as UiLocale;
+  const label = t("cutFrom", { date: formatDay(day, locale) });
+  return (
+    <button
+      type="button"
+      data-testid="cut-stay"
+      onClick={(event) => {
+        event.stopPropagation();
+        onCut();
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+      aria-label={label}
+      title={label}
+      className="border-accent bg-surface text-accent hover:bg-accent hover:text-on-accent focus-visible:bg-accent focus-visible:text-on-accent shadow-raised absolute top-[29px] z-20 flex size-[30px] items-center justify-center rounded-full border-2"
+      style={{ left: left - 15 }}
+    >
+      <Scissors size={16} strokeWidth={2.25} aria-hidden="true" />
+    </button>
+  );
+}
+
 /** Spreads stays over as few lanes as possible so overlapping ones sit one under the other. */
 export function laneOf(bookings: CalendarBooking[]): Map<string, number> {
   const ends: IsoDate[] = [];
@@ -408,32 +496,70 @@ function PastUnplacedRow({
 
 /** The day header and one row per apartment; day cells are drawn around the visible days, bars for all loaded data. */
 export const CalendarGrid = memo(function CalendarGrid(props: CalendarGridProps) {
-  const { drawn, bookings, proposed, today, blocks } = props;
-  const { byRoom, proposedByRoom, pastUnplaced, blocksByRoom, gapsByRoom } = useMemo(() => {
-    const byRoom = new Map<string, CalendarBooking[]>();
+  const { drawn, bookings, proposed, today, blocks, rooms, cut } = props;
+  const { byRoom, jointsByRoom, proposedByRoom, pastUnplaced, blocksByRoom, gapsByRoom } = useMemo(() => {
+    const byRoom = new Map<string, RowBar[]>();
+    const jointsByRoom = new Map<string, Joint[]>();
     const proposedByRoom = new Map<string, CalendarBooking[]>();
     const pastUnplaced: CalendarBooking[] = [];
+    const nameOf = new Map(rooms.map((r) => [r.id, r.name]));
+    const rowOf = new Map(rooms.map((r, i) => [r.id, i]));
+    const push = <T,>(map: Map<string, T[]>, key: string, value: T) => map.set(key, [...(map.get(key) ?? []), value]);
     for (const b of bookings) {
       const proposedRoom = b.assignment ? undefined : proposed?.get(b.id);
-      if (proposedRoom) proposedByRoom.set(proposedRoom, [...(proposedByRoom.get(proposedRoom) ?? []), b]);
+      if (proposedRoom) push(proposedByRoom, proposedRoom, b);
       else if (!b.assignment && b.checkout <= today && b.status !== "pending") pastUnplaced.push(b);
-      if (!b.assignment) continue;
-      byRoom.set(b.assignment.roomId, [...(byRoom.get(b.assignment.roomId) ?? []), b]);
+      if (b.pieces.length === 0) continue;
+      // While nights are cut off this stay, they are drawn as their own faded piece in the same row.
+      const pieces =
+        cut && cut.booking.id === b.id
+          ? b.pieces.flatMap((p) =>
+              p.start <= cut.from && cut.to <= p.end && p.start < cut.from
+                ? [
+                    { ...p, end: cut.from, lifted: false },
+                    { ...p, start: cut.from, end: cut.to, lifted: true },
+                    ...(cut.to < p.end ? [{ ...p, start: cut.to, lifted: false }] : []),
+                  ]
+                : [{ ...p, lifted: false }],
+            )
+          : b.pieces.map((p) => ({ ...p, lifted: false }));
+      pieces.forEach((p, index) => {
+        const before = pieces[index - 1];
+        push(byRoom, p.roomId, {
+          booking: b,
+          piece: {
+            start: p.start,
+            end: p.end,
+            index,
+            count: pieces.length,
+            fromRoom: before && before.roomId !== p.roomId ? nameOf.get(before.roomId) : undefined,
+            lifted: p.lifted,
+          },
+        });
+        if (!before || before.roomId === p.roomId) return;
+        const a = rowOf.get(before.roomId);
+        const z = rowOf.get(p.roomId);
+        if (a === undefined || z === undefined) return;
+        const [top, bottom] = a < z ? [a, z] : [z, a];
+        rooms.slice(top, bottom + 1).forEach((r, i) =>
+          push(jointsByRoom, r.id, {
+            bookingId: b.id,
+            day: p.start,
+            part: i === 0 ? "bottom" : top + i === bottom ? "top" : "full",
+          }),
+        );
+      });
     }
     const blocksByRoom = new Map<string, CalendarBlock[]>();
-    for (const b of blocks) blocksByRoom.set(b.roomId, [...(blocksByRoom.get(b.roomId) ?? []), b]);
+    for (const b of blocks) push(blocksByRoom, b.roomId, b);
     const gapsByRoom = new Map<string, GapNights[]>();
     const occupied = [
-      ...bookings.flatMap((b) =>
-        b.assignment ? [{ id: b.id, roomId: b.assignment.roomId, start: b.checkin, end: b.checkout }] : [],
-      ),
+      ...bookings.flatMap((b) => b.pieces.map((p) => ({ id: b.id, roomId: p.roomId, start: p.start, end: p.end }))),
       ...blocks.map((b) => ({ id: b.id, roomId: b.roomId, start: b.start, end: b.end })),
     ];
-    for (const g of shortGaps(occupied, { after: today })) {
-      gapsByRoom.set(g.roomId, [...(gapsByRoom.get(g.roomId) ?? []), g]);
-    }
-    return { byRoom, proposedByRoom, pastUnplaced, blocksByRoom, gapsByRoom };
-  }, [bookings, proposed, today, blocks]);
+    for (const g of shortGaps(occupied, { after: today })) push(gapsByRoom, g.roomId, g);
+    return { byRoom, jointsByRoom, proposedByRoom, pastUnplaced, blocksByRoom, gapsByRoom };
+  }, [bookings, proposed, today, blocks, rooms, cut]);
   return (
     <div style={{ width: LABEL_WIDTH + props.span.days * props.dayWidth }}>
       <DayHeader
@@ -452,7 +578,8 @@ export const CalendarGrid = memo(function CalendarGrid(props: CalendarGridProps)
           today={today}
           selectedId={props.selectedId}
           drop={props.dropStates.get(room.id) ?? null}
-          rowBookings={byRoom.get(room.id) ?? EMPTY}
+          rowBars={byRoom.get(room.id) ?? EMPTY_BARS}
+          rowJoints={jointsByRoom.get(room.id) ?? EMPTY_JOINTS}
           rowBlocks={blocksByRoom.get(room.id) ?? EMPTY_BLOCKS}
           rowProposed={proposedByRoom.get(room.id) ?? EMPTY}
           rowGaps={gapsByRoom.get(room.id) ?? EMPTY_GAPS}
@@ -460,6 +587,7 @@ export const CalendarGrid = memo(function CalendarGrid(props: CalendarGridProps)
           onPlace={props.onPlace}
           placeDisabled={props.placeDisabled ?? false}
           onOpen={props.onOpen}
+          onCut={props.onCut}
         />
       ))}
       {pastUnplaced.length > 0 ? <PastUnplacedRow props={props} drawn={drawn} rowBookings={pastUnplaced} /> : null}

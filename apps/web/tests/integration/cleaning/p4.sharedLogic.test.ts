@@ -158,7 +158,7 @@ describe("cleaning shared logic (P4-2)", () => {
       expect(after.assigneeName).toBe("Eleni");
 
       // Reassigned to another apartment: the times stay, the apartment follows.
-      await prisma.assignment.update({ where: { bookingId: out.id }, data: { roomId: other.id } });
+      await prisma.assignment.updateMany({ where: { bookingId: out.id }, data: { roomId: other.id } });
       await ensure(out.id, other.id, out.checkoutDate);
       after = await turnover(out.id);
       expect(after.roomId).toBe(other.id);

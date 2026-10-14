@@ -70,8 +70,8 @@ const ROOMS = [
   { id: "cosmos", name: "Cosmos", color: "#C2562E", capacity: 4, isActive: true },
 ] as CalendarRoom[];
 
-const booking = (over: Partial<CalendarBooking> = {}) =>
-  ({
+const booking = (over: Partial<CalendarBooking> = {}) => {
+  const b = {
     id: "b1",
     version: 1,
     guestName: "Olivia Brown",
@@ -83,7 +83,13 @@ const booking = (over: Partial<CalendarBooking> = {}) =>
     status: "confirmed",
     assignment: null,
     ...over,
-  }) as CalendarBooking;
+  } as CalendarBooking;
+  // The apartment's nights follow the assignment unless a test gives its own pieces.
+  return {
+    ...b,
+    pieces: over.pieces ?? (b.assignment ? [{ roomId: b.assignment.roomId, start: b.checkin, end: b.checkout }] : []),
+  };
+};
 
 afterEach(cleanup);
 

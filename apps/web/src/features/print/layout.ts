@@ -56,12 +56,25 @@ export function unplacedBookings(bookings: CalendarBooking[]): CalendarBooking[]
 
 const touches = (from: IsoDate, to: IsoDate, start: IsoDate, end: IsoDate) => start < to && end > from;
 
+/** A booking's nights in one apartment: the whole stay, or one part of a stay that changed apartment. */
+type RoomStay = { booking: CalendarBooking; start: IsoDate; end: IsoDate };
+
+function staysIn(data: Data, roomId: string): RoomStay[] {
+  return data.bookings
+    .flatMap((booking) =>
+      booking.pieces.filter((p) => p.roomId === roomId).map((p) => ({ booking, start: p.start, end: p.end })),
+    )
+    .sort(
+      (a, b) => compareDates(a.start, b.start) || compareDates(a.end, b.end) || (a.booking.id < b.booking.id ? -1 : 1),
+    );
+}
+
 /** Apartments to list: the active ones, plus a switched-off one that still has something in the range. */
 function roomsToShow(data: Data, from: IsoDate, to: IsoDate): CalendarRoom[] {
   return data.rooms.filter(
     (room) =>
       room.isActive ||
-      data.bookings.some((b) => b.assignment?.roomId === room.id && touches(from, to, b.checkin, b.checkout)) ||
+      data.bookings.some((b) => b.pieces.some((p) => p.roomId === room.id && touches(from, to, p.start, p.end))) ||
       data.blocks.some((b) => b.roomId === room.id && touches(from, to, b.start, b.end)),
   );
 }
@@ -74,17 +87,18 @@ function roomsToShow(data: Data, from: IsoDate, to: IsoDate): CalendarRoom[] {
 export function buildWeek(data: Data, from: IsoDate): WeekSheet {
   const days = Array.from({ length: 7 }, (_, i) => addDays(from, i));
   const rows = roomsToShow(data, from, addDays(from, 7)).map((room): WeekRow => {
-    const mine = data.bookings.filter((b) => b.assignment?.roomId === room.id).sort(byCheckin);
+    // A guest who moved apartment mid-stay leaves one row and arrives in the other on the day they moved.
+    const mine = staysIn(data, room.id);
     const blocks = data.blocks.filter((b) => b.roomId === room.id);
     const cells = days.map((day): WeekCell => {
-      const departures = mine.filter((b) => b.checkout === day);
-      const stays = mine.filter((b) => b.checkin <= day && day < b.checkout);
+      const departures = mine.filter((s) => s.end === day);
+      const stays = mine.filter((s) => s.start <= day && day < s.end);
       return {
         day,
         closed: blocks.some((b) => b.start <= day && day < b.end),
         entries: [
-          ...departures.map((booking): CellEntry => ({ kind: "departure", booking, arrival: false })),
-          ...stays.map((booking): CellEntry => ({ kind: "stay", booking, arrival: booking.checkin === day })),
+          ...departures.map((s): CellEntry => ({ kind: "departure", booking: s.booking, arrival: false })),
+          ...stays.map((s): CellEntry => ({ kind: "stay", booking: s.booking, arrival: s.start === day })),
         ],
       };
     });
@@ -104,14 +118,14 @@ export type MonthSheet = { sections: MonthSection[]; unplaced: CalendarBooking[]
 export function buildMonth(data: Data, from: IsoDate): MonthSheet {
   const to = addMonths(from, 1);
   const sections = roomsToShow(data, from, to).map((room): MonthSection => {
-    const stays = data.bookings
-      .filter((b) => b.assignment?.roomId === room.id && touches(from, to, b.checkin, b.checkout))
-      .map((booking): MonthItem => ({
+    const stays = staysIn(data, room.id)
+      .filter((s) => touches(from, to, s.start, s.end))
+      .map((s): MonthItem => ({
         kind: "stay",
-        booking,
-        start: booking.checkin,
-        end: booking.checkout,
-        nights: booking.nights,
+        booking: s.booking,
+        start: s.start,
+        end: s.end,
+        nights: daysBetween(s.start, s.end),
       }));
     const closed = data.blocks
       .filter((b) => b.roomId === room.id && touches(from, to, b.start, b.end))

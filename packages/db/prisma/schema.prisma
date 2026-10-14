@@ -185,7 +185,9 @@ model Booking {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   sourceListing SourceListing? @relation(fields: [sourceListingId], references: [id], onDelete: SetNull)
-  assignment    Assignment?
+  /// Where the guest sleeps: one piece per apartment, back to back from check-in to check-out, in date order.
+  /// Usually one; more when the guest moved apartment during the stay.
+  assignments   Assignment[]
   ledgerEntry   LedgerEntry?
   cleaningTasks CleaningTask[]
   excelLedgerEntries ExcelLedgerEntry[]
@@ -259,10 +261,11 @@ model TaxRule {
   @@map("tax_rules")
 }
 
-/// At most one assignment per booking in v1 (`booking_id` unique).
+/// One piece of a booking's stay in one apartment. A booking that moved apartment mid-stay has several pieces,
+/// back to back and in date order (the first starts at check-in, the last ends at check-out).
 model Assignment {
   id          String   @id @default(cuid())
-  bookingId   String   @unique @map("booking_id")
+  bookingId   String   @map("booking_id")
   roomId      String   @map("room_id")
   startDate   DateTime @db.Date @map("start_date")
   endDate     DateTime @db.Date @map("end_date")
@@ -280,6 +283,7 @@ model Assignment {
   updatedBy User?   @relation("AssignmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([roomId, startDate, endDate])
+  @@index([bookingId, startDate])
   @@map("assignments")
 }
 

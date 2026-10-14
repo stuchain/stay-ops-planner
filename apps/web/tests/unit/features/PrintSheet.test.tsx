@@ -21,7 +21,7 @@ function booking(
   over: Partial<CalendarBooking> & Pick<CalendarBooking, "id" | "checkin" | "checkout">,
 ): CalendarBooking {
   const nights = Math.round((Date.parse(over.checkout) - Date.parse(over.checkin)) / 86_400_000);
-  return {
+  const merged = {
     nights,
     guestName: "Maria Papadopoulou",
     partySize: 2,
@@ -31,6 +31,13 @@ function booking(
     assignment: { roomId: "r1", pinned: false },
     ...over,
   } as CalendarBooking;
+  // The apartment's nights follow the assignment unless a test gives its own pieces.
+  return {
+    ...merged,
+    pieces:
+      over.pieces ??
+      (merged.assignment ? [{ roomId: merged.assignment.roomId, start: merged.checkin, end: merged.checkout }] : []),
+  };
 }
 
 const block = (over: Partial<CalendarBlock> & Pick<CalendarBlock, "start" | "end">): CalendarBlock => ({

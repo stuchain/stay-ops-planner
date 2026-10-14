@@ -26,11 +26,13 @@ export async function applyCancellationSideEffects(
     return;
   }
 
-  const assignment = await tx.assignment.findUnique({
+  // Every piece of the stay is released (a guest who moved mid-stay has more than one).
+  const assignments = await tx.assignment.findMany({
     where: { bookingId },
+    orderBy: { startDate: "asc" },
   });
 
-  if (assignment) {
+  for (const assignment of assignments) {
     const beforeAssignment = {
       id: assignment.id,
       bookingId: assignment.bookingId,

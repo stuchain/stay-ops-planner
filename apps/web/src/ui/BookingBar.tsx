@@ -38,6 +38,15 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" 
    * sit outside the timeline (the tray), where nothing else shows when the stay is. A pending stay still says so.
    */
   showDates?: boolean;
+  /**
+   * Part of a stay that changed apartment mid-way: the edge that joins the piece before / after gets a dashed
+   * purple seam, and a later piece says which apartment the guest came from ("↳ από Helios").
+   */
+  joinedBefore?: boolean;
+  joinedAfter?: boolean;
+  fromRoom?: string | undefined;
+  /** The nights being moved to another apartment: drawn faded with a dashed outline until they are placed. */
+  lifted?: boolean;
 };
 
 /** Bar colours per channel; the same in light and dark mode so a channel always looks the same. */
@@ -108,6 +117,10 @@ export function BookingBar({
   detail,
   stickyLeft,
   showDates = false,
+  joinedBefore = false,
+  joinedAfter = false,
+  fromRoom,
+  lifted = false,
   className,
   style,
   type = "button",
@@ -125,8 +138,18 @@ export function BookingBar({
       : null;
   const hasPeople = people != null && people > 0;
   const peopleText = hasPeople ? t("common.people", { count: people }) : null;
-  const accessibleName = [guest, range, nights, peopleText, status].filter(Boolean).join(", ");
-  const info = (showDates ? [range, nights, pending ? status : null, detail] : [nights, status, detail])
+  const accessibleName = [
+    guest,
+    range,
+    nights,
+    peopleText,
+    status,
+    fromRoom ? t("calendar.continuedFrom", { room: fromRoom }) : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const continued = fromRoom ? t("calendar.continuedFrom", { room: fromRoom }) : null;
+  const info = (showDates ? [range, nights, pending ? status : null, detail] : [continued, nights, status, detail])
     .filter(Boolean)
     .join(" · ");
   const draggable = !pending;
@@ -152,6 +175,10 @@ export function BookingBar({
         draggable && "cursor-grab",
         selected && "z-10 shadow-[0_0_0_3px_var(--so-surface),0_0_0_6px_var(--so-accent)]",
         dragging && "opacity-35",
+        lifted && "opacity-45 outline-2 outline-dashed outline-text",
+        // A seam where the stay continues in another apartment: square corner and a dashed purple edge.
+        joinedBefore && "rounded-l-none border-l-4 border-dashed border-l-[#7A4CC2]",
+        joinedAfter && "rounded-r-none border-r-4 border-dashed border-r-[#7A4CC2]",
         className,
       )}
     >

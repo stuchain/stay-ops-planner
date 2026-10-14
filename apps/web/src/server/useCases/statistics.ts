@@ -98,7 +98,7 @@ export async function loadStatsBookings(db: typeof prisma = prisma): Promise<Sta
         guestAdults: true,
         guestChildren: true,
         guestInfants: true,
-        assignment: { select: { roomId: true } },
+        assignments: { orderBy: { startDate: "asc" }, select: { roomId: true, startDate: true, endDate: true } },
       },
     }),
     db.$queryRaw<{ id: string; created: unknown }[]>`
@@ -123,7 +123,16 @@ export async function loadStatsBookings(db: typeof prisma = prisma): Promise<Sta
       kind: kindOf(b.status),
       checkin: dbDateToIso(b.checkinDate),
       checkout: dbDateToIso(b.checkoutDate),
-      roomId: b.assignment?.roomId ?? null,
+      roomId: b.assignments[0]?.roomId ?? null,
+      ...(b.assignments.length > 1
+        ? {
+            pieces: b.assignments.map((a) => ({
+              roomId: a.roomId,
+              start: dbDateToIso(a.startDate),
+              end: dbDateToIso(a.endDate),
+            })),
+          }
+        : {}),
       incomeCents: counts ? income.grossCents : 0,
       payoutCents: counts ? income.payoutCents : 0,
       feeCents: counts ? income.channelFeeCents : null,

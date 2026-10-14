@@ -80,7 +80,7 @@ const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
 async function bookingFor(eventId: string) {
   return prisma.booking.findFirstOrThrow({
     where: { externalBookingId: eventId.toLowerCase() },
-    include: { assignment: true },
+    include: { assignments: { orderBy: { startDate: "asc" } } },
   });
 }
 
@@ -188,7 +188,8 @@ describe("syncHosthub", () => {
     const moved = await bookingFor("Evt-Fake-0001");
     expect(moved.status).toBe(BookingStatus.confirmed);
     expect(moved.version).toBeGreaterThan(booking.version);
-    expect(moved.assignment).toMatchObject({ startDate: day("2030-07-12"), endDate: day("2030-07-17") });
+    expect(moved.assignments).toHaveLength(1);
+    expect(moved.assignments[0]).toMatchObject({ startDate: day("2030-07-12"), endDate: day("2030-07-17") });
     const task = await prisma.cleaningTask.findFirstOrThrow({ where: { bookingId: booking.id } });
     expect(task.plannedStart?.toISOString().slice(0, 10)).toBe("2030-07-17");
   });
@@ -217,7 +218,7 @@ describe("syncHosthub", () => {
 
     const moved = await bookingFor("Evt-Fake-0001");
     expect(moved.status).toBe(BookingStatus.needs_reassignment);
-    expect(moved.assignment).toBeNull();
+    expect(moved.assignments).toEqual([]);
     expect(await prisma.assignment.count({ where: { bookingId: other.id } })).toBe(1);
   });
 
@@ -231,9 +232,38 @@ describe("syncHosthub", () => {
 
     const cancelled = await bookingFor("Evt-Fake-0001");
     expect(cancelled.status).toBe(BookingStatus.cancelled);
-    expect(cancelled.assignment).toBeNull();
+    expect(cancelled.assignments).toEqual([]);
     const task = await prisma.cleaningTask.findFirstOrThrow({ where: { bookingId: booking.id } });
     expect(task.status).toBe("cancelled");
+  });
+
+  it("keeps a stay that moved apartment split when Hosthub changes its dates, and frees both on cancel", async () => {
+    const hosthub = new FakeHosthub().put(fixture("new-booking"));
+    await syncHosthub({ source: hosthub, trigger: "manual", db: prisma });
+    const { booking, room } = await place("Evt-Fake-0001");
+    const cosmos = await prisma.room.create({ data: { code: "cosmos", displayName: "Cosmos", isActive: true } });
+    // The guest moved to Cosmos on the 13th: 10–13 in Onar, 13–14 in Cosmos.
+    await prisma.assignment.updateMany({ where: { bookingId: booking.id }, data: { endDate: day("2030-07-13") } });
+    await prisma.assignment.create({
+      data: { bookingId: booking.id, roomId: cosmos.id, startDate: day("2030-07-13"), endDate: day("2030-07-14") },
+    });
+
+    hosthub.put(fixture("date-change"));
+    await syncHosthub({ source: hosthub, trigger: "manual", db: prisma });
+
+    const moved = await bookingFor("Evt-Fake-0001");
+    expect(moved.status).toBe(BookingStatus.confirmed);
+    expect(moved.assignments.map((a) => [a.roomId, a.startDate, a.endDate])).toEqual([
+      [room.id, day("2030-07-12"), day("2030-07-13")],
+      [cosmos.id, day("2030-07-13"), day("2030-07-17")],
+    ]);
+    expect(await prisma.booking.count()).toBe(1);
+
+    hosthub.put(fixture("cancellation"));
+    await syncHosthub({ source: hosthub, trigger: "manual", db: prisma });
+    const cancelled = await bookingFor("Evt-Fake-0001");
+    expect(cancelled.status).toBe(BookingStatus.cancelled);
+    expect(cancelled.assignments).toEqual([]);
   });
 
   it("fetches everything again once a day, so a cancellation the cursor missed still lands", async () => {
@@ -256,7 +286,7 @@ describe("syncHosthub", () => {
     expect(hosthub.calls.list).toEqual([undefined, 4102444800, undefined]);
     const cancelled = await bookingFor("Evt-Fake-0001");
     expect(cancelled.status).toBe(BookingStatus.cancelled);
-    expect(cancelled.assignment).toBeNull();
+    expect(cancelled.assignments).toEqual([]);
   });
 
   it("keeps a local edit and leaves an existing apartment alone", async () => {

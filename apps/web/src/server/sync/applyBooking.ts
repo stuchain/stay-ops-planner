@@ -15,6 +15,7 @@ import {
   parseUpdatedUnix,
   type HosthubReservationDto,
 } from "@stay-ops/sync";
+import { fitPiecesToStay, isoDate, samePieces, type StayPiece } from "@stay-ops/domain";
 
 type Dict = Record<string, unknown>;
 
@@ -137,6 +138,10 @@ function isoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+function dayToDb(day: string): Date {
+  return new Date(`${day}T00:00:00.000Z`);
+}
+
 function auditShape(b: {
   id: string;
   status: string;
@@ -198,55 +203,94 @@ async function ensureListingAndRoom(tx: Prisma.TransactionClient, dto: HosthubRe
 /**
  * Hosthub moved the dates of a booking that has an apartment. If the new dates still fit there
  * (apartment on, nobody else, not closed) the booking stays and its dates move; otherwise it
- * leaves the apartment and waits in "Χρειάζονται διαμέρισμα".
+ * leaves the apartment and waits in "Χρειάζονται διαμέρισμα". A guest who moved apartment mid-stay keeps the
+ * split: only the first piece follows a new check-in and only the last one a new check-out.
  */
 async function followDateChange(
   tx: Prisma.TransactionClient,
   booking: { id: string; status: BookingStatus; checkinDate: Date; checkoutDate: Date },
 ): Promise<void> {
   if (booking.status === BookingStatus.cancelled) return;
-  const assignment = await tx.assignment.findUnique({ where: { bookingId: booking.id } });
-  if (!assignment) return;
-  if (
-    assignment.startDate.getTime() === booking.checkinDate.getTime() &&
-    assignment.endDate.getTime() === booking.checkoutDate.getTime()
-  ) {
-    return;
-  }
-  const before = {
-    id: assignment.id,
-    roomId: assignment.roomId,
-    startDate: isoDay(assignment.startDate),
-    endDate: isoDay(assignment.endDate),
-  };
-  const room = await tx.room.findUnique({ where: { id: assignment.roomId }, select: { isActive: true } });
-  const conflict = room?.isActive
-    ? await findStayConflict(tx, {
-        roomId: assignment.roomId,
-        start: booking.checkinDate,
-        end: booking.checkoutDate,
-        excludeAssignmentId: assignment.id,
-      })
-    : null;
+  const rows = await tx.assignment.findMany({ where: { bookingId: booking.id }, orderBy: { startDate: "asc" } });
+  const first = rows[0];
+  if (!first) return;
+  const pieces: StayPiece[] = rows.map((r) => ({
+    roomId: r.roomId,
+    start: isoDate(isoDay(r.startDate)),
+    end: isoDate(isoDay(r.endDate)),
+  }));
+  const target = fitPiecesToStay(pieces, isoDate(isoDay(booking.checkinDate)), isoDate(isoDay(booking.checkoutDate)));
+  if (samePieces(pieces, target)) return;
 
-  if (room?.isActive && conflict === null) {
-    await tx.assignment.update({
-      where: { id: assignment.id },
-      data: { startDate: booking.checkinDate, endDate: booking.checkoutDate, version: { increment: 1 } },
-    });
+  const before = {
+    id: first.id,
+    roomId: first.roomId,
+    startDate: isoDay(first.startDate),
+    endDate: isoDay(rows[rows.length - 1]!.endDate),
+    ...(rows.length > 1 ? { pieces } : {}),
+  };
+  const roomIds = [...new Set(target.map((p) => p.roomId))];
+  const activeRooms = await tx.room.count({ where: { id: { in: roomIds }, isActive: true } });
+  const roomsOn = activeRooms === roomIds.length;
+  let conflict: Awaited<ReturnType<typeof findStayConflict>> = null;
+  if (roomsOn) {
+    for (const p of target) {
+      conflict = await findStayConflict(tx, {
+        roomId: p.roomId,
+        start: dayToDb(p.start),
+        end: dayToDb(p.end),
+        excludeBookingId: booking.id,
+      });
+      if (conflict) break;
+    }
+  }
+
+  if (roomsOn && conflict === null) {
+    // Rows that keep their apartment and nights stay as they are; the changed ones are rewritten.
+    const same = (r: (typeof rows)[number], p: StayPiece) =>
+      r.roomId === p.roomId && isoDay(r.startDate) === p.start && isoDay(r.endDate) === p.end;
+    const stale = rows.filter((r) => !target.some((p) => same(r, p)));
+    const fresh = target.filter((p) => !rows.some((r) => same(r, p)));
+    // A single piece moving dates keeps its row (and its id in the history); otherwise rows are replaced.
+    const reuse = stale.length === 1 && fresh.length === 1 ? stale[0]! : null;
+    if (reuse) {
+      const p = fresh[0]!;
+      await tx.assignment.update({
+        where: { id: reuse.id },
+        data: { roomId: p.roomId, startDate: dayToDb(p.start), endDate: dayToDb(p.end), version: { increment: 1 } },
+      });
+    } else {
+      await tx.assignment.deleteMany({ where: { id: { in: stale.map((r) => r.id) } } });
+      for (const p of fresh) {
+        await tx.assignment.create({
+          data: {
+            bookingId: booking.id,
+            roomId: p.roomId,
+            startDate: dayToDb(p.start),
+            endDate: dayToDb(p.end),
+            pinned: first.pinned,
+          },
+        });
+      }
+    }
     await writeAuditSnapshot(tx, {
       actorUserId: null,
       entityType: "assignment",
-      entityId: assignment.id,
+      entityId: first.id,
       action: "assignment.dates_followed_sync",
       before,
-      after: { ...before, startDate: isoDay(booking.checkinDate), endDate: isoDay(booking.checkoutDate) },
+      after: {
+        ...before,
+        startDate: isoDay(booking.checkinDate),
+        endDate: isoDay(booking.checkoutDate),
+        ...(target.length > 1 ? { pieces: target } : {}),
+      },
       meta: { bookingId: booking.id },
     });
     return;
   }
 
-  await tx.assignment.delete({ where: { id: assignment.id } });
+  await tx.assignment.deleteMany({ where: { bookingId: booking.id } });
   await tx.booking.update({
     where: { id: booking.id },
     data: { status: BookingStatus.needs_reassignment, version: { increment: 1 } },
@@ -254,13 +298,13 @@ async function followDateChange(
   await writeAuditSnapshot(tx, {
     actorUserId: null,
     entityType: "assignment",
-    entityId: assignment.id,
+    entityId: first.id,
     action: "assignment.cleared_on_sync_revalidation",
     before,
     after: null,
     meta: {
       bookingId: booking.id,
-      reason: !room?.isActive ? "ROOM_INACTIVE" : conflict?.kind === "assignment" ? "ROOM_TAKEN" : "ROOM_CLOSED",
+      reason: !roomsOn ? "ROOM_INACTIVE" : conflict?.kind === "assignment" ? "ROOM_TAKEN" : "ROOM_CLOSED",
       bookingCheckin: isoDay(booking.checkinDate),
       bookingCheckout: isoDay(booking.checkoutDate),
     },
@@ -345,7 +389,11 @@ export async function applyHosthubBooking(tx: Prisma.TransactionClient, item: In
   if (booking.status === BookingStatus.cancelled) {
     await applyCancellationSideEffects(tx, booking.id, null);
   } else {
-    const assignment = await tx.assignment.findUnique({ where: { bookingId: booking.id } });
+    // The checkout cleaning belongs to the apartment the guest leaves from (the last piece).
+    const assignment = await tx.assignment.findFirst({
+      where: { bookingId: booking.id },
+      orderBy: { startDate: "desc" },
+    });
     if (assignment) {
       await ensureTurnoverCleaningTask(tx, {
         bookingId: booking.id,

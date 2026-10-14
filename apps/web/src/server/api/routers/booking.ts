@@ -38,6 +38,9 @@ export const bookingRouter = createTRPCRouter({
         roomId: z.string().min(1).nullable(),
         expectedVersion: z.number().int().nonnegative(),
         confirmStarted: z.boolean().optional(),
+        /** Only these nights [from, to) move: splits a stay when the guest changed apartment. */
+        from: day.optional(),
+        to: day.optional(),
       }),
     )
     .mutation(({ ctx, input }) => moveBooking({ ...input, actorUserId: ctx.user.userId })),

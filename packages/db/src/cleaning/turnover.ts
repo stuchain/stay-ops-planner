@@ -60,17 +60,25 @@ export async function ensureTurnoverCleaningTask(
     return;
   }
   await ensureOwnTurnover(tx, params, booking.status);
-  const before = await tx.assignment.findFirst({
-    where: {
-      roomId: params.roomId,
-      bookingId: { not: params.bookingId },
-      endDate: booking.checkinDate,
-      booking: { status: { not: BookingStatus.cancelled } },
-    },
-    select: { bookingId: true, roomId: true, endDate: true },
+  // Every apartment this guest walks into (on arrival, or when moving mid-stay) may have just become a changeover.
+  const pieces = await tx.assignment.findMany({
+    where: { bookingId: params.bookingId },
+    select: { roomId: true, startDate: true },
   });
-  if (before) {
-    await ensureOwnTurnover(tx, { bookingId: before.bookingId, roomId: before.roomId, checkoutDate: before.endDate });
+  const arrivals = pieces.length > 0 ? pieces : [{ roomId: params.roomId, startDate: booking.checkinDate }];
+  for (const arrival of arrivals) {
+    const before = await tx.assignment.findFirst({
+      where: {
+        roomId: arrival.roomId,
+        bookingId: { not: params.bookingId },
+        endDate: arrival.startDate,
+        booking: { status: { not: BookingStatus.cancelled } },
+      },
+      select: { bookingId: true, roomId: true, endDate: true },
+    });
+    if (before) {
+      await ensureOwnTurnover(tx, { bookingId: before.bookingId, roomId: before.roomId, checkoutDate: before.endDate });
+    }
   }
 }
 
@@ -107,8 +115,19 @@ async function ensureOwnTurnover(
     return;
   }
 
-  const assignment = await tx.assignment.findUnique({ where: { bookingId: params.bookingId } });
-  if (!assignment || assignment.roomId !== params.roomId) {
+  // Only the real checkout gets a cleaning: the last piece of the stay, ending on the booking's check-out day.
+  // A guest moving apartment mid-stay leaves an earlier piece on a day that is not a checkout.
+  const booking = await tx.booking.findUnique({ where: { id: params.bookingId }, select: { checkoutDate: true } });
+  const assignment = await tx.assignment.findFirst({
+    where: { bookingId: params.bookingId },
+    orderBy: { startDate: "desc" },
+  });
+  if (
+    !booking ||
+    !assignment ||
+    assignment.roomId !== params.roomId ||
+    booking.checkoutDate.getTime() !== params.checkoutDate.getTime()
+  ) {
     return;
   }
 

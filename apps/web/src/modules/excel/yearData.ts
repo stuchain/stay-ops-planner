@@ -33,7 +33,7 @@ function endOfYearUtc(year: number): Date {
 type BookingLedgerRow = Prisma.BookingGetPayload<{
   include: {
     sourceListing: { select: { title: true; rentalIndex: true } };
-    assignment: { include: { room: { select: { displayName: true } } } };
+    assignments: { orderBy: { startDate: "asc" }; include: { room: { select: { displayName: true } } } };
   };
 }>;
 
@@ -51,7 +51,7 @@ function bookingToLedgerInput(b: BookingLedgerRow): BookingForLedger {
     guestTotal: b.guestTotal,
     rawPayload: b.rawPayload,
     sourceListingTitle: b.sourceListing?.title ?? null,
-    roomDisplayName: b.assignment?.room?.displayName ?? null,
+    roomDisplayName: b.assignments.length > 0 ? b.assignments.map((a) => a.room.displayName ?? "").join(" → ") : null,
     sourceListingRentalIndex: b.sourceListing?.rentalIndex ?? null,
   };
 }
@@ -67,7 +67,7 @@ export async function loadLedgerRowsForYear(prisma: PrismaClient, year: number):
     orderBy: [{ checkinDate: "asc" }, { id: "asc" }],
     include: {
       sourceListing: { select: { title: true, rentalIndex: true } },
-      assignment: { include: { room: { select: { displayName: true } } } },
+      assignments: { orderBy: { startDate: "asc" }, include: { room: { select: { displayName: true } } } },
     },
   });
 

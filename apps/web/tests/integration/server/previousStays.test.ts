@@ -56,7 +56,7 @@ async function booking(
       guestTotal: 2,
       ...(extra.roomId
         ? {
-            assignment: {
+            assignments: {
               create: {
                 roomId: extra.roomId,
                 startDate: new Date(`${checkin}T00:00:00Z`),

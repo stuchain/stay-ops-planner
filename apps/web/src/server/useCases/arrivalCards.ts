@@ -78,13 +78,19 @@ export async function getArrivalCards(ids: string[]): Promise<ArrivalCard[]> {
       channel: true,
       notes: true,
       hosthubNotesRaw: true,
-      assignment: { select: { room: { select: { displayName: true, code: true } } } },
+      // The apartment the guest arrives in (the first one, when they move mid-stay).
+      assignments: {
+        orderBy: { startDate: "asc" },
+        take: 1,
+        select: { room: { select: { displayName: true, code: true } } },
+      },
     },
     orderBy: [{ checkinDate: "asc" }, { guestName: "asc" }, { id: "asc" }],
   });
   const previous = await previousStaysForMany(rows.map((r) => r.id));
   return rows.map((row) => {
     const party = partyOf(row);
+    const arrival = row.assignments[0];
     return {
       id: row.id,
       guestName: row.guestName,
@@ -97,7 +103,7 @@ export async function getArrivalCards(ids: string[]): Promise<ArrivalCard[]> {
       checkin: dbDateToIso(row.checkinDate),
       checkout: dbDateToIso(row.checkoutDate),
       nights: Math.round((row.checkoutDate.getTime() - row.checkinDate.getTime()) / 86_400_000),
-      apartment: row.assignment ? (row.assignment.room.displayName ?? row.assignment.room.code) : null,
+      apartment: arrival ? (arrival.room.displayName ?? arrival.room.code) : null,
       channel: row.channel,
       notes: noteLines(row.notes, row.hosthubNotesRaw),
       previousStays: previous.get(row.id) ?? { sure: [], maybe: [] },

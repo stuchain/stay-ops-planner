@@ -1,17 +1,33 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { placeNights, type IsoDate, type StayPiece } from "@stay-ops/domain";
 import { useTRPC } from "@/api/client";
 import { readClientError, useErrorText } from "@/api/errors";
 import type { CalendarBooking, CalendarRangeData, CalendarRoom, MoveResult } from "@/api/types";
+import { formatDay, type UiLocale } from "@/ui/format";
 import { showToast, undoToast } from "@/ui/Toast";
 
 export type MoveRequest = {
   booking: CalendarBooking;
   roomId: string | null;
   confirmStarted?: boolean;
+  /** Only the nights `[from, to)` move (a guest who changed apartment mid-stay); both left out moves the whole stay. */
+  from?: IsoDate;
+  to?: IsoDate;
 };
+
+/** Where the booking would be after the move, worked out in the browser for the optimistic update. */
+export function piecesAfter(
+  booking: CalendarBooking,
+  roomId: string | null,
+  from?: IsoDate,
+  to?: IsoDate,
+): StayPiece[] {
+  if (roomId === null) return [];
+  return placeNights(booking.pieces, from ?? booking.checkin, to ?? booking.checkout, roomId);
+}
 
 type Snapshot = { booking: CalendarBooking };
 
@@ -38,6 +54,33 @@ export function useMoveBooking(rooms: CalendarRoom[], onNeedsConfirm: (request: 
   }
 
   const roomName = (roomId: string | null) => rooms.find((r) => r.id === roomId)?.name ?? "";
+  const locale = useLocale() as UiLocale;
+
+  /** Puts the booking back the way it was, piece by piece (each step answers with the next version). */
+  async function restore(after: CalendarBooking, before: readonly StayPiece[], confirmStarted: boolean) {
+    const extra = confirmStarted ? { confirmStarted: true } : {};
+    const first = before[0];
+    let current = (
+      await mutation.mutateAsync({
+        bookingId: after.id,
+        roomId: first?.roomId ?? null,
+        expectedVersion: after.version,
+        ...extra,
+      })
+    ).booking;
+    for (const p of before.slice(1)) {
+      current = (
+        await mutation.mutateAsync({
+          bookingId: after.id,
+          roomId: p.roomId,
+          expectedVersion: current.version,
+          from: p.start,
+          to: p.end,
+          ...extra,
+        })
+      ).booking;
+    }
+  }
 
   const mutation = useMutation({
     ...trpc.booking.move.mutationOptions(),
@@ -48,9 +91,16 @@ export function useMoveBooking(rooms: CalendarRoom[], onNeedsConfirm: (request: 
         .flatMap(([, data]) => data?.bookings ?? [])
         .find((b) => b.id === input.bookingId);
       if (!cached) return undefined;
+      const pieces = piecesAfter(
+        cached,
+        input.roomId,
+        input.from as IsoDate | undefined,
+        input.to as IsoDate | undefined,
+      );
       patchBooking({
         ...cached,
-        assignment: input.roomId === null ? null : { roomId: input.roomId, pinned: true },
+        assignment: pieces[0] ? { roomId: pieces[0].roomId, pinned: true } : null,
+        pieces,
       });
       return { booking: cached };
     },
@@ -69,19 +119,27 @@ export function useMoveBooking(rooms: CalendarRoom[], onNeedsConfirm: (request: 
 
   async function move(request: MoveRequest, options: { undoable?: boolean } = {}): Promise<MoveResult | null> {
     const { booking, roomId } = request;
-    const before = booking.assignment?.roomId ?? null;
+    const before = booking.pieces;
+    const partial = request.from !== undefined || request.to !== undefined;
     try {
       const result = await mutation.mutateAsync({
         bookingId: booking.id,
         roomId,
         expectedVersion: booking.version,
         ...(request.confirmStarted ? { confirmStarted: true } : {}),
+        ...(request.from !== undefined ? { from: request.from } : {}),
+        ...(request.to !== undefined ? { to: request.to } : {}),
       });
       const room = rooms.find((r) => r.id === roomId);
       const message =
         roomId === null
-          ? t("calendar.toast.removed", { room: roomName(before) })
-          : t("calendar.toast.moved", { room: roomName(roomId) });
+          ? t("calendar.toast.removed", { room: roomName(before[0]?.roomId ?? null) })
+          : partial
+            ? t("calendar.toast.split", {
+                room: roomName(roomId),
+                date: formatDay(request.from ?? booking.checkin, locale),
+              })
+            : t("calendar.toast.moved", { room: roomName(roomId) });
       const warning =
         result.warnings.includes("OVER_CAPACITY") && room?.capacity != null
           ? t("booking.smallRoom", { count: room.capacity })
@@ -93,11 +151,26 @@ export function useMoveBooking(rooms: CalendarRoom[], onNeedsConfirm: (request: 
           message,
           undoLabel: t("common.undo"),
           ...(warning ? { warning } : {}),
-          onUndo: () =>
-            void move(
-              { booking: result.booking, roomId: before, ...(request.confirmStarted ? { confirmStarted: true } : {}) },
-              { undoable: false },
-            ),
+          onUndo: () => {
+            const confirmStarted = Boolean(request.confirmStarted);
+            // One apartment before (also when this move split it): a single move back. A stay that was already
+            // split is rebuilt piece by piece.
+            const back =
+              before.length <= 1
+                ? move(
+                    {
+                      booking: result.booking,
+                      roomId: before[0]?.roomId ?? null,
+                      ...(confirmStarted ? { confirmStarted: true } : {}),
+                    },
+                    { undoable: false },
+                  )
+                : restore(result.booking, before, confirmStarted).then(
+                    () => showToast({ message: t("calendar.toast.restored"), tone: "success" }),
+                    (error: unknown) => showToast({ message: errorText(error), tone: "danger" }),
+                  );
+            void back;
+          },
         });
       }
       return result;

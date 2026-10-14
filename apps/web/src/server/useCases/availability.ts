@@ -51,7 +51,7 @@ export async function checkAvailability(
     prisma.booking.count({
       where: {
         status: { in: [BookingStatus.confirmed, BookingStatus.needs_reassignment] },
-        assignment: null,
+        assignments: { none: {} },
         checkinDate: { lt: isoToDbDate(checkout) },
         checkoutDate: { gt: isoToDbDate(checkin) },
       },

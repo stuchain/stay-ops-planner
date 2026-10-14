@@ -7,6 +7,7 @@ import { memo, type CSSProperties } from "react";
 import { useOnline } from "@/api/online";
 import { useCanChange } from "@/features/shell/role";
 import type { CalendarBooking } from "@/api/types";
+import type { IsoDate } from "@stay-ops/domain";
 import { BookingBar } from "@/ui/BookingBar";
 import { formatMoney, type UiLocale } from "@/ui/format";
 import { motion } from "@/ui/tokens";
@@ -23,7 +24,27 @@ export type DraggableBarProps = {
   style?: CSSProperties;
   className?: string;
   onOpen: (bookingId: string) => void;
+  /**
+   * One apartment's part of a stay that changed apartment mid-way: the bar shows only these nights and dragging it
+   * moves only them. Left out, the bar is the whole stay.
+   */
+  piece?: BarPiece | undefined;
 };
+
+export type BarPiece = {
+  start: IsoDate;
+  end: IsoDate;
+  /** Position among the stay's pieces and how many there are. */
+  index: number;
+  count: number;
+  /** The apartment of the piece before, for "↳ από Helios". */
+  fromRoom?: string | undefined;
+  /** Being moved: drawn faded until it is placed. */
+  lifted?: boolean;
+};
+
+/** What a bar carries while dragged: the booking and the nights that move. */
+export type DragData = { bookingId: string; from?: IsoDate; to?: IsoDate };
 
 function shallowEqual(a: object | undefined, b: object | undefined): boolean {
   if (a === b) return true;
@@ -39,7 +60,9 @@ function shallowEqual(a: object | undefined, b: object | undefined): boolean {
 export const DraggableBar = memo(DraggableBarInner, (prev, next) => {
   const { style: ps, ...pr } = prev;
   const { style: ns, ...nr } = next;
-  return shallowEqual(pr, nr) && shallowEqual(ps, ns);
+  const { piece: pp, ...prRest } = pr;
+  const { piece: np, ...nrRest } = nr;
+  return shallowEqual(prRest, nrRest) && shallowEqual(pp, np) && shallowEqual(ps, ns);
 });
 
 function DraggableBarInner({
@@ -51,6 +74,7 @@ function DraggableBarInner({
   style,
   className,
   onOpen,
+  piece,
 }: DraggableBarProps) {
   const t = useTranslations("common");
   const tCalendar = useTranslations("calendar");
@@ -65,10 +89,13 @@ function DraggableBarInner({
       : tCalendar("perNight", { price: formatMoney(booking.nightlyCents, locale) });
   // The bar glides to its new row (shared layoutId across rows); off when the person asks for less motion.
   const reduceMotion = useReducedMotion();
+  const split = piece !== undefined && piece.count > 1;
+  const dragData: DragData =
+    split && piece ? { bookingId: booking.id, from: piece.start, to: piece.end } : { bookingId: booking.id };
   const { listeners, setNodeRef, isDragging } = useDraggable({
-    id: `booking:${booking.id}`,
-    data: { bookingId: booking.id },
-    disabled: pending || !online || !canChange,
+    id: split && piece ? `booking:${booking.id}:${piece.index}` : `booking:${booking.id}`,
+    data: dragData,
+    disabled: pending || !online || !canChange || Boolean(piece?.lifted),
   });
   // Dragging is a mouse shortcut. Keyboard users open the panel with Enter or Space and
   // choose the apartment there, so dnd-kit's keyboard attributes are not used.
@@ -82,17 +109,21 @@ function DraggableBarInner({
         ? {}
         : {
             layout: "position" as const,
-            layoutId: `bar:${booking.id}`,
+            layoutId: split && piece && piece.index > 0 ? `bar:${booking.id}:${piece.index}` : `bar:${booking.id}`,
             transition: { duration: motion.layoutMs / 1000, ease: [0.2, 0, 0, 1] as const },
           })}
     >
       <BookingBar
         guest={guest}
         shownGuest={barName(guest, typeof style?.width === "number" ? style.width : undefined)}
-        checkin={booking.checkin}
-        checkout={booking.checkout}
+        checkin={piece?.start ?? booking.checkin}
+        checkout={piece?.end ?? booking.checkout}
         channel={booking.channel}
         selected={selected}
+        joinedBefore={split && piece ? piece.index > 0 : false}
+        joinedAfter={split && piece ? piece.index < piece.count - 1 : false}
+        fromRoom={split ? piece?.fromRoom : undefined}
+        lifted={piece?.lifted ?? false}
         dragging={isDragging}
         pending={pending}
         needsRoom={needsRoom && !pending}

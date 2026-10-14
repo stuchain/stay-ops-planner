@@ -105,7 +105,11 @@ export async function previousStaysForMany(bookingIds: string[]): Promise<Map<st
       guestPhone: true,
       guestEmail: true,
       guestNote: true,
-      assignment: { select: { room: { select: { displayName: true, code: true } } } },
+      assignments: {
+        orderBy: { startDate: "asc" },
+        take: 1,
+        select: { room: { select: { displayName: true, code: true } } },
+      },
     },
   });
   for (const guest of guests) {
@@ -114,7 +118,7 @@ export async function previousStaysForMany(bookingIds: string[]): Promise<Map<st
       .map((h) => ({
         bookingId: h.id,
         checkin: dbDateToIso(h.checkinDate),
-        apartment: h.assignment ? (h.assignment.room.displayName ?? h.assignment.room.code) : null,
+        apartment: h.assignments[0] ? (h.assignments[0].room.displayName ?? h.assignments[0].room.code) : null,
         name: h.guestName,
         phone: h.guestPhone,
         email: h.guestEmail,

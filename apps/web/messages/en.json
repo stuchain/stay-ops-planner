@@ -124,7 +124,9 @@
     },
     "toast": {
       "moved": "Moved to {room}",
-      "removed": "The booking was taken out of {room}"
+      "removed": "The booking was taken out of {room}",
+      "split": "From {date} in {room}",
+      "restored": "Back as it was"
     },
     "perNight": "{price}/night",
     "proposed": "Proposed: {guest}",
@@ -143,7 +145,11 @@
       "applied": "{count, plural, one {# booking placed} other {# bookings placed}}"
     },
     "print": "Print",
-    "more": "More"
+    "more": "More",
+    "cutFrom": "Changes apartment from {date}",
+    "cutPick": "{guest}: which apartment from {date}? Press \"Put here\".",
+    "cutCancel": "Cancel",
+    "continuedFrom": "↳ from {room}"
   },
   "booking": {
     "title": "Booking",
@@ -179,7 +185,8 @@
     "here": "Here",
     "sendMessage": "Send a message",
     "priceRow": "Price · {price}",
-    "editDetails": "Change details"
+    "editDetails": "Change details",
+    "splitHint": "Moved apartment mid-stay? Press the scissors on the booking, on the day they moved."
   },
   "income": {
     "title": "Income",

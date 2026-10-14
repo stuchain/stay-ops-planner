@@ -2,6 +2,7 @@ import { BookingStatus } from "@stay-ops/db";
 import { addDays, type IsoDate } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
 import { appTimeZone, isoToDbDate, todayIso } from "@/server/time";
+import { piecesArgs } from "./stayPieces";
 import { bookingSliceSelect, toBookingSlice } from "./bookingSlice";
 import { byCalendarOrder } from "./calendarRange";
 import { loadTurnovers, type TurnoverTask } from "./cleaningSchedule";
@@ -57,16 +58,17 @@ export async function getWeekSummary(
       select: {
         ...bookingSliceSelect,
         guestNote: true,
-        assignment: { select: { roomId: true, pinned: true, room: roomSelect } },
+        assignments: { ...piecesArgs, select: { ...piecesArgs.select, room: roomSelect } },
       },
       orderBy: [{ checkinDate: "asc" }, { guestName: "asc" }, { id: "asc" }],
     }),
     loadTurnovers(from, 7, { includeCancelled: false }, now),
   ]);
 
-  const stays = rows.map((row): TodayStay => {
+  // Arrivals show the apartment the guest arrives in, departures the one they leave from (the last piece).
+  const stayOf = (row: (typeof rows)[number], piece: (typeof row.assignments)[number] | undefined): TodayStay => {
     const slice = toBookingSlice(row);
-    const room = row.assignment?.room;
+    const room = piece?.room;
     return {
       id: slice.id,
       guestName: slice.guestName,
@@ -79,10 +81,10 @@ export async function getWeekSummary(
       // Only this booking's own note; Today adds the ones from earlier stays.
       guestNotes: row.guestNote ? [row.guestNote] : [],
     };
-  });
-  const roomById = new Map(
-    rows.flatMap((r) => (r.assignment ? [[r.assignment.room.id, r.assignment.room] as const] : [])),
-  );
+  };
+  const stays = rows.map((row) => stayOf(row, row.assignments[0]));
+  const leaving = rows.map((row) => stayOf(row, row.assignments[row.assignments.length - 1]));
+  const roomById = new Map(rows.flatMap((r) => r.assignments.map((a) => [a.room.id, a.room] as const)));
   const byRoom = (a: TodayStay, b: TodayStay) => byCalendarOrder(roomById, a.room?.id, b.room?.id);
 
   const days = Array.from({ length: 7 }, (_, i): WeekDay => {
@@ -90,7 +92,7 @@ export async function getWeekSummary(
     return {
       date,
       arrivals: stays.filter((s) => s.checkin === date).sort(byRoom),
-      departures: stays.filter((s) => s.checkout === date).sort(byRoom),
+      departures: leaving.filter((s) => s.checkout === date).sort(byRoom),
       cleanings: turnovers.tasks.filter((task) => task.day === date),
     };
   });

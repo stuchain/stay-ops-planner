@@ -36,6 +36,8 @@ export type AssertNoOverlapParams = {
   end: Date;
   /** When updating an assignment, exclude its row from the probe. */
   excludeAssignmentId?: string | null;
+  /** When changing a booking's pieces, exclude all of that booking's own rows from the probe. */
+  excludeBookingId?: string | null;
   /** When updating a manual block, exclude its row from the probe. */
   excludeBlockId?: string | null;
 };
@@ -49,6 +51,7 @@ export async function findStayConflict(
   params: AssertNoOverlapParams,
 ): Promise<StayConflict | null> {
   const { roomId, start, end, excludeAssignmentId, excludeBlockId } = params;
+  const excludeBookingId = params.excludeBookingId ?? null;
 
   const rows = await tx.$queryRaw<
     {
@@ -64,6 +67,7 @@ export async function findStayConflict(
     WHERE room_id = ${roomId}
       AND daterange(start_date, end_date, '[)') && daterange(${start}::date, ${end}::date, '[)')
       AND (${excludeAssignmentId}::text IS NULL OR id <> ${excludeAssignmentId})
+      AND (${excludeBookingId}::text IS NULL OR booking_id <> ${excludeBookingId})
     UNION ALL
     SELECT id, 'block'::text AS kind, room_id, start_date, end_date
     FROM manual_blocks
@@ -86,10 +90,7 @@ export async function findStayConflict(
   };
 }
 
-export async function assertNoOverlap(
-  tx: Prisma.TransactionClient,
-  params: AssertNoOverlapParams,
-): Promise<void> {
+export async function assertNoOverlap(tx: Prisma.TransactionClient, params: AssertNoOverlapParams): Promise<void> {
   const conflict = await findStayConflict(tx, params);
   if (conflict) {
     throw new OverlapConflictError(undefined, conflict);

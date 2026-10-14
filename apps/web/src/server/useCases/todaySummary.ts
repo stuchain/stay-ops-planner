@@ -2,6 +2,7 @@ import { BookingStatus } from "@stay-ops/db";
 import { addDays, GAP_LOOKAHEAD_DAYS, GAP_MAX_NIGHTS, shortGaps, type IsoDate, type Occupied } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
 import { appTimeZone, dbDateToIso, isoToDbDate, todayIso } from "@/server/time";
+import { piecesArgs } from "./stayPieces";
 import { bookingSliceSelect, toBookingSlice } from "./bookingSlice";
 import { byCalendarOrder } from "./calendarRange";
 import { previousStaysForMany } from "./previousStays";
@@ -68,19 +69,21 @@ export async function getTodaySummary(now = new Date(), timeZone: string = appTi
       select: {
         ...bookingSliceSelect,
         guestNote: true,
-        assignment: { select: { roomId: true, pinned: true, room: roomSelect } },
+        assignments: { ...piecesArgs, select: { ...piecesArgs.select, room: roomSelect } },
       },
       orderBy: [{ checkinDate: "asc" }, { guestName: "asc" }, { id: "asc" }],
     }),
-    prisma.booking.count({ where: { ...notCancelled, assignment: null, checkoutDate: { gt: isoToDbDate(today) } } }),
+    prisma.booking.count({
+      where: { ...notCancelled, assignments: { none: {} }, checkoutDate: { gt: isoToDbDate(today) } },
+    }),
     prisma.booking.findMany({
       where: {
         ...notCancelled,
-        assignment: { isNot: null },
+        assignments: { some: {} },
         checkinDate: { lt: horizon },
         checkoutDate: { gte: isoToDbDate(addDays(today, -GAP_MAX_NIGHTS)) },
       },
-      select: { id: true, checkinDate: true, checkoutDate: true, assignment: { select: { roomId: true } } },
+      select: { id: true, assignments: { select: { roomId: true, startDate: true, endDate: true } } },
     }),
     prisma.manualBlock.findMany({
       where: { startDate: { lt: horizon }, endDate: { gte: isoToDbDate(addDays(today, -GAP_MAX_NIGHTS)) } },
@@ -94,12 +97,15 @@ export async function getTodaySummary(now = new Date(), timeZone: string = appTi
 
   const BLOCK = "block:";
   const occupied: Occupied[] = [
-    ...placed.map((b) => ({
-      id: b.id,
-      roomId: b.assignment!.roomId,
-      start: dbDateToIso(b.checkinDate),
-      end: dbDateToIso(b.checkoutDate),
-    })),
+    // One entry per apartment the guest sleeps in (a guest who moved mid-stay has more than one).
+    ...placed.flatMap((b) =>
+      b.assignments.map((a) => ({
+        id: b.id,
+        roomId: a.roomId,
+        start: dbDateToIso(a.startDate),
+        end: dbDateToIso(a.endDate),
+      })),
+    ),
     ...blocks.map((b) => ({
       id: `${BLOCK}${b.id}`,
       roomId: b.roomId,
@@ -128,9 +134,10 @@ export async function getTodaySummary(now = new Date(), timeZone: string = appTi
   const arriving = rows.filter((r) => days.some((d) => d.getTime() === r.checkinDate.getTime()));
   const previous = await previousStaysForMany(arriving.map((r) => r.id));
 
-  const stays = rows.map((row): TodayStay => {
+  // Arrivals show the apartment the guest arrives in, departures the one they leave from (the last piece).
+  const stayOf = (row: (typeof rows)[number], piece: (typeof row.assignments)[number] | undefined): TodayStay => {
     const slice = toBookingSlice(row);
-    const room = row.assignment?.room;
+    const room = piece?.room;
     return {
       id: slice.id,
       guestName: slice.guestName,
@@ -145,15 +152,17 @@ export async function getTodaySummary(now = new Date(), timeZone: string = appTi
         ...(previous.get(row.id)?.sure ?? []).flatMap((s) => (s.note ? [s.note] : [])),
       ],
     };
-  });
+  };
+  const stays = rows.map((row) => stayOf(row, row.assignments[0]));
+  const leaving = rows.map((row) => stayOf(row, row.assignments[row.assignments.length - 1]));
 
   return {
     today,
     tomorrow,
     arrivals: stays.filter((s) => s.checkin === today),
-    departures: stays.filter((s) => s.checkout === today),
+    departures: leaving.filter((s) => s.checkout === today),
     tomorrowArrivals: stays.filter((s) => s.checkin === tomorrow),
-    tomorrowDepartures: stays.filter((s) => s.checkout === tomorrow),
+    tomorrowDepartures: leaving.filter((s) => s.checkout === tomorrow),
     needsApartment,
     gaps,
   };

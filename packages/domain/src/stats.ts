@@ -16,8 +16,13 @@ export interface StatsBooking {
   readonly kind: StatsKind;
   readonly checkin: IsoDate;
   readonly checkout: IsoDate;
-  /** The apartment it sits in; null when not placed. */
+  /** The apartment it sits in (the arrival one); null when not placed. */
   readonly roomId: string | null;
+  /**
+   * Every apartment of the stay with its nights, when the guest moved mid-stay. Left out, the whole stay counts
+   * for `roomId`.
+   */
+  readonly pieces?: readonly { readonly roomId: string; readonly start: IsoDate; readonly end: IsoDate }[];
   /** Income that counts (the money page's rules); 0 when nothing counts. */
   readonly incomeCents: number;
   /** What reached the owner. */
@@ -240,19 +245,27 @@ export function yearStats(
     const c = channel.get(b.channel)!;
     if (b.kind === "stay" && length > 0) {
       const slept = nightsWithin(b.checkin, b.checkout, period.from, period.to);
-      const placed = b.roomId !== null && rooms.has(b.roomId);
       nights += slept;
       c.nights += slept;
-      if (placed) {
-        placedNights += slept;
-        const r = room.get(b.roomId!)!;
-        r.nights += slept;
-        r.incomeCents += (b.incomeCents * slept) / length;
+      // Each apartment gets its own nights and the matching share of the income, so a guest who moved mid-stay
+      // is never counted twice.
+      const parts = (
+        b.pieces && b.pieces.length > 0
+          ? b.pieces
+          : b.roomId !== null
+            ? [{ roomId: b.roomId, start: b.checkin, end: b.checkout }]
+            : []
+      ).filter((p) => rooms.has(p.roomId));
+      for (const p of parts) {
+        const inPart = nightsWithin(p.start, p.end, period.from, period.to);
+        placedNights += inPart;
+        const r = room.get(p.roomId)!;
+        r.nights += inPart;
+        r.incomeCents += (b.incomeCents * inPart) / length;
       }
       months.forEach((m, i) => {
-        const n = nightsWithin(b.checkin, b.checkout, m.from, m.to);
-        month[i]!.nights += n;
-        if (placed) month[i]!.placedNights += n;
+        month[i]!.nights += nightsWithin(b.checkin, b.checkout, m.from, m.to);
+        for (const p of parts) month[i]!.placedNights += nightsWithin(p.start, p.end, m.from, m.to);
       });
     }
     if (!inPeriod(b.checkin)) continue;

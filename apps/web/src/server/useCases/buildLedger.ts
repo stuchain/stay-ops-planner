@@ -164,7 +164,10 @@ async function loadApartments(db: Db): Promise<LedgerApartment[]> {
 
 const bookingInclude = {
   sourceListing: { select: { rentalIndex: true } },
-  assignment: { select: { room: { select: { displayName: true, code: true, rentalIndex: true } } } },
+  assignments: {
+    orderBy: { startDate: "asc" },
+    select: { room: { select: { displayName: true, code: true, rentalIndex: true } } },
+  },
   ledgerEntry: true,
 } satisfies Prisma.BookingInclude;
 
@@ -181,7 +184,10 @@ export function bookingRow(b: LedgerBooking, basis: IncomeBasis): LedgerRowView 
     cleaningFeeCents: b.cleaningFeeCents,
     currency: b.currency,
   });
-  const room = b.assignment?.room ?? null;
+  // One row per booking whatever the number of apartments, so a guest who moved is counted once. A direct
+  // booking counts for the apartment the guest arrived in (the first piece).
+  const pieces = b.assignments.map((a) => a.room);
+  const room = pieces[0] ?? null;
   const bucket = rentalBucketFor({
     channel: b.channel,
     listingRentalIndex: b.sourceListing?.rentalIndex ?? null,
@@ -191,7 +197,7 @@ export function bookingRow(b: LedgerBooking, basis: IncomeBasis): LedgerRowView 
     name: (b.guestName ?? "").trim().toUpperCase(),
     guestCount: guestCount(b),
     passport: passportFrom(b.rawPayload),
-    roomLocation: (room?.displayName ?? room?.code ?? "").trim(),
+    roomLocation: pieces.map((r) => (r.displayName ?? r.code ?? "").trim()).join(" → "),
     dateRange: formatStayRange(b.checkinDate, b.checkoutDate),
     nights: b.nights,
     airbnbCents: b.channel === "airbnb" ? income.grossCents : null,

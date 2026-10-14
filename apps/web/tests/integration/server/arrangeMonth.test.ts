@@ -151,13 +151,13 @@ describe("arrange the month", () => {
     );
     expect(result).toEqual({ placed: 2 });
 
-    const rows = await prisma.booking.findMany({ where: { id: { in: [a.id, b.id] } }, include: { assignment: true } });
+    const rows = await prisma.booking.findMany({ where: { id: { in: [a.id, b.id] } }, include: { assignments: true } });
     for (const row of rows) {
-      expect(row.assignment?.pinned).toBe(false);
+      expect(row.assignments[0]?.pinned).toBe(false);
       expect(row.version).toBe(1);
       expect(row.status).toBe(BookingStatus.confirmed);
     }
-    expect(new Set(rows.map((r) => r.assignment?.roomId)).size).toBe(2);
+    expect(new Set(rows.map((r) => r.assignments[0]?.roomId)).size).toBe(2);
     expect(await prisma.auditEvent.count({ where: { action: "booking.arrange" } })).toBe(2);
     // Cleanings come by themselves only for same-day changeovers; these two have none.
     expect(await prisma.cleaningTask.count({ where: { taskType: TURNOVER_TASK_TYPE } })).toBe(0);
@@ -178,7 +178,7 @@ describe("arrange the month", () => {
       apply(proposal.placements.map((p) => ({ bookingId: p.bookingId, roomId: p.roomId, expectedVersion: p.version }))),
     );
     expect(code).toBe("CHANGED_MEANWHILE");
-    expect(await prisma.assignment.findUnique({ where: { bookingId: a.id } })).toBeNull();
+    expect(await prisma.assignment.findFirst({ where: { bookingId: a.id } })).toBeNull();
     expect(await prisma.auditEvent.count()).toBe(0);
   });
 

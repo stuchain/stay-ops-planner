@@ -78,6 +78,27 @@ describe("helpers", () => {
 });
 
 describe("yearStats", () => {
+  it("shares a stay that moved apartment between the apartments by night, counting it once", () => {
+    const s = yearStats(
+      [
+        booking("2026-07-08", "2026-07-11", {
+          pieces: [
+            { roomId: "a", start: isoDate("2026-07-08"), end: isoDate("2026-07-09") },
+            { roomId: "b", start: isoDate("2026-07-09"), end: isoDate("2026-07-11") },
+          ],
+        }),
+      ],
+      YEAR,
+      ["a", "b"],
+    );
+    expect(s).toMatchObject({ bookings: 1, nights: 3, placedNights: 3, incomeCents: 30_000 });
+    expect(s.byRoom).toEqual([
+      { roomId: "a", bookings: 1, nights: 1, availableNights: 365, incomeCents: 10_000 },
+      { roomId: "b", bookings: 0, nights: 2, availableNights: 365, incomeCents: 20_000 },
+    ]);
+    expect(s.byMonth[6]).toMatchObject({ nights: 3, placedNights: 3 });
+  });
+
   it("adds up stays, nights, money and occupancy", () => {
     const s = yearStats(
       [

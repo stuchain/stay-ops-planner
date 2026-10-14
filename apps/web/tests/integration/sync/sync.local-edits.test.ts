@@ -122,10 +122,10 @@ describe("sync keeps the user's edits", () => {
     await applyHosthubReservation(prisma, reservation, { ...reservation, updated: 1_500 });
     const after = await prisma.booking.findUniqueOrThrow({
       where: { id: booking.id },
-      include: { assignment: true },
+      include: { assignments: true },
     });
     expect(after.status).toBe(BookingStatus.cancelled);
-    expect(after.assignment).toBeNull();
+    expect(after.assignments).toEqual([]);
   });
 
   it("Hosthub wins again once its own status changes after an app cancel", async () => {

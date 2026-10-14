@@ -112,7 +112,11 @@ export async function searchBookings(input: SearchInput): Promise<SearchOutput> 
       guestTotal: true,
       channel: true,
       status: true,
-      assignment: { select: { room: { select: { id: true, displayName: true, code: true, color: true } } } },
+      assignments: {
+        orderBy: { startDate: "asc" },
+        take: 1,
+        select: { room: { select: { id: true, displayName: true, code: true, color: true } } },
+      },
     },
   });
   const byId = new Map(rows.map((r) => [r.id, r]));
@@ -120,7 +124,7 @@ export async function searchBookings(input: SearchInput): Promise<SearchOutput> 
     const row = byId.get(id);
     if (!row) return [];
     const party = partyOf(row);
-    const room = row.assignment?.room;
+    const room = row.assignments[0]?.room;
     const checkin = dbDateToIso(row.checkinDate);
     const checkout = dbDateToIso(row.checkoutDate);
     return [

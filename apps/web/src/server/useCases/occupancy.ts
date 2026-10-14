@@ -27,7 +27,7 @@ export async function buildOccupancy(year: number, db: typeof prisma = prisma): 
   const bookings = await db.booking.findMany({
     where: {
       status: BookingStatus.confirmed,
-      assignment: { isNot: null },
+      assignments: { some: {} },
       checkinDate: { lt: new Date(Date.UTC(year + 1, 0, 1)) },
       checkoutDate: { gt: new Date(Date.UTC(year - 1, 0, 1)) },
     },
@@ -41,29 +41,30 @@ export async function buildOccupancy(year: number, db: typeof prisma = prisma): 
       currency: true,
       checkinDate: true,
       checkoutDate: true,
-      assignment: { select: { roomId: true } },
+      assignments: { select: { roomId: true, startDate: true, endDate: true } },
     },
   });
-  const stays: OccupancyStay[] = bookings.flatMap((b) =>
-    b.assignment
-      ? [
-          {
-            roomId: b.assignment.roomId,
-            checkin: dbDateToIso(b.checkinDate),
-            checkout: dbDateToIso(b.checkoutDate),
-            grossCents: incomeFor({
-              channel: b.channel,
-              status: b.status,
-              totalValueCents: b.totalValueCents,
-              bookingValueCents: b.totalAmountCents,
-              payoutCents: b.payoutAmountCents,
-              cleaningFeeCents: b.cleaningFeeCents,
-              currency: b.currency,
-            }).grossCents,
-          },
-        ]
-      : [],
-  );
+  // One entry per apartment the guest slept in, each with its nights' share of the gross, so a guest who moved
+  // mid-stay is counted once in total.
+  const stays: OccupancyStay[] = bookings.flatMap((b) => {
+    const grossCents = incomeFor({
+      channel: b.channel,
+      status: b.status,
+      totalValueCents: b.totalValueCents,
+      bookingValueCents: b.totalAmountCents,
+      payoutCents: b.payoutAmountCents,
+      cleaningFeeCents: b.cleaningFeeCents,
+      currency: b.currency,
+    }).grossCents;
+    const nights = (b.checkoutDate.getTime() - b.checkinDate.getTime()) / 86_400_000;
+    return b.assignments.map((a) => ({
+      roomId: a.roomId,
+      checkin: dbDateToIso(a.startDate),
+      checkout: dbDateToIso(a.endDate),
+      grossCents:
+        nights > 0 ? (grossCents * (a.endDate.getTime() - a.startDate.getTime())) / 86_400_000 / nights : grossCents,
+    }));
+  });
   const rooms = await listCalendarRooms();
   const compute = (y: number, ids: readonly string[]) => occupancyByRoom(stays, y, ids);
   // Inactive apartments only show when they still had stays in one of the two years.

@@ -1,6 +1,7 @@
 import type { BookingStatus, Channel, Prisma } from "@stay-ops/db";
-import type { IsoDate, Party } from "@stay-ops/domain";
+import type { IsoDate, Party, StayPiece } from "@stay-ops/domain";
 import { dbDateToIso } from "@/server/time";
+import { piecesArgs, toPieces } from "./stayPieces";
 
 /** The few booking fields the calendar needs, in one shape for the range query and the move result. */
 export type BookingSlice = {
@@ -15,7 +16,10 @@ export type BookingSlice = {
   status: BookingStatus;
   /** Send back as `expectedVersion` when moving; it changes with every move. */
   version: number;
+  /** The apartment the guest arrives in, or null when the booking has none yet. */
   assignment: { roomId: string; pinned: boolean } | null;
+  /** Every apartment of the stay in date order; more than one when the guest moved mid-stay. Empty when unplaced. */
+  pieces: StayPiece[];
 };
 
 export const bookingSliceSelect = {
@@ -30,7 +34,7 @@ export const bookingSliceSelect = {
   channel: true,
   status: true,
   version: true,
-  assignment: { select: { roomId: true, pinned: true } },
+  assignments: piecesArgs,
 } satisfies Prisma.BookingSelect;
 
 export type BookingSliceRow = Prisma.BookingGetPayload<{ select: typeof bookingSliceSelect }>;
@@ -52,6 +56,7 @@ export function toBookingSlice(row: BookingSliceRow): BookingSlice {
   const checkin = dbDateToIso(row.checkinDate);
   const checkout = dbDateToIso(row.checkoutDate);
   const party = partyOf(row);
+  const first = row.assignments[0];
   return {
     id: row.id,
     checkin,
@@ -62,6 +67,7 @@ export function toBookingSlice(row: BookingSliceRow): BookingSlice {
     channel: row.channel,
     status: row.status,
     version: row.version,
-    assignment: row.assignment ? { roomId: row.assignment.roomId, pinned: row.assignment.pinned } : null,
+    assignment: first ? { roomId: first.roomId, pinned: row.assignments.some((a) => a.pinned) } : null,
+    pieces: toPieces(row.assignments),
   };
 }

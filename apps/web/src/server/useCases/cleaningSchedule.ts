@@ -77,7 +77,7 @@ function dayStart(day: IsoDate): Date {
  */
 export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate, now = new Date()): Promise<number> {
   await setAsideNonChangeovers(from, to, now);
-  const missing = await prisma.assignment.findMany({
+  const pieces = await prisma.assignment.findMany({
     where: {
       endDate: { gte: isoToDbDate(from), lt: isoToDbDate(to) },
       booking: {
@@ -89,8 +89,10 @@ export async function ensureTurnoversBetween(from: IsoDate, to: IsoDate, now = n
       },
       room: { isActive: true },
     },
-    select: { bookingId: true, roomId: true, endDate: true },
+    select: { bookingId: true, roomId: true, endDate: true, booking: { select: { checkoutDate: true } } },
   });
+  // Only real checkouts: a guest moving apartment mid-stay leaves an earlier piece on a day that is not one.
+  const missing = pieces.filter((a) => a.endDate.getTime() === a.booking.checkoutDate.getTime());
   if (missing.length === 0) return 0;
   const arrivals = await prisma.assignment.findMany({
     where: {
@@ -130,11 +132,12 @@ async function setAsideNonChangeovers(from: IsoDate, to: IsoDate, now: Date): Pr
       roomId: true,
       bookingId: true,
       sourceEventId: true,
-      booking: { select: { assignment: { select: { endDate: true } } } },
+      // The apartment the guest leaves from is the last piece of the stay.
+      booking: { select: { assignments: { orderBy: { startDate: "desc" }, take: 1, select: { endDate: true } } } },
     },
   });
   const checkouts = untouched.flatMap((t) => {
-    const endDate = t.booking.assignment?.endDate;
+    const endDate = t.booking.assignments[0]?.endDate;
     return endDate ? [{ ...t, endDate }] : [];
   });
   if (checkouts.length === 0) return 0;

@@ -80,9 +80,20 @@ describe("calendar range and move command", () => {
     roomId: string | null;
     expectedVersion: number;
     confirmStarted?: boolean;
+    from?: string;
+    to?: string;
   }) => {
     const { moveBooking } = await import("@/server/useCases/moveBooking");
-    return moveBooking({ ...input, actorUserId: actorId }, NOW);
+    const { from, to, ...rest } = input;
+    return moveBooking(
+      {
+        ...rest,
+        ...(from ? { from: isoDate(from) } : {}),
+        ...(to ? { to: isoDate(to) } : {}),
+        actorUserId: actorId,
+      },
+      NOW,
+    );
   };
 
   it("places a booking, records audit and turnover, and returns the new version", async () => {
@@ -234,6 +245,109 @@ describe("calendar range and move command", () => {
     expect(failed.reason).toBeInstanceOf(DomainError);
     expect(["ROOM_TAKEN", "BOOKING_CHANGED"]).toContain((failed.reason as DomainError).code);
     expect(await prisma.assignment.count({ where: { roomId: onar.id } })).toBe(1);
+  });
+
+  it("splits a stay across apartments without a second booking or a second money row", async () => {
+    const { bookingRow } = await import("@/server/useCases/buildLedger");
+    const onar = await room("Onar", 3);
+    const cosmos = await room("Cosmos", 4, true);
+    const iris = await room("Iris", 3);
+    // Nikos holds Cosmos only on the first nights, so the guest can move there on the 3rd.
+    const nikos = await booking("Nikos", "2030-06-28", "2030-07-03");
+    await move({ bookingId: nikos.id, roomId: cosmos.id, expectedVersion: 0 });
+    // Eleni arrives in Cosmos the day Dirk leaves, so the changeover cleaning belongs to Dirk's last apartment.
+    const eleni = await booking("Eleni", "2030-07-06", "2030-07-09");
+    await move({ bookingId: eleni.id, roomId: cosmos.id, expectedVersion: 0 });
+
+    const dirk = await booking("Dirk", "2030-07-01", "2030-07-06");
+    await prisma.booking.update({ where: { id: dirk.id }, data: { totalAmountCents: 50_000 } });
+    const placed = await move({ bookingId: dirk.id, roomId: onar.id, expectedVersion: 0 });
+
+    // Cosmos is taken on the 1st and 2nd: only the moved nights are checked.
+    expect(
+      (
+        await errorCode(
+          move({ bookingId: dirk.id, roomId: cosmos.id, expectedVersion: 1, from: "2030-07-02", to: "2030-07-06" }),
+        )
+      ).code,
+    ).toBe("ROOM_TAKEN");
+    const split = await move({
+      bookingId: dirk.id,
+      roomId: cosmos.id,
+      expectedVersion: placed.booking.version,
+      from: "2030-07-03",
+      to: "2030-07-06",
+    });
+    expect(split.booking.pieces).toEqual([
+      { roomId: onar.id, start: "2030-07-01", end: "2030-07-03" },
+      { roomId: cosmos.id, start: "2030-07-03", end: "2030-07-06" },
+    ]);
+    expect(split.booking.assignment).toEqual({ roomId: onar.id, pinned: true });
+    expect(await prisma.booking.count({ where: { guestName: "Dirk" } })).toBe(1);
+    const rows = await prisma.assignment.findMany({ where: { bookingId: dirk.id }, orderBy: { startDate: "asc" } });
+    expect(rows.map((r) => [r.roomId, r.pinned])).toEqual([
+      [onar.id, true],
+      [cosmos.id, true],
+    ]);
+
+    // The cleaning is for the real checkout only, in the apartment the guest leaves from.
+    const turnovers = await prisma.cleaningTask.findMany({
+      where: { bookingId: dirk.id, taskType: TURNOVER_TASK_TYPE, status: { not: "cancelled" } },
+    });
+    expect(turnovers.map((t) => t.roomId)).toEqual([cosmos.id]);
+
+    // One money row with the whole amount, counted once.
+    const full = await prisma.booking.findUniqueOrThrow({
+      where: { id: dirk.id },
+      include: {
+        sourceListing: { select: { rentalIndex: true } },
+        assignments: {
+          orderBy: { startDate: "asc" },
+          select: { room: { select: { displayName: true, code: true, rentalIndex: true } } },
+        },
+        ledgerEntry: true,
+      },
+    });
+    const row = bookingRow(full, "gross");
+    expect(row.auto).toMatchObject({ roomLocation: "Onar → Cosmos", soloCents: 50_000, nights: dirk.nights });
+
+    // The pieces cannot overlap, even written straight to the database.
+    await expect(
+      prisma.assignment.create({
+        data: {
+          bookingId: dirk.id,
+          roomId: iris.id,
+          startDate: new Date("2030-07-02T00:00:00Z"),
+          endDate: new Date("2030-07-04T00:00:00Z"),
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Moving the second part back joins the stay into one piece again.
+    const joined = await move({
+      bookingId: dirk.id,
+      roomId: onar.id,
+      expectedVersion: split.booking.version,
+      from: "2030-07-03",
+      to: "2030-07-06",
+    });
+    expect(joined.booking.pieces).toEqual([{ roomId: onar.id, start: "2030-07-01", end: "2030-07-06" }]);
+    expect(await prisma.assignment.count({ where: { bookingId: dirk.id } })).toBe(1);
+  });
+
+  it("refuses part of a stay that has no apartment yet, or nights outside the stay", async () => {
+    const onar = await room("Onar", 3);
+    const b = await booking("Maria", "2030-07-01", "2030-07-05");
+    const part = { bookingId: b.id, roomId: onar.id, expectedVersion: 0 };
+    expect((await errorCode(move({ ...part, from: "2030-07-02", to: "2030-07-05" }))).code).toBe("VALIDATION");
+    const placed = await move(part);
+    const v = placed.booking.version;
+    expect((await errorCode(move({ ...part, expectedVersion: v, from: "2030-06-30", to: "2030-07-02" }))).code).toBe(
+      "VALIDATION",
+    );
+    expect(
+      (await errorCode(move({ ...part, roomId: null, expectedVersion: v, from: "2030-07-02", to: "2030-07-05" }))).code,
+    ).toBe("VALIDATION");
   });
 
   it("returns the range with rooms in order, the tray and overbooked nights", async () => {

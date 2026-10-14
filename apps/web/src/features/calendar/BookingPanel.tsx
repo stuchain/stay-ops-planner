@@ -73,7 +73,8 @@ function MoveButtons({
   if (suggestions.error) {
     return <ErrorState message={errorText(suggestions.error)} onRetry={() => void suggestions.refetch()} />;
   }
-  const current = booking.assignment?.roomId ?? null;
+  // A stay split over apartments is in none of them as a whole: every apartment moves (and joins) all of it.
+  const current = booking.pieces.length === 1 ? booking.pieces[0]!.roomId : null;
   return (
     <ul className="flex flex-col gap-2">
       {suggestions.data.map((s) => {
@@ -134,6 +135,29 @@ function MoveButtons({
   );
 }
 
+/** For a guest who changed apartment mid-stay: each apartment with its nights, in order. */
+function StayPieces({ booking, rooms }: { booking: CalendarBooking; rooms: CalendarRoom[] }) {
+  const locale = useLocale() as UiLocale;
+  if (booking.pieces.length < 2) return null;
+  return (
+    <ol className="flex flex-col gap-1" data-testid="stay-pieces">
+      {booking.pieces.map((p) => (
+        <li key={p.start} className="flex flex-wrap items-center gap-2">
+          <ApartmentChip name={rooms.find((r) => r.id === p.roomId)?.name ?? ""} />
+          <span className="text-sm">
+            {formatDay(p.start, locale)} – {formatDay(p.end, locale)}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** The apartments of the stay as one name: "Helios", or "Helios → Iris" when the guest moved. */
+export function stayRoomsName(booking: CalendarBooking, rooms: CalendarRoom[]): string {
+  return booking.pieces.map((p) => rooms.find((r) => r.id === p.roomId)?.name ?? "").join(" → ");
+}
+
 /** "Στο Cosmos" with a small "Αλλαγή διαμερίσματος" that shows the apartment list and "Βγάλτε την". */
 function PlacedIn({
   booking,
@@ -167,6 +191,8 @@ function PlacedIn({
           <ChevronDown size={20} aria-hidden="true" className={cn("transition-transform", open && "rotate-180")} />
         </Button>
       </div>
+      <StayPieces booking={booking} rooms={rooms} />
+      {booking.nights > 1 ? <p className="text-sm text-text-muted">{t("splitHint")}</p> : null}
       <div id="move-list" hidden={!open} className={open ? "flex flex-col gap-3" : "hidden"}>
         {open ? (
           <>
@@ -204,7 +230,7 @@ function MainAction({
   const t = useTranslations("booking");
   const locale = useLocale();
   const canChange = useCanChange();
-  const roomName = rooms.find((r) => r.id === booking.assignment?.roomId)?.name ?? "";
+  const roomName = stayRoomsName(booking, rooms);
   const muted = "bg-surface-muted rounded-card text-text-muted p-4";
 
   if (booking.status === "pending") return <p className={muted}>{t("pendingNote")}</p>;
@@ -215,6 +241,7 @@ function MainAction({
           <h3 id="move-title" className="text-lg font-semibold">
             {t("inRoom", { room: roomName })}
           </h3>
+          <StayPieces booking={booking} rooms={rooms} />
           {canChange ? <p className={muted}>{t("endedNote", { date: formatDay(booking.checkout, locale) })}</p> : null}
         </div>
       );

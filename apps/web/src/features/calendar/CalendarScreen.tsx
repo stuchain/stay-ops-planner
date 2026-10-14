@@ -14,6 +14,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { canPlace, isIsoDate, type IsoDate, type Occupant } from "@stay-ops/domain";
+import { useLocale } from "next-intl";
+import { formatDay, type UiLocale } from "@/ui/format";
 import { useErrorText } from "@/api/errors";
 import { useOnline } from "@/api/online";
 import { useCanChange } from "@/features/shell/role";
@@ -31,7 +33,8 @@ import { ArrangeMonthPanel } from "./ArrangeMonthPanel";
 import { MoreMenu } from "./MoreMenu";
 import { BookingPanel } from "./BookingPanel";
 import { useUnsavedGuard } from "./useUnsavedGuard";
-import { CalendarGrid, LABEL_WIDTH, type DropState } from "./CalendarGrid";
+import { CalendarGrid, LABEL_WIDTH, type DropState, type Placement } from "./CalendarGrid";
+import type { DragData } from "./DraggableBar";
 import { Tray } from "./Tray";
 import {
   addMonths,
@@ -53,31 +56,32 @@ export type CalendarScreenProps = {
   today: IsoDate;
 };
 
-/** Free or busy for each apartment if `booking` went there, from what is loaded (E1 "show before it happens"). */
+/** Free or busy for each apartment if the nights being placed went there, from what is loaded (E1 "show before it happens"). */
 function dropStatesFor(
-  booking: CalendarBooking | null,
+  placement: Placement | null,
   bookings: Map<string, CalendarBooking>,
   blocks: { id: string; roomId: string; start: IsoDate; end: IsoDate }[],
   roomIds: string[],
 ): Map<string, DropState> {
   const out = new Map<string, DropState>();
-  if (!booking || booking.status === "pending") return out;
+  if (!placement || placement.booking.status === "pending") return out;
   const timelines = new Map<string, Occupant[]>(roomIds.map((id) => [id, []]));
   for (const b of bookings.values()) {
-    if (!b.assignment) continue;
-    timelines.get(b.assignment.roomId)?.push({
-      kind: "booking",
-      id: b.id,
-      stay: { checkin: b.checkin, checkout: b.checkout },
-      guestName: b.guestName ?? undefined,
-    });
+    for (const p of b.pieces) {
+      timelines.get(p.roomId)?.push({
+        kind: "booking",
+        id: b.id,
+        stay: { checkin: p.start, checkout: p.end },
+        guestName: b.guestName ?? undefined,
+      });
+    }
   }
   for (const b of blocks)
     timelines.get(b.roomId)?.push({ kind: "block", id: b.id, stay: { checkin: b.start, checkout: b.end } });
   for (const roomId of roomIds) {
-    if (booking.assignment?.roomId === roomId) continue;
-    const result = canPlace({ checkin: booking.checkin, checkout: booking.checkout }, timelines.get(roomId) ?? [], {
-      ignoreBookingId: booking.id,
+    if (placement.roomId === roomId) continue;
+    const result = canPlace({ checkin: placement.from, checkout: placement.to }, timelines.get(roomId) ?? [], {
+      ignoreBookingId: placement.booking.id,
     });
     if (result.ok) out.set(roomId, { state: "free" });
     else if (result.reason === "INVALID_STAY") out.set(roomId, null);
@@ -88,6 +92,17 @@ function dropStatesFor(
       });
   }
   return out;
+}
+
+/** The whole stay, or the nights a dragged piece carries, as something to place. */
+function placementOf(booking: CalendarBooking, from?: IsoDate, to?: IsoDate): Placement {
+  const start = from ?? booking.checkin;
+  return {
+    booking,
+    from: start,
+    to: to ?? booking.checkout,
+    roomId: booking.pieces.find((p) => p.start <= start && start < p.end)?.roomId ?? null,
+  };
 }
 
 export function CalendarScreen({ today }: CalendarScreenProps) {
@@ -113,7 +128,10 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   );
   // /app/calendar?booking=<id> (from the Today screen) opens that booking's panel.
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams?.get("booking") || null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [drag, setDrag] = useState<DragData | null>(null);
+  const draggingId = drag?.bookingId ?? null;
+  // Nights cut off the selected stay with the scissors, waiting for the apartment the guest moved to.
+  const [cutFrom, setCutFrom] = useState<{ bookingId: string; day: IsoDate } | null>(null);
   const [confirm, setConfirm] = useState<MoveRequest | null>(null);
   // "Τακτοποίησε τον μήνα": the month being arranged and the preview's placements, shown on the grid.
   const [arrangeMonth, setArrangeMonth] = useState<IsoDate | null>(null);
@@ -125,6 +143,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
       if (id === selectedId) return;
       run(() => {
         setSelectedId(id);
+        setCutFrom(null);
         if (id === null) setConfirm(null);
         else setArrangeMonth(null);
       });
@@ -161,10 +180,23 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const bookingList = useMemo(() => [...data.bookings.values()], [data.bookings]);
   const selected = selectedId ? (data.bookings.get(selectedId) ?? null) : null;
   const dragging = draggingId ? (data.bookings.get(draggingId) ?? null) : null;
+  const draggingPlacement = useMemo(
+    () => (dragging && drag ? placementOf(dragging, drag.from, drag.to) : null),
+    [dragging, drag],
+  );
+  // The piece the scissors cut: from the chosen day to the end of the apartment's part it falls in.
+  const cut = useMemo((): Placement | null => {
+    const booking = cutFrom ? data.bookings.get(cutFrom.bookingId) : undefined;
+    const piece = booking?.pieces.find((p) => p.start < cutFrom!.day && cutFrom!.day < p.end);
+    return booking && piece ? { booking, from: cutFrom!.day, to: piece.end, roomId: piece.roomId } : null;
+  }, [cutFrom, data.bookings]);
   const roomIds = useMemo(() => data.rooms.filter((r) => r.isActive).map((r) => r.id), [data.rooms]);
   // The booking being placed: the one dragged, or one picked from the tray (no apartment yet). Every row says
   // whether it can go there and outlines its dates, so it is clear where it lands whatever month is on screen.
-  const placing = dragging ?? (selected && !selected.assignment ? selected : null);
+  const placing = useMemo(
+    () => draggingPlacement ?? cut ?? (selected && !selected.assignment ? placementOf(selected) : null),
+    [draggingPlacement, cut, selected],
+  );
   const dropStates = useMemo(
     () => (placing ? dropStatesFor(placing, data.bookings, data.blocks, roomIds) : new Map<string, DropState>()),
     [placing, data.bookings, data.blocks, roomIds],
@@ -257,8 +289,10 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
       if (target?.closest("[role=slider], [role=tab], [role=listbox], [role=menu], [role=combobox]")) return;
       if (document.querySelector("[role=alertdialog]")) return;
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-      if (key === "Escape") select(null);
-      else if (key === "ArrowLeft") shiftMonth(-1);
+      if (key === "Escape") {
+        if (cutFrom) setCutFrom(null);
+        else select(null);
+      } else if (key === "ArrowLeft") shiftMonth(-1);
       else if (key === "ArrowRight") shiftMonth(1);
       else if (key === "t" || key === "\u03c4") scrollToDate(today);
       else return;
@@ -266,33 +300,36 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shiftMonth, select, scrollToDate, today]);
+  }, [shiftMonth, select, scrollToDate, today, cutFrom]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   function onDragStart(event: DragStartEvent) {
-    const bookingId = (event.active.data.current as { bookingId?: string } | undefined)?.bookingId ?? null;
-    setDraggingId(bookingId);
-    if (bookingId) revealBooking(bookingId);
+    const data = (event.active.data.current as DragData | undefined) ?? null;
+    setCutFrom(null);
+    setDrag(data?.bookingId ? data : null);
+    if (data?.bookingId) revealBooking(data.bookingId);
   }
 
   function onDragEnd(event: DragEndEvent) {
-    const booking = draggingId ? data.bookings.get(draggingId) : undefined;
-    setDraggingId(null);
-    if (!booking || !event.over) return;
+    const placement = draggingPlacement;
+    setDrag(null);
+    if (!placement || !event.over) return;
+    const { booking } = placement;
     if (event.over.id === "tray") {
-      if (booking.assignment) void move({ booking, roomId: null });
+      // Back to "needs an apartment" is for the whole stay only.
+      if (booking.assignment && !drag?.from) void move({ booking, roomId: null });
       return;
     }
     const roomId = (event.over.data.current as { roomId?: string } | undefined)?.roomId;
-    if (!roomId || roomId === booking.assignment?.roomId) return;
+    if (!roomId || roomId === placement.roomId) return;
     const drop = dropStates.get(roomId);
     if (drop?.state === "busy") {
       // The server would refuse; open the panel so the reason and the free apartments are visible.
       select(booking.id);
       return;
     }
-    void move({ booking, roomId });
+    void move({ booking, roomId, ...(drag?.from ? { from: placement.from, to: placement.to } : {}) });
   }
 
   // The paper copy of what is on screen: the week of the first visible day, or its month.
@@ -310,13 +347,29 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   }, []);
 
   // The green outline in a row: the same move as dropping the bar there.
-  const placeable = canChange && placing !== null && placing.status !== "pending";
+  const placeable = canChange && placing !== null && placing.booking.status !== "pending";
   const placeIn = useCallback(
     (roomId: string) => {
-      if (placing) void move({ booking: placing, roomId });
+      if (!placing) return;
+      const partial = placing.from !== placing.booking.checkin || placing.to !== placing.booking.checkout;
+      setCutFrom(null);
+      void move({ booking: placing.booking, roomId, ...(partial ? { from: placing.from, to: placing.to } : {}) });
     },
     [placing, move],
   );
+  // Scissors only on a placed stay that is not over, for someone who can change it, while nothing else is moving.
+  const cuttable =
+    canChange &&
+    online &&
+    !cut &&
+    !dragging &&
+    selected !== null &&
+    selected.assignment !== null &&
+    selected.status !== "pending" &&
+    selected.checkout > (data.today ?? today) &&
+    selected.nights > 1;
+  const onCut = useCallback((bookingId: string, day: IsoDate) => setCutFrom({ bookingId, day }), []);
+  const locale = useLocale() as UiLocale;
 
   const handleMove = (request: MoveRequest) => {
     setConfirm(null);
@@ -358,17 +411,35 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
         autoScroll={false}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setDraggingId(null)}
+        onDragCancel={() => setDrag(null)}
       >
         <Tray
           bookings={data.unassigned}
           selectedId={selectedId}
-          acceptsDrop={Boolean(dragging?.assignment)}
+          acceptsDrop={Boolean(dragging?.assignment) && !drag?.from}
           onOpen={openFromTray}
           {...(canChange && data.unassigned.some((b) => b.status !== "pending" && b.checkout > (data.today ?? today))
             ? { onArrange: openArrange, arrangeDisabled: !online }
             : {})}
         />
+
+        {cut ? (
+          <div
+            role="status"
+            data-testid="cut-banner"
+            className="border-accent bg-accent-soft rounded-card flex flex-wrap items-center gap-3 border-2 px-4 py-3"
+          >
+            <span className="min-w-0 flex-1 font-semibold">
+              {t("calendar.cutPick", {
+                guest: cut.booking.guestName ?? t("common.noName"),
+                date: formatDay(cut.from, locale),
+              })}
+            </span>
+            <Button variant="secondary" onClick={() => setCutFrom(null)}>
+              {t("calendar.cutCancel")}
+            </Button>
+          </div>
+        ) : null}
 
         {data.error && data.rooms.length === 0 ? (
           <ErrorState message={errorText(data.error)} onRetry={data.refetch} />
@@ -402,6 +473,8 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 dropStates={dropStates}
                 proposed={proposed}
                 placing={placing}
+                cut={cut}
+                onCut={cuttable ? onCut : undefined}
                 onPlace={placeable ? placeIn : undefined}
                 placeDisabled={moving}
                 onOpen={select}
@@ -410,11 +483,11 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
           </div>
         )}
         <DragOverlay dropAnimation={null}>
-          {dragging ? (
+          {dragging && draggingPlacement ? (
             <BookingBar
               guest={dragging.guestName ?? t("common.noName")}
-              checkin={dragging.checkin}
-              checkout={dragging.checkout}
+              checkin={draggingPlacement.from}
+              checkout={draggingPlacement.to}
               channel={dragging.channel}
               people={dragging.partySize}
               showDates

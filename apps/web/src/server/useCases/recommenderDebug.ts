@@ -31,7 +31,7 @@ export async function listBookingsForDebug(input: { query?: string; now?: Date }
       guestTotal: true,
       guestAdults: true,
       guestChildren: true,
-      assignment: { select: { roomId: true } },
+      _count: { select: { assignments: true } },
     },
     orderBy: [{ checkinDate: "asc" }, { id: "asc" }],
     take: 200,
@@ -42,7 +42,7 @@ export async function listBookingsForDebug(input: { query?: string; now?: Date }
     checkin: dbDateToIso(r.checkinDate),
     checkout: dbDateToIso(r.checkoutDate),
     partySize: r.guestTotal ?? (r.guestAdults !== null ? r.guestAdults + (r.guestChildren ?? 0) : null),
-    needsApartment: r.assignment === null,
+    needsApartment: r._count.assignments === 0,
   }));
   return query
     ? mapped.slice(0, 30)

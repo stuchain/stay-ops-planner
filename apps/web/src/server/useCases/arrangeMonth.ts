@@ -74,7 +74,7 @@ export async function proposeArrangement(month: string, now = new Date()): Promi
       : await prisma.booking.findMany({
           where: {
             status: { in: PLACEABLE },
-            assignment: null,
+            assignments: { none: {} },
             checkinDate: { lt: isoToDbDate(end) },
             checkoutDate: { gt: isoToDbDate(from) },
           },
@@ -165,10 +165,17 @@ async function applyInTransaction(
   for (const p of input.placements) {
     const booking = await tx.booking.findUnique({
       where: { id: p.bookingId },
-      select: { id: true, version: true, status: true, checkinDate: true, checkoutDate: true, assignment: true },
+      select: {
+        id: true,
+        version: true,
+        status: true,
+        checkinDate: true,
+        checkoutDate: true,
+        _count: { select: { assignments: true } },
+      },
     });
     // Anything different from the preview means the plan is out of date: nothing is saved.
-    if (!booking || booking.version !== p.expectedVersion || booking.assignment !== null)
+    if (!booking || booking.version !== p.expectedVersion || booking._count.assignments > 0)
       throw new DomainError("CHANGED_MEANWHILE");
     if (!PLACEABLE.includes(booking.status)) throw new DomainError("CHANGED_MEANWHILE");
     if (dbDateToIso(booking.checkoutDate) <= today) throw new DomainError("CHANGED_MEANWHILE");

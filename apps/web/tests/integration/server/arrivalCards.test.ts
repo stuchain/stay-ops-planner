@@ -44,7 +44,7 @@ async function booking(data: {
       ...(data.notesRaw ? { hosthubNotesRaw: data.notesRaw } : {}),
       ...(data.roomId
         ? {
-            assignment: {
+            assignments: {
               create: {
                 roomId: data.roomId,
                 startDate: new Date(`${data.checkin}T00:00:00Z`),

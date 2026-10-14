@@ -116,13 +116,19 @@ export async function buildCalendarFeed(locale: "el" | "en", now: Date = new Dat
       guestChildren: true,
       guestInfants: true,
       updatedAt: true,
-      assignment: { select: { updatedAt: true, room: { select: { displayName: true, code: true } } } },
+      assignments: {
+        orderBy: { startDate: "asc" },
+        select: { updatedAt: true, room: { select: { displayName: true, code: true } } },
+      },
     },
   });
 
   const events = rows.flatMap((row) => {
-    const room = row.assignment?.room;
-    const roomName = room ? (room.displayName ?? room.code ?? "") : t("calendarFeed.noRoom");
+    // Arrival in the first apartment, departure from the last (they differ when the guest moved mid-stay).
+    const nameOf = (piece: (typeof row.assignments)[number] | undefined) =>
+      piece ? (piece.room.displayName ?? piece.room.code ?? "") : t("calendarFeed.noRoom");
+    const roomName = nameOf(row.assignments[0]);
+    const leaveRoomName = nameOf(row.assignments[row.assignments.length - 1]);
     const guest = row.guestName?.trim() || t("calendarFeed.noName");
     const party = partyOf(row);
     const checkin = dbDateToIso(row.checkinDate);
@@ -142,8 +148,7 @@ export async function buildCalendarFeed(locale: "el" | "en", now: Date = new Dat
       .filter(Boolean)
       .join("\n");
     // A move to another apartment changes the event text, so it counts as a change too.
-    const lastModified =
-      row.assignment && row.assignment.updatedAt > row.updatedAt ? row.assignment.updatedAt : row.updatedAt;
+    const lastModified = row.assignments.reduce((a, p) => (p.updatedAt > a ? p.updatedAt : a), row.updatedAt);
     return [
       {
         uid: `${row.id}-arrival@stay-ops-planner`,
@@ -156,7 +161,7 @@ export async function buildCalendarFeed(locale: "el" | "en", now: Date = new Dat
       {
         uid: `${row.id}-departure@stay-ops-planner`,
         date: checkout,
-        summary: t("calendarFeed.departure", { guest, room: roomName }),
+        summary: t("calendarFeed.departure", { guest, room: leaveRoomName }),
         description: details,
         lastModified,
       },
