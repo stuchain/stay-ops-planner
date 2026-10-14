@@ -1,8 +1,17 @@
 import { z } from "zod";
-import { DomainError } from "@stay-ops/domain";
+import { DomainError, isIsoDate, type IsoDate } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
+import { applyPaperCalendar, previewPaperCalendar } from "@/server/useCases/paperCalendar";
 import { addFamilyMember, listFamily, setFamilyActive } from "@/server/useCases/family";
 import { adminProcedure, createTRPCRouter } from "../trpc";
+
+const day = z
+  .string()
+  .refine(isIsoDate, "Expected YYYY-MM-DD")
+  .transform((v) => v as IsoDate);
+
+/** The Excel file as base64; the calendar file is well under 1 MB. */
+const MAX_FILE_BASE64 = 6_000_000;
 
 export const adminRouter = createTRPCRouter({
   /** Signs a user out on every device: their older sessions stop working at once. */
@@ -30,5 +39,30 @@ export const adminRouter = createTRPCRouter({
     setActive: adminProcedure
       .input(z.object({ userId: z.string().min(1), active: z.boolean() }))
       .mutation(({ ctx, input }) => setFamilyActive({ ...input, actorUserId: ctx.user.userId })),
+  }),
+
+  /** Where past guests stayed, from the family's Excel calendar: preview first, then save what was ticked. */
+  paperCalendar: createTRPCRouter({
+    preview: adminProcedure
+      .input(z.object({ fileBase64: z.string().min(1).max(MAX_FILE_BASE64) }))
+      .mutation(({ input }) => previewPaperCalendar(Buffer.from(input.fileBase64, "base64"))),
+    save: adminProcedure
+      .input(
+        z.object({
+          items: z
+            .array(
+              z.object({
+                bookingId: z.string().min(1),
+                expectedVersion: z.number().int().nonnegative(),
+                pieces: z
+                  .array(z.object({ roomId: z.string().min(1), start: day, end: day }))
+                  .min(1)
+                  .max(20),
+              }),
+            )
+            .max(1000),
+        }),
+      )
+      .mutation(({ ctx, input }) => applyPaperCalendar(input.items, ctx.user.userId)),
   }),
 });
