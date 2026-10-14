@@ -110,7 +110,7 @@ export function ExcelSheet({
   function focusCell(lineKey: string, col: number) {
     const td = table.current?.querySelector<HTMLElement>(`td[data-line-key="${lineKey}"][data-col="${col}"]`);
     td?.focus({ preventScroll: true });
-    td?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    td?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }
 
   function select(lineKey: string, col: number) {
