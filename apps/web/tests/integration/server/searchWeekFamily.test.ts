@@ -120,6 +120,13 @@ describe("getWeekSummary", () => {
     // The arrival on Sunday 2 March belongs to the week before.
     expect(week.days.flatMap((d) => d.arrivals).map((s) => s.id)).not.toContain(ids.past);
   });
+
+  it("starts on the day itself when asked, for Today's next days", async () => {
+    const week = await getWeekSummary("2031-03-05" as IsoDate, new Date("2031-03-04T10:00:00Z"), undefined, "day");
+    expect(week.from).toBe("2031-03-05");
+    expect(week.days.map((d) => d.date)[6]).toBe("2031-03-11");
+    expect(week.days[0]!.departures.map((s) => s.id)).toEqual([ids.past]);
+  });
 });
 
 describe("family accounts", () => {
