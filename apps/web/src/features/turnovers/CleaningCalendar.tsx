@@ -39,7 +39,6 @@ const DAYS = 21;
 /** Width of one day column and of the apartment names, in px. */
 const DAY_PX = 76;
 const HEAD_PX = 168;
-const FALLBACK_COLOR = "#5B5852";
 const TIME_PRESETS = [
   { time: "10:00", key: "morning" },
   { time: "12:00", key: "noon" },
@@ -91,7 +90,6 @@ function CleaningTag({
 }) {
   const t = useTranslations("cleaningCalendar");
   const locale = useLocale() as UiLocale;
-  const color = task.room.color ?? FALLBACK_COLOR;
   const done = task.status === "done";
   const locked = isLocked(task);
   const { listeners, setNodeRef, isDragging, transform } = useDraggable({
@@ -119,14 +117,13 @@ function CleaningTag({
       onClick={() => onOpen(task.id)}
       style={{
         ...style,
-        ...(done ? {} : { color, borderColor: color }),
         ...(transform ? { transform: CSS.Translate.toString(transform) } : {}),
       }}
       className={cn(
         "rounded-sm border-2 bg-surface absolute flex h-10 items-center justify-center gap-1 text-sm font-bold tabular-nums",
         "pointer-events-auto shadow-card",
         task.taskType !== "turnover" && "border-dashed",
-        done && "bg-success-soft text-success-text border-success",
+        done ? "bg-success-soft text-success-text border-success" : "border-text-muted text-text",
         isDragging && "shadow-raised z-30",
         canChange && canMove(task) && "cursor-grab active:cursor-grabbing",
       )}
@@ -213,16 +210,12 @@ function RoomRow({
 }) {
   const t = useTranslations("cleaningCalendar");
   const tCommon = useTranslations("common");
-  const color = room.color ?? FALLBACK_COLOR;
   const first = days[0]!;
   const stays = data.stays.filter((s) => s.roomId === room.id);
   const noName = tCommon("noName");
   return (
     <div className="relative grid" style={{ gridTemplateColumns: `${HEAD_PX}px repeat(${DAYS}, ${DAY_PX}px)` }}>
-      <div
-        className="border-border bg-surface sticky left-0 z-20 flex flex-col justify-center border-b border-l-[6px] px-4"
-        style={{ borderLeftColor: color }}
-      >
+      <div className="border-border bg-surface sticky left-0 z-20 flex flex-col justify-center border-b px-4">
         <span className="text-lg font-semibold">{room.name}</span>
         {room.capacity ? <span className="text-text-muted text-sm">{t("upTo", { count: room.capacity })}</span> : null}
       </div>
@@ -248,11 +241,11 @@ function RoomRow({
               key={stay.id}
               data-testid="cleaning-stay"
               className={cn(
-                "absolute top-2 h-14 overflow-hidden rounded-sm px-2.5 py-1.5 text-sm leading-tight whitespace-nowrap text-white",
+                "border-border bg-surface-muted text-text absolute top-2 h-14 overflow-hidden rounded-sm border px-2.5 py-1.5 text-sm leading-tight whitespace-nowrap",
                 start === 0 && "rounded-l-none",
                 stay.checkout <= data.today && "opacity-50",
               )}
-              style={{ left: start * DAY_PX + 2, width: (end - start) * DAY_PX - 4, background: color }}
+              style={{ left: start * DAY_PX + 2, width: (end - start) * DAY_PX - 4 }}
             >
               <span className="block truncate text-base font-semibold">{stay.guestName ?? noName}</span>
               {t("nights", { count: nights })}

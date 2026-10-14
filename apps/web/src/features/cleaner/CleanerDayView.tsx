@@ -35,7 +35,7 @@ function TaskCard({ task }: { task: CleanerTask }) {
   return (
     <li className="bg-surface rounded-card shadow-card flex flex-col gap-4 p-5 print:break-inside-avoid print:border print:border-border print:shadow-none">
       <div className="flex flex-wrap items-center gap-3">
-        <ApartmentChip name={task.apartment} color={task.color} className="text-xl" />
+        <ApartmentChip name={task.apartment} className="text-xl" />
         {task.status === "done" ? (
           <Badge tone="success" icon={Check} size="lg">
             {t("done")}

@@ -1,13 +1,10 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/ui/cn";
-import { apartmentColor } from "@/ui/apartmentColor";
 import { ApartmentChip } from "@/ui/ApartmentChip";
 
 type Props = {
   name: string;
-  /** The apartment's stored colour (hex); missing means no colour. Drawn through `apartmentColor`. */
-  color: string | null | undefined;
   /** Maximum number of guests. */
   capacity: number;
   inactive?: boolean;
@@ -27,7 +24,6 @@ type Props = {
 /** One calendar row: sticky label cell on the left, the day track on the right. */
 export function ApartmentRow({
   name,
-  color,
   capacity,
   inactive = false,
   dropState = null,
@@ -46,7 +42,6 @@ export function ApartmentRow({
     <div
       role="group"
       aria-label={name}
-      style={{ "--apt": apartmentColor(color) } as CSSProperties}
       className={cn(
         "relative flex h-row border-b border-border bg-surface",
         free && "ring-3 ring-success ring-inset",
@@ -56,7 +51,7 @@ export function ApartmentRow({
     >
       <div
         className={cn(
-          "sticky left-0 z-10 flex w-52 flex-none flex-col justify-center gap-1 border-r border-border px-4 shadow-[inset_6px_0_0_var(--apt)]",
+          "sticky left-0 z-10 flex w-52 flex-none flex-col justify-center gap-1 border-r border-border px-4",
           free ? "bg-success-soft" : "bg-surface",
           (busy || inactive) && "bg-surface-muted",
           inactive && "text-text-muted",
@@ -64,7 +59,6 @@ export function ApartmentRow({
       >
         <ApartmentChip
           name={name}
-          color={color}
           inactive={inactive}
           inactiveLabel={inactiveLabel ?? t("ui.inactive")}
           className="self-start"

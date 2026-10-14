@@ -56,15 +56,6 @@
   --color-on-accent: var(--so-on-accent);
   --color-paper: #ffffff;
   --color-ink: #000000;
-  /* Apartment colours: the approved light values, a lighter step in dark mode (see tokens.ts and ui/apartmentColor.ts). */
-  --color-onar: var(--so-apt-onar);
-  --color-onar-soft: #e6f4f2;
-  --color-cosmos: var(--so-apt-cosmos);
-  --color-cosmos-soft: #ecebfb;
-  --color-iris: var(--so-apt-iris);
-  --color-iris-soft: #fce8f0;
-  --color-helios: var(--so-apt-helios);
-  --color-helios-soft: #fff1dc;
 
   --font-sans: "Commissioner Variable", "Commissioner", "Inter", "Segoe UI", system-ui, sans-serif;
 
@@ -121,10 +112,6 @@
   --so-danger-soft: #fdecea;
   --so-focus: #1e4b8f;
   --so-on-accent: #ffffff;
-  --so-apt-onar: #0f766e;
-  --so-apt-cosmos: #4338ca;
-  --so-apt-iris: #be185d;
-  --so-apt-helios: #a65f00;
 }
 
 /*
@@ -160,10 +147,6 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
   --so-danger-soft: #3b1717;
   --so-focus: #8db4f2;
   --so-on-accent: #161616;
-  --so-apt-onar: #2dd4bf;
-  --so-apt-cosmos: #a5b4fc;
-  --so-apt-iris: #f472b6;
-  --so-apt-helios: #eab308;
   color-scheme: dark;
 }
 
@@ -187,10 +170,6 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
     --so-danger-soft: #3b1717;
     --so-focus: #8db4f2;
     --so-on-accent: #161616;
-    --so-apt-onar: #2dd4bf;
-    --so-apt-cosmos: #a5b4fc;
-    --so-apt-iris: #f472b6;
-    --so-apt-helios: #eab308;
     color-scheme: dark;
   }
 }
@@ -268,7 +247,7 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
   }
 }
 
-/* Months still to come on the money chart: hatched over the apartment colour (Phase 3). */
+/* Months still to come on the money chart: hatched over the bar colour (Phase 3). */
 @utility money-hatch {
   background-image: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.6) 0 3px, transparent 3px 7px);
 }
@@ -292,10 +271,6 @@ html:has([data-ui="new"][data-text-size="xlarge"]) {
     --so-text-muted: #222222;
     --so-accent: #000000;
     --so-warning-text: #000000;
-    --so-apt-onar: #0f766e;
-    --so-apt-cosmos: #4338ca;
-    --so-apt-iris: #be185d;
-    --so-apt-helios: #a65f00;
     color-scheme: light;
   }
 

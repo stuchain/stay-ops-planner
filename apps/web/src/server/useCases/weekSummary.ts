@@ -3,6 +3,7 @@ import { addDays, type IsoDate } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
 import { appTimeZone, isoToDbDate, todayIso } from "@/server/time";
 import { bookingSliceSelect, toBookingSlice } from "./bookingSlice";
+import { byCalendarOrder } from "./calendarRange";
 import { loadTurnovers, type TurnoverTask } from "./cleaningSchedule";
 import type { TodayStay } from "./todaySummary";
 
@@ -27,7 +28,9 @@ export function mondayOn(day: IsoDate): IsoDate {
   return addDays(day, -((weekday + 6) % 7));
 }
 
-const roomSelect = { select: { id: true, displayName: true, code: true, color: true } } as const;
+const roomSelect = {
+  select: { id: true, displayName: true, code: true, color: true, calendarSortIndex: true },
+} as const;
 
 /**
  * The weekly summary (Monday to Sunday): arrivals, departures and cleanings per day. Cancelled bookings and
@@ -77,7 +80,10 @@ export async function getWeekSummary(
       guestNotes: row.guestNote ? [row.guestNote] : [],
     };
   });
-  const byRoom = (a: TodayStay, b: TodayStay) => (a.room?.name ?? "￿").localeCompare(b.room?.name ?? "￿");
+  const roomById = new Map(
+    rows.flatMap((r) => (r.assignment ? [[r.assignment.room.id, r.assignment.room] as const] : [])),
+  );
+  const byRoom = (a: TodayStay, b: TodayStay) => byCalendarOrder(roomById, a.room?.id, b.room?.id);
 
   const days = Array.from({ length: 7 }, (_, i): WeekDay => {
     const date = addDays(from, i);

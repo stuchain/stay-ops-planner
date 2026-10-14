@@ -20,7 +20,7 @@ import { formatMoney } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { ExcelSheet } from "./ExcelSheet";
-import { changeOnLastYear, formatChange, incomeView, ledgerApartmentColor, type IncomeView } from "./incomeView";
+import { changeOnLastYear, formatChange, incomeView, type IncomeView } from "./incomeView";
 import { TaxFold } from "./TaxCard";
 
 export type IncomeScreenProps = {
@@ -45,11 +45,6 @@ function MonthTable({ ledger, view }: { ledger: LedgerYearData; view: IncomeView
             </th>
             {ledger.apartments.map((a) => (
               <th key={a.index} scope="col" className="px-3 py-3 text-right font-bold whitespace-nowrap">
-                <span
-                  className="mr-2 inline-block size-3 rounded-sm align-[-1px]"
-                  style={{ background: ledgerApartmentColor(a) }}
-                  aria-hidden="true"
-                />
                 {a.label}
               </th>
             ))}
@@ -231,15 +226,8 @@ function IncomeBody({
 
       <div className="grid grid-cols-4 gap-4 narrow:grid-cols-2 small:grid-cols-1">
         {ledger.apartments.map((a, i) => (
-          <div
-            key={a.index}
-            className="border-border rounded-card bg-surface flex flex-col gap-1 border border-t-[6px] p-4"
-            style={{ borderTopColor: ledgerApartmentColor(a) }}
-          >
-            <span className="flex items-center gap-2 text-lg font-semibold">
-              <span className="size-3 rounded-sm" style={{ background: ledgerApartmentColor(a) }} aria-hidden="true" />
-              {a.label}
-            </span>
+          <div key={a.index} className="border-border rounded-card bg-surface flex flex-col gap-1 border p-4">
+            <span className="text-lg font-semibold">{a.label}</span>
             <span className="text-xl font-bold tabular-nums">{money(ledger.totals.byRentalCents[i] ?? 0)}</span>
             {perApartmentTax?.[i] ? (
               <span className="text-text-muted">

@@ -35,7 +35,6 @@ const PRINT_CSS = `
   [data-sonner-toaster] { display: none !important; }
   .print-sheet { font-size: 14pt; line-height: 1.3; padding: 0 !important; }
   .print-sheet, .print-sheet * { color: #000 !important; background-color: transparent !important; box-shadow: none !important; }
-  .print-sheet .swatch { background-color: var(--swatch) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .print-sheet thead { display: table-header-group; }
   .print-sheet tr, .print-sheet li { break-inside: avoid; }
   .print-sheet h2 { break-after: avoid; }
@@ -44,23 +43,8 @@ const PRINT_CSS = `
 
 type Data = Pick<CalendarRangeData, "rooms" | "bookings" | "blocks">;
 
-function Swatch({ room }: { room: CalendarRoom }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="swatch inline-block size-4 shrink-0 border border-ink"
-      style={{ ["--swatch" as string]: room.color ?? "#fff", backgroundColor: room.color ?? "#fff" }}
-    />
-  );
-}
-
 function RoomName({ room }: { room: CalendarRoom }) {
-  return (
-    <span className="inline-flex items-center gap-2 font-bold">
-      <Swatch room={room} />
-      {room.name}
-    </span>
-  );
+  return <span className="font-bold">{room.name}</span>;
 }
 
 /** "Maria P." in bold and, when known, "2 άτομα" after it. */

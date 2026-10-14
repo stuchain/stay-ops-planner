@@ -3,6 +3,7 @@ import { addDays, GAP_LOOKAHEAD_DAYS, GAP_MAX_NIGHTS, shortGaps, type IsoDate, t
 import { prisma } from "@/lib/prisma";
 import { appTimeZone, dbDateToIso, isoToDbDate, todayIso } from "@/server/time";
 import { bookingSliceSelect, toBookingSlice } from "./bookingSlice";
+import { byCalendarOrder } from "./calendarRange";
 import { previousStaysForMany } from "./previousStays";
 
 /** One arrival or departure on the Today screen. */
@@ -87,7 +88,7 @@ export async function getTodaySummary(now = new Date(), timeZone: string = appTi
     }),
     prisma.room.findMany({
       where: { isActive: true },
-      select: { id: true, displayName: true, code: true, color: true },
+      select: { id: true, displayName: true, code: true, color: true, calendarSortIndex: true },
     }),
   ]);
 
@@ -122,7 +123,7 @@ export async function getTodaySummary(now = new Date(), timeZone: string = appTi
         },
       ];
     })
-    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.room.name.localeCompare(b.room.name)));
+    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : byCalendarOrder(roomById, a.room.id, b.room.id)));
 
   const arriving = rows.filter((r) => days.some((d) => d.getTime() === r.checkinDate.getTime()));
   const previous = await previousStaysForMany(arriving.map((r) => r.id));

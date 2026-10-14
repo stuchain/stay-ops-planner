@@ -66,11 +66,7 @@ function StayRow({ stay, line, showKind = false }: { stay: TodayStay; line: Line
               ))
             : null}
         </span>
-        {stay.room ? (
-          <ApartmentChip name={stay.room.name} color={stay.room.color} />
-        ) : (
-          <Badge tone="warning">{t("needsApartment")}</Badge>
-        )}
+        {stay.room ? <ApartmentChip name={stay.room.name} /> : <Badge tone="warning">{t("needsApartment")}</Badge>}
       </Link>
     </li>
   );

@@ -145,7 +145,6 @@ const RoomTrack = memo(function RoomTrack({
     <div ref={setNodeRef}>
       <ApartmentRow
         name={room.name}
-        color={room.color}
         capacity={room.capacity ?? 0}
         capacityLabel={() =>
           room.capacity === null ? t("common.noCapacity") : t("common.upToPeople", { count: room.capacity })

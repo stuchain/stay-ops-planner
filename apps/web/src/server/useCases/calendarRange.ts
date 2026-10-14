@@ -35,6 +35,26 @@ export type CalendarRange = {
   overbookedNights: IsoDate[];
 };
 
+type SortableRoom = { calendarSortIndex: number | null; displayName: string | null; code: string | null; id: string };
+
+/**
+ * Compares two rooms by id in calendar order (the set order first, then the rest by name), like `listCalendarRooms`.
+ * A missing or unknown room sorts last.
+ */
+export function byCalendarOrder(
+  rooms: ReadonlyMap<string, SortableRoom>,
+  aId: string | null | undefined,
+  bId: string | null | undefined,
+): number {
+  const a = aId ? rooms.get(aId) : undefined;
+  const b = bId ? rooms.get(bId) : undefined;
+  if (!a || !b) return a ? -1 : b ? 1 : 0;
+  const ai = a.calendarSortIndex ?? Number.POSITIVE_INFINITY;
+  const bi = b.calendarSortIndex ?? Number.POSITIVE_INFINITY;
+  if (ai !== bi) return ai < bi ? -1 : 1;
+  return (a.displayName ?? a.code ?? a.id).localeCompare(b.displayName ?? b.code ?? b.id) || a.id.localeCompare(b.id);
+}
+
 /** Rooms in calendar order: the set order first, then the rest by name. */
 export async function listCalendarRooms(): Promise<CalendarRoom[]> {
   const rooms = await prisma.room.findMany({

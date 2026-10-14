@@ -383,7 +383,6 @@
       "needsSetup": "{count, plural, one {# νέο διαμέρισμα από το Hosthub χρειάζεται ρύθμιση.} other {# νέα διαμερίσματα από το Hosthub χρειάζονται ρύθμιση.}}",
       "order": "Σειρά",
       "name": "Όνομα",
-      "color": "Χρώμα",
       "capacity": "Χωρητικότητα (άτομα)",
       "preferredLarge": "Προτιμάται για 3–4 άτομα",
       "preferredLargeShort": "Για 3–4 άτομα",

@@ -72,7 +72,7 @@ function StayItem({ stay, kind }: { stay: TodayStay; kind: "arrival" | "departur
         </span>
         <span className="swatch-chip">
           {stay.room ? (
-            <ApartmentChip name={stay.room.name} color={stay.room.color} />
+            <ApartmentChip name={stay.room.name} />
           ) : (
             <span className="text-warning-text text-sm font-semibold">{t("noApartment")}</span>
           )}
@@ -98,7 +98,7 @@ function CleaningItem({ task }: { task: TurnoverTask }) {
         </span>
       </span>
       <span className="swatch-chip">
-        <ApartmentChip name={task.room.name} color={task.room.color} />
+        <ApartmentChip name={task.room.name} />
       </span>
     </li>
   );

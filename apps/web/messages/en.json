@@ -383,7 +383,6 @@
       "needsSetup": "{count, plural, one {# new apartment from Hosthub needs setting up.} other {# new apartments from Hosthub need setting up.}}",
       "order": "Order",
       "name": "Name",
-      "color": "Colour",
       "capacity": "Capacity (people)",
       "preferredLarge": "Preferred for 3–4 people",
       "preferredLargeShort": "For 3–4 people",

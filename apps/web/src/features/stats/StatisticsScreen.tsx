@@ -381,7 +381,7 @@ function ApartmentTable({ data }: { data: StatisticsData }) {
               return (
                 <tr key={a.id} className="border-border border-b">
                   <th scope="row" className="bg-surface sticky left-0 px-3 py-3 text-left align-top">
-                    <ApartmentChip name={a.name} color={a.color} />
+                    <ApartmentChip name={a.name} />
                   </th>
                   <td className={cell}>
                     <span className="block">{number(now.bookings)}</span>

@@ -71,11 +71,7 @@ function ResultRow({ result }: { result: SearchResultData }) {
             </span>
           ) : null}
         </span>
-        {result.room ? (
-          <ApartmentChip name={result.room.name} color={result.room.color} />
-        ) : (
-          <Badge tone="warning">{t("noApartment")}</Badge>
-        )}
+        {result.room ? <ApartmentChip name={result.room.name} /> : <Badge tone="warning">{t("noApartment")}</Badge>}
       </Link>
     </li>
   );

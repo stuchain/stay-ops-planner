@@ -99,19 +99,5 @@ export const color = {
   },
 } as const;
 
-/**
- * One fixed colour per apartment, used everywhere: calendar row and bars,
- * chips, money bars and the Excel export. White bold text on each passes AA.
- * `dark` is the same hue a step lighter, used on screen in the dark theme (at least 3:1 on the dark surface).
- */
-export const apartment = {
-  Onar: { name: "Onar", color: "#0F766E", soft: "#E6F4F2", dark: "#2DD4BF" }, // teal, 5.5:1
-  Cosmos: { name: "Cosmos", color: "#4338CA", soft: "#ECEBFB", dark: "#A5B4FC" }, // indigo, 7.9:1
-  Iris: { name: "Iris", color: "#BE185D", soft: "#FCE8F0", dark: "#F472B6" }, // rose, 6.0:1
-  Helios: { name: "Helios", color: "#A65F00", soft: "#FFF1DC", dark: "#EAB308" }, // amber, 4.9:1
-} as const;
-
 /** Paper and ink for printable sheets: black on white whatever the theme. */
 export const paper = { paper: "#FFFFFF", ink: "#000000" } as const;
-
-export type ApartmentName = keyof typeof apartment;

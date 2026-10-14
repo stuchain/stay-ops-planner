@@ -47,7 +47,7 @@ function PlacementRow({ placement, rooms }: { placement: ArrangePlacement; rooms
         </span>
         <span className="flex items-center gap-2">
           <ArrowRight size={20} aria-hidden="true" />
-          <ApartmentChip name={room?.name ?? ""} color={room?.color} />
+          <ApartmentChip name={room?.name ?? ""} />
         </span>
       </div>
       <span className={small ? "text-warning-text text-sm font-semibold" : "text-text-muted text-sm"}>{note}</span>

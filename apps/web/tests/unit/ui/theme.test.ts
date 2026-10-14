@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { apartment, color } from "@/ui/tokens";
+import { color } from "@/ui/tokens";
 
 const css = readFileSync(path.resolve(__dirname, "../../../src/ui/theme.css"), "utf8").toLowerCase();
 
@@ -31,16 +31,8 @@ describe("theme.css matches tokens.ts", () => {
     }
   });
 
-  it("has every apartment colour, lighter in dark mode", () => {
-    const light = block('[data-ui="new"]');
-    const dark = block('[data-ui="new"][data-theme="dark"]');
-    for (const a of Object.values(apartment)) {
-      const key = a.name.toLowerCase();
-      expect(css).toContain(`--color-${key}: var(--so-apt-${key});`);
-      expect(light).toContain(`--so-apt-${key}: ${a.color.toLowerCase()};`);
-      expect(dark).toContain(`--so-apt-${key}: ${a.dark.toLowerCase()};`);
-      expect(css).toContain(`--color-${key}-soft: ${a.soft.toLowerCase()};`);
-    }
+  it("gives apartments no colours of their own", () => {
+    expect(css).not.toMatch(/--(so-apt|color-(onar|cosmos|iris|helios))/);
   });
 
   it("follows the device in the system theme with the same dark colours", () => {

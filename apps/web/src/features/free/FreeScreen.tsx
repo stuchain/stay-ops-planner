@@ -58,12 +58,7 @@ function RoomRow({ room, guests }: { room: AvailabilityRoom; guests: number | nu
         !room.available && "bg-surface-muted text-text-muted",
       )}
     >
-      <ApartmentChip
-        name={room.name}
-        color={room.color}
-        inactive={!room.isActive}
-        className={room.available ? "text-lg" : "text-base"}
-      />
+      <ApartmentChip name={room.name} inactive={!room.isActive} className={room.available ? "text-lg" : "text-base"} />
       <span
         className={cn(
           "min-w-0 flex-1",

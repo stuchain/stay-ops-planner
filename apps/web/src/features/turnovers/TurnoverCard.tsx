@@ -203,7 +203,7 @@ export function TurnoverCard({ task, canEdit, actions }: TurnoverCardProps) {
       className={cn("flex flex-col gap-3 py-4 print:break-inside-avoid", cancelled && "opacity-70")}
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <ApartmentChip name={task.room.name} color={task.room.color} className="text-base" />
+        <ApartmentChip name={task.room.name} className="text-base" />
         {task.taskType === "service" ? <Badge tone="info">{t("serviceTag")}</Badge> : null}
         <span className="min-w-0 flex-1 text-lg">
           {task.taskType === "service" ? (

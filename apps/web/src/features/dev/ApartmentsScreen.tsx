@@ -35,11 +35,8 @@ import { SidePanel } from "@/ui/SidePanel";
 import { Skeleton } from "@/ui/Skeleton";
 import { showToast } from "@/ui/Toast";
 
-const NEUTRAL = "#5B5852";
-
 type Draft = {
   name: string;
-  color: string;
   capacity: string;
   preferredForLargeParty: boolean;
   isActive: boolean;
@@ -48,7 +45,6 @@ type Draft = {
 function draftOf(row: ApartmentRow): Draft {
   return {
     name: row.name,
-    color: row.color ?? NEUTRAL,
     capacity: row.capacity === null ? "" : String(row.capacity),
     preferredForLargeParty: row.preferredForLargeParty,
     isActive: row.isActive,
@@ -84,7 +80,6 @@ function EditPanel({ row, onClose }: { row: ApartmentRow | null; onClose: () => 
       id: row.id,
       patch: {
         name: draft.name.trim(),
-        color: draft.color,
         capacity,
         preferredForLargeParty: draft.preferredForLargeParty,
         isActive: draft.isActive,
@@ -109,15 +104,6 @@ function EditPanel({ row, onClose }: { row: ApartmentRow | null; onClose: () => 
               required
               maxLength={60}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="font-medium">{t("color")}</span>
-            <input
-              type="color"
-              className="border-border h-12 w-24 rounded-sm border-2"
-              value={draft.color}
-              onChange={(e) => setDraft({ ...draft, color: e.target.value })}
             />
           </label>
           <label className="flex flex-col gap-2">
@@ -215,7 +201,7 @@ function Row({
         </div>
       </td>
       <td className="px-3 py-2">
-        <ApartmentChip name={row.name} color={row.color} inactive={!row.isActive} />
+        <ApartmentChip name={row.name} inactive={!row.isActive} />
       </td>
       <td className="px-3 py-2 tabular-nums">{row.capacity ?? t("notSet")}</td>
       <td className="px-3 py-2">{row.preferredForLargeParty ? t("yes") : t("no")}</td>

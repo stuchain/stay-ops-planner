@@ -11,7 +11,7 @@ async function expectNoViolations(container: HTMLElement) {
 describe("ApartmentRow", () => {
   it("default: name, capacity, children, 88px row", async () => {
     const { container } = render(
-      <ApartmentRow name="Onar" color="#0F766E" capacity={4}>
+      <ApartmentRow name="Onar" capacity={4}>
         <div>track</div>
       </ApartmentRow>,
     );
@@ -23,21 +23,19 @@ describe("ApartmentRow", () => {
   });
 
   it("free drop state", async () => {
-    const { container } = render(<ApartmentRow name="Cosmos" color="#4338CA" capacity={3} dropState="free" />);
+    const { container } = render(<ApartmentRow name="Cosmos" capacity={3} dropState="free" />);
     expect(screen.getByText("Ελεύθερο")).toBeInTheDocument();
     await expectNoViolations(container);
   });
 
   it("busy drop state names the guest", async () => {
-    const { container } = render(
-      <ApartmentRow name="Iris" color="#BE185D" capacity={3} dropState="busy" busyGuest="Νίκος Π." />,
-    );
+    const { container } = render(<ApartmentRow name="Iris" capacity={3} dropState="busy" busyGuest="Νίκος Π." />);
     expect(screen.getByText("Κλεισμένο: Νίκος Π.")).toBeInTheDocument();
     await expectNoViolations(container);
   });
 
   it("inactive wins over drop state", async () => {
-    const { container } = render(<ApartmentRow name="Helios" color="#A65F00" capacity={2} inactive dropState="free" />);
+    const { container } = render(<ApartmentRow name="Helios" capacity={2} inactive dropState="free" />);
     expect(screen.getByText(/Απενεργοποιημένο/)).toBeInTheDocument();
     expect(screen.queryByText("Ελεύθερο")).toBeNull();
     await expectNoViolations(container);

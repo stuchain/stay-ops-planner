@@ -108,7 +108,7 @@ function MoveButtons({
                 choosable && !best && "hover:bg-surface-muted",
               )}
             >
-              <ApartmentChip name={room.name} color={room.color} inactive={!room.isActive} />
+              <ApartmentChip name={room.name} inactive={!room.isActive} />
               <span
                 className={cn(
                   "text-sm min-w-[100px] flex-1",
