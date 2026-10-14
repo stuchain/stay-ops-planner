@@ -138,8 +138,11 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const [proposed, setProposed] = useState<Map<string, string>>(() => new Map());
   const { setDirty, run, dialog } = useUnsavedGuard();
   // Opening another booking or closing the panel asks first when the edit form has unsaved changes.
+  // The scissors show after a tap on the bar and go away at a tap anywhere else; the panel stays open.
+  const [scissors, setScissors] = useState(false);
   const select = useCallback(
     (id: string | null) => {
+      setScissors(id !== null);
       if (id === selectedId) return;
       run(() => {
         setSelectedId(id);
@@ -369,6 +372,17 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     selected.checkout > (data.today ?? today) &&
     selected.nights > 1;
   const onCut = useCallback((bookingId: string, day: IsoDate) => setCutFrom({ bookingId, day }), []);
+  useEffect(() => {
+    if (!scissors) return;
+    const hide = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      // A tap on the selected bar opens it again (and keeps them); a tap on the scissors uses them.
+      if (target?.closest("[data-cut-keep]") || target?.closest(`[data-booking-id="${selectedId}"]`)) return;
+      setScissors(false);
+    };
+    document.addEventListener("pointerdown", hide, true);
+    return () => document.removeEventListener("pointerdown", hide, true);
+  }, [scissors, selectedId]);
   const locale = useLocale() as UiLocale;
 
   const handleMove = (request: MoveRequest) => {
@@ -474,7 +488,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 proposed={proposed}
                 placing={placing}
                 cut={cut}
-                onCut={cuttable ? onCut : undefined}
+                onCut={cuttable && scissors ? onCut : undefined}
                 onPlace={placeable ? placeIn : undefined}
                 placeDisabled={moving}
                 onOpen={select}

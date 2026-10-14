@@ -1,9 +1,9 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { Plus, Scissors } from "lucide-react";
+import { ChevronDown, Plus, Scissors } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { memo, useMemo, useSyncExternalStore, type CSSProperties } from "react";
+import { memo, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { addDays, shortGaps, type GapNights, type IsoDate } from "@stay-ops/domain";
 import type { CalendarBlock, CalendarBooking, CalendarRoom } from "@/api/types";
 import { ApartmentRow } from "@/ui/ApartmentRow";
@@ -398,7 +398,10 @@ function cutDays(start: IsoDate, end: IsoDate): IsoDate[] {
   return out;
 }
 
-/** Scissors on the selected bar at a day boundary: the stay changes apartment from this day. */
+/**
+ * Scissors on the bottom edge of the selected bar, at a day boundary: the stay changes apartment from this day. On the
+ * edge, not the middle, so the guest's name stays readable.
+ */
 function CutButton({ day, left, onCut }: { day: IsoDate; left: number; onCut: () => void }) {
   const t = useTranslations("calendar");
   const locale = useLocale() as UiLocale;
@@ -414,10 +417,11 @@ function CutButton({ day, left, onCut }: { day: IsoDate; left: number; onCut: ()
       onPointerDown={(event) => event.stopPropagation()}
       aria-label={label}
       title={label}
-      className="border-accent bg-surface text-accent hover:bg-accent hover:text-on-accent focus-visible:bg-accent focus-visible:text-on-accent shadow-raised absolute top-[29px] z-20 flex size-[30px] items-center justify-center rounded-full border-2"
-      style={{ left: left - 15 }}
+      data-cut-keep
+      className="border-accent bg-surface text-accent hover:bg-accent hover:text-on-accent focus-visible:bg-accent focus-visible:text-on-accent shadow-raised absolute top-[61px] z-20 flex size-[24px] items-center justify-center rounded-full border-2"
+      style={{ left: left - 12 }}
     >
-      <Scissors size={16} strokeWidth={2.25} aria-hidden="true" />
+      <Scissors size={13} strokeWidth={2.25} aria-hidden="true" />
     </button>
   );
 }
@@ -439,6 +443,8 @@ export function laneOf(bookings: CalendarBooking[]): Map<string, number> {
 const LANE_HEIGHT = 64;
 
 /** "Περασμένες κρατήσεις": finished stays that were never put in an apartment, under the apartment rows. */
+const PAST_ROW_KEY = "calendar.pastRow";
+
 function PastUnplacedRow({
   props,
   drawn,
@@ -456,24 +462,57 @@ function PastUnplacedRow({
   const shown = rowBookings.filter((b) => visible(b.checkin, b.checkout));
   const lanes = laneOf(shown);
   const laneCount = Math.max(1, ...[...lanes.values()].map((l) => l + 1));
+  // Folded at first; opening it is remembered on this device.
+  const [opened, setOpen] = useState(false);
+  // A past stay opened from search or Today shows even while the row is folded.
+  const open = opened || rowBookings.some((b) => b.id === selectedId);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(PAST_ROW_KEY) === "open") setOpen(true);
+    } catch {
+      // No storage (private window): it stays folded.
+    }
+  }, []);
+  const toggle = () => {
+    setOpen(!opened);
+    try {
+      window.localStorage.setItem(PAST_ROW_KEY, opened ? "closed" : "open");
+    } catch {
+      // Not remembered, nothing else is lost.
+    }
+  };
   return (
     <div
       role="group"
       aria-label={t("pastUnplaced")}
       className="border-border bg-surface-muted relative flex border-b"
-      style={{ height: laneCount * LANE_HEIGHT + 24 }}
+      style={{ height: open ? laneCount * LANE_HEIGHT + 24 : 48 }}
       data-testid="past-unplaced-row"
+      data-open={open}
     >
-      <div
-        className="border-border bg-surface-muted sticky left-0 z-10 flex w-52 flex-none flex-col justify-center gap-1 border-r px-4"
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        data-testid="past-unplaced-toggle"
+        className="border-border bg-surface-muted hover:bg-surface sticky left-0 z-10 flex w-52 flex-none items-center gap-2 border-r px-4 text-left"
         style={{ width: LABEL_WIDTH }}
       >
-        <span className="text-base font-semibold">{t("pastUnplaced")}</span>
-        <span className="text-text-muted text-xs">{t("pastUnplacedHint")}</span>
-      </div>
+        <ChevronDown
+          size={20}
+          aria-hidden="true"
+          className={cn("flex-none transition-transform", open ? "rotate-180" : "")}
+        />
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="text-base font-semibold">
+            {t("pastUnplaced")} · {rowBookings.length}
+          </span>
+          {open ? <span className="text-text-muted text-xs">{t("pastUnplacedHint")}</span> : null}
+        </span>
+      </button>
       <div className="relative min-w-0 flex-1">
         <div className="relative h-full" style={{ width: span.days * dayWidth }}>
-          {shown.map((b) => (
+          {(open ? shown : []).map((b) => (
             <DraggableBar
               stickyLeft={LABEL_WIDTH + 12}
               key={b.id}

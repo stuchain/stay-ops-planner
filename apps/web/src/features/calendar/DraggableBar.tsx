@@ -102,6 +102,7 @@ function DraggableBarInner({
   return (
     <m.div
       ref={setNodeRef}
+      data-booking-id={booking.id}
       {...listeners}
       {...(style ? { style: style as MotionStyle } : {})}
       className={className}
