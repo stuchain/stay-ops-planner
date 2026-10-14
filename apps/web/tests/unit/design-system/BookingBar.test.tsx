@@ -84,6 +84,15 @@ describe("BookingBar", () => {
     await expectNoViolations(container);
   });
 
+  it("tray cards show the dates in place of the status, but still say pending", () => {
+    const { rerender } = render(<BookingBar {...base} needsRoom showDates />);
+    expect(screen.getByText("Παρ 17 – Τρι 21 Οκτ · 4 νύχτες")).toBeInTheDocument();
+    expect(screen.queryByText(/Χρειάζεται διαμέρισμα/)).toBeNull();
+    expect(screen.getByRole("button")).toHaveAccessibleName(/Χρειάζεται διαμέρισμα/);
+    rerender(<BookingBar {...base} pending showDates />);
+    expect(screen.getByText("Παρ 17 – Τρι 21 Οκτ · 4 νύχτες · Περιμένει επιβεβαίωση")).toBeInTheDocument();
+  });
+
   it("truncates visually but keeps the full name", () => {
     const long = "Αλεξάνδρα-Μαρία Παπαδοπούλου-Χατζηγεωργίου";
     render(<BookingBar {...base} guest={long} />);

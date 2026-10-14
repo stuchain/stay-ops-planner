@@ -42,12 +42,7 @@ export function ApartmentRow({
     <div
       role="group"
       aria-label={name}
-      className={cn(
-        "relative flex h-row border-b border-border bg-surface",
-        free && "ring-3 ring-success ring-inset",
-        inactive && "bg-surface-muted",
-        className,
-      )}
+      className={cn("relative flex h-row border-b border-border bg-surface", inactive && "bg-surface-muted", className)}
     >
       <div
         className={cn(

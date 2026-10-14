@@ -51,8 +51,8 @@ export function Tray({ bookings, selectedId, acceptsDrop, onOpen, onArrange, arr
       ) : (
         <ul className="flex gap-3 overflow-x-auto pb-1">
           {bookings.map((b) => (
-            <li key={b.id} className="w-64 flex-none">
-              <DraggableBar booking={b} selected={b.id === selectedId} needsRoom onOpen={onOpen} />
+            <li key={b.id} className="w-72 flex-none">
+              <DraggableBar booking={b} selected={b.id === selectedId} needsRoom showDates onOpen={onOpen} />
             </li>
           ))}
         </ul>

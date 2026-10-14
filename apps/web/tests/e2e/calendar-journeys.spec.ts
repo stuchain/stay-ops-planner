@@ -1,7 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
+  addFarTrayFixture,
   CAL_USER,
+  FAR,
   GUEST,
   ROOM,
   closeCalendarFixtures,
@@ -233,6 +235,48 @@ for (const viewport of VIEWPORTS) {
       await reload(page);
       await expectInRoom(page, ROOM.gamma, GUEST.boundary);
       await expect(bar(room(page, ROOM.alpha), GUEST.boundary)).toHaveCount(0);
+    });
+
+    test("picking a tray booking months away shows its dates in every apartment and places it with a tap", async ({
+      page,
+    }) => {
+      await addFarTrayFixture();
+      await reload(page);
+      const grid = page.getByRole("region", { name: "Ημερολόγιο διαμερισμάτων" });
+      const spot = room(page, ROOM.beta).getByRole("button", { name: `Βάλτε εδώ: ${ROOM.beta}` });
+      await expect(spot).toHaveCount(0);
+
+      // The card says when the stay is, and picking it brings those dates on screen.
+      await expect(bar(tray(page), FAR.guest)).toContainText("4 νύχτες");
+      await openPanel(page, bar(tray(page), FAR.guest));
+      await expect(spot).toBeVisible();
+      await expect(async () => {
+        const view = (await grid.boundingBox())!;
+        const box = (await spot.boundingBox())!;
+        expect(box.x).toBeGreaterThan(view.x + 208);
+        expect(box.x + box.width).toBeLessThan(view.x + view.width);
+      }).toPass({ timeout: 5_000 });
+      // Alpha is taken then: red outline, no button, and the row says by whom.
+      await expect(room(page, ROOM.alpha).getByTestId("place-spot-busy")).toBeVisible();
+      await expect(room(page, ROOM.alpha).getByRole("button", { name: /Βάλτε εδώ/ })).toHaveCount(0);
+      await expect(room(page, ROOM.alpha)).toContainText(`Κλεισμένο: ${FAR.blocker}`);
+
+      await spot.click();
+      await expect(toast(page, `Μετακινήθηκε στο ${ROOM.beta}`)).toBeVisible();
+      await expectInRoom(page, ROOM.beta, FAR.guest);
+      await expect(page.getByTestId("place-spot")).toHaveCount(0);
+
+      await reload(page);
+      await scrollToBar(page, FAR.guest);
+      await expectInRoom(page, ROOM.beta, FAR.guest);
+    });
+
+    test("dragging a tray booking months away brings its dates on screen and drops it in place", async ({ page }) => {
+      await addFarTrayFixture();
+      await reload(page);
+      await drag(page, bar(tray(page), FAR.guest), room(page, ROOM.gamma));
+      await expect(toast(page, `Μετακινήθηκε στο ${ROOM.gamma}`)).toBeVisible();
+      await expectInRoom(page, ROOM.gamma, FAR.guest);
     });
 
     test("shows who is in a busy apartment and does not move a booking there", async ({ page }) => {

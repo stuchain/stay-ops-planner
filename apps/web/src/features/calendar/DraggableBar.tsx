@@ -16,6 +16,8 @@ export type DraggableBarProps = {
   booking: CalendarBooking;
   selected: boolean;
   needsRoom?: boolean;
+  /** See BookingBar: the dates in place of the status, for the tray. */
+  showDates?: boolean;
   /** See BookingBar: keeps the name in view on long stays. */
   stickyLeft?: number;
   style?: CSSProperties;
@@ -44,6 +46,7 @@ function DraggableBarInner({
   booking,
   selected,
   needsRoom = false,
+  showDates = false,
   stickyLeft,
   style,
   className,
@@ -95,6 +98,7 @@ function DraggableBarInner({
         needsRoom={needsRoom && !pending}
         detail={priceDetail}
         stickyLeft={stickyLeft}
+        showDates={showDates}
         className="w-full"
         onClick={() => onOpen(booking.id)}
       />

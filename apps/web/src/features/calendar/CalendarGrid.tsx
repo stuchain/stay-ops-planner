@@ -1,8 +1,9 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { memo, useMemo, useSyncExternalStore } from "react";
+import { memo, useMemo, useSyncExternalStore, type CSSProperties } from "react";
 import { shortGaps, type GapNights, type IsoDate } from "@stay-ops/domain";
 import type { CalendarBlock, CalendarBooking, CalendarRoom } from "@/api/types";
 import { ApartmentRow } from "@/ui/ApartmentRow";
@@ -34,6 +35,12 @@ export type CalendarGridProps = {
   dropStates: Map<string, DropState>;
   /** "Τακτοποίησε τον μήνα" preview: booking id to the apartment it would go to. */
   proposed?: Map<string, string>;
+  /** The booking being placed (dragged, or picked from the tray): every row outlines its dates, free or taken. */
+  placing?: CalendarBooking | null;
+  /** Puts `placing` in that apartment; without it (no right to change) the free outlines are only drawn. */
+  onPlace?: ((roomId: string) => void) | undefined;
+  /** A move is running or there is no internet: the free outlines are there but can't be pressed yet. */
+  placeDisabled?: boolean;
   onOpen: (bookingId: string) => void;
 };
 
@@ -121,6 +128,10 @@ type RoomTrackProps = {
   rowProposed: CalendarBooking[];
   /** Single empty nights between stays, still to come: they cannot be sold. */
   rowGaps: GapNights[];
+  /** The stay being placed, outlined at its dates when this row has a drop state. */
+  spot: CalendarBooking | null;
+  onPlace: ((roomId: string) => void) | undefined;
+  placeDisabled: boolean;
   onOpen: (bookingId: string) => void;
 };
 
@@ -136,11 +147,22 @@ const RoomTrack = memo(function RoomTrack({
   rowBlocks,
   rowProposed,
   rowGaps,
+  spot,
+  onPlace,
+  placeDisabled,
   onOpen,
 }: RoomTrackProps) {
   const t = useTranslations();
-  const { setNodeRef } = useDroppable({ id: `room:${room.id}`, data: { roomId: room.id }, disabled: !room.isActive });
+  const { setNodeRef, isOver } = useDroppable({
+    id: `room:${room.id}`,
+    data: { roomId: room.id },
+    disabled: !room.isActive,
+  });
   const todayIndex = dayIndex(span, today);
+  const spotStyle = (stay: CalendarBooking) => ({
+    left: (dayIndex(span, stay.checkin) + 0.5) * dayWidth + 2,
+    width: Math.max(dayWidth - 4, (dayIndex(span, stay.checkout) - dayIndex(span, stay.checkin)) * dayWidth - 4),
+  });
   return (
     <div ref={setNodeRef}>
       <ApartmentRow
@@ -161,6 +183,8 @@ const RoomTrack = memo(function RoomTrack({
               aria-hidden="true"
             />
           ) : null}
+          {/* Under everything else, so whatever is in the way stays readable on top of the red. */}
+          {spot && drop?.state === "busy" ? <PlaceSpot room={room} free={false} style={spotStyle(spot)} /> : null}
           {rowGaps.map((g) => (
             <div
               key={g.start}
@@ -231,11 +255,84 @@ const RoomTrack = memo(function RoomTrack({
               </button>
             );
           })}
+          {spot && drop?.state === "free" ? (
+            <PlaceSpot
+              room={room}
+              free
+              active={isOver}
+              onPlace={onPlace}
+              disabled={placeDisabled}
+              style={spotStyle(spot)}
+            />
+          ) : null}
         </div>
       </ApartmentRow>
     </div>
   );
 });
+
+/** Narrower than this, "Βάλτε εδώ" does not fit and the outline shows a plus instead (the name keeps the words). */
+const PLACE_TEXT_MIN_WIDTH = 100;
+
+/**
+ * Where the booking being placed would sit in this apartment: a green "Βάλτε εδώ" outline to press (or drop on)
+ * when it is free, a red one under whatever is in the way when it is not. The row's label says who.
+ */
+function PlaceSpot({
+  room,
+  free,
+  active = false,
+  onPlace,
+  disabled = false,
+  style,
+}: {
+  room: CalendarRoom;
+  free: boolean;
+  /** A bar is being dragged over this row: the outline turns solid where it will land. */
+  active?: boolean;
+  onPlace?: ((roomId: string) => void) | undefined;
+  disabled?: boolean;
+  style: CSSProperties & { width: number };
+}) {
+  const t = useTranslations("calendar");
+  if (!free)
+    return (
+      <div
+        data-testid="place-spot-busy"
+        aria-hidden="true"
+        className="border-danger bg-danger-soft pointer-events-none absolute top-4 h-14 rounded-sm border-2 border-dashed"
+        style={style}
+      />
+    );
+  const look = cn(
+    "border-success bg-success-soft text-success-text text-sm absolute top-4 flex h-14 items-center justify-center overflow-hidden rounded-sm border-2 px-2 font-semibold",
+    active ? "border-solid shadow-card" : "border-dashed",
+  );
+  // Someone who can only look sees where it would go, with nothing to press.
+  if (!onPlace)
+    return (
+      <div data-testid="place-spot" aria-hidden="true" className={cn(look, "pointer-events-none")} style={style} />
+    );
+  const label = t("placeIn", { room: room.name });
+  return (
+    <button
+      type="button"
+      data-testid="place-spot"
+      onClick={() => onPlace(room.id)}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={cn(look, "enabled:hover:border-solid enabled:cursor-pointer disabled:opacity-60")}
+      style={style}
+    >
+      {style.width >= PLACE_TEXT_MIN_WIDTH ? (
+        <span className="truncate">{t("placeHere")}</span>
+      ) : (
+        <Plus size={20} strokeWidth={2.5} aria-hidden="true" />
+      )}
+    </button>
+  );
+}
 
 /** Spreads stays over as few lanes as possible so overlapping ones sit one under the other. */
 export function laneOf(bookings: CalendarBooking[]): Map<string, number> {
@@ -359,6 +456,9 @@ export const CalendarGrid = memo(function CalendarGrid(props: CalendarGridProps)
           rowBlocks={blocksByRoom.get(room.id) ?? EMPTY_BLOCKS}
           rowProposed={proposedByRoom.get(room.id) ?? EMPTY}
           rowGaps={gapsByRoom.get(room.id) ?? EMPTY_GAPS}
+          spot={props.placing ?? null}
+          onPlace={props.onPlace}
+          placeDisabled={props.placeDisabled ?? false}
           onOpen={props.onOpen}
         />
       ))}

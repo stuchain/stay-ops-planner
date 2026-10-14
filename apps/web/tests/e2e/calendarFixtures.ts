@@ -169,6 +169,19 @@ export async function resetCalendarFixtures(): Promise<CalendarFixtures> {
   };
 }
 
+/** A tray booking months away, and who holds Alpha on the same dates; see `addFarTrayFixture`. */
+export const FAR = { guest: "Fabio Faraway", blocker: "Alma Already", from: 150, nights: 4 } as const;
+
+/**
+ * A booking waiting for an apartment five months ahead, far off the screen the calendar opens on, with Alpha
+ * already taken on those dates. Call after `resetCalendarFixtures`, which also removes it.
+ */
+export async function addFarTrayFixture(): Promise<void> {
+  const alpha = (await db().room.findUniqueOrThrow({ where: { code: `${ROOM_PREFIX}alpha` } })).id;
+  await createBooking({ key: "fabio", guest: FAR.guest, from: FAR.from, nights: FAR.nights });
+  await createBooking({ key: "alma", guest: FAR.blocker, from: FAR.from - 1, nights: 3, roomId: alpha });
+}
+
 /** Guests added by `addScrollFixtures`, for the scrolling and past-stays specs. */
 export const SCROLL_GUEST = {
   longStay: "Lena Long",

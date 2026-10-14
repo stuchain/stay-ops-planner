@@ -162,14 +162,13 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const selected = selectedId ? (data.bookings.get(selectedId) ?? null) : null;
   const dragging = draggingId ? (data.bookings.get(draggingId) ?? null) : null;
   const roomIds = useMemo(() => data.rooms.filter((r) => r.isActive).map((r) => r.id), [data.rooms]);
-  // While dragging, every row says whether the bar can go there. With the panel open the panel lists the
-  // apartments itself, so the rows only light up the free ones, and only for a booking that has no apartment yet.
-  const dropStates = useMemo(() => {
-    if (dragging) return dropStatesFor(dragging, data.bookings, data.blocks, roomIds);
-    if (!selected || selected.assignment) return new Map<string, DropState>();
-    const states = dropStatesFor(selected, data.bookings, data.blocks, roomIds);
-    return new Map([...states].filter(([, s]) => s?.state === "free"));
-  }, [dragging, selected, data.bookings, data.blocks, roomIds]);
+  // The booking being placed: the one dragged, or one picked from the tray (no apartment yet). Every row says
+  // whether it can go there and outlines its dates, so it is clear where it lands whatever month is on screen.
+  const placing = dragging ?? (selected && !selected.assignment ? selected : null);
+  const dropStates = useMemo(
+    () => (placing ? dropStatesFor(placing, data.bookings, data.blocks, roomIds) : new Map<string, DropState>()),
+    [placing, data.bookings, data.blocks, roomIds],
+  );
 
   const scrollToDate = useCallback(
     (date: IsoDate, smooth = true) => {
@@ -180,6 +179,40 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
       el.scrollTo({ left, behavior: smooth && !reduce ? "smooth" : "auto" });
     },
     [span, dayWidth],
+  );
+
+  // Brings a stay into view, centred, unless it is already all on screen. Used when a booking is picked from the
+  // tray, which can hold stays months away from what the calendar shows.
+  const revealStay = useCallback(
+    (booking: CalendarBooking) => {
+      const el = scroller.current;
+      if (!el) return;
+      const visible = el.clientWidth - LABEL_WIDTH;
+      const from = (dayIndex(span, booking.checkin) + 0.5) * dayWidth;
+      const to = (dayIndex(span, booking.checkout) + 0.5) * dayWidth;
+      if (from >= el.scrollLeft && to <= el.scrollLeft + visible) return;
+      // A stay longer than the screen starts near the left edge, like the month buttons.
+      const left = to - from > visible - 4 * dayWidth ? from - 2 * dayWidth : (from + to - visible) / 2;
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      el.scrollTo({ left: Math.max(0, left), behavior: reduce ? "auto" : "smooth" });
+    },
+    [span, dayWidth],
+  );
+  // Only when the person picks one (a tray card, or dragging one), so the calendar never jumps on its own later.
+  const revealBooking = useCallback(
+    (bookingId: string) => {
+      const booking = data.bookings.get(bookingId);
+      if (booking && !booking.assignment) revealStay(booking);
+    },
+    [data.bookings, revealStay],
+  );
+  const openFromTray = useCallback(
+    (bookingId: string) => {
+      select(bookingId);
+      // After the panel has opened and narrowed the calendar, so the stay is not centred under the panel.
+      requestAnimationFrame(() => revealBooking(bookingId));
+    },
+    [select, revealBooking],
   );
 
   // Start at today once the rows are drawn, and keep the same first visible day when the zoom changes.
@@ -238,7 +271,9 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   function onDragStart(event: DragStartEvent) {
-    setDraggingId((event.active.data.current as { bookingId?: string } | undefined)?.bookingId ?? null);
+    const bookingId = (event.active.data.current as { bookingId?: string } | undefined)?.bookingId ?? null;
+    setDraggingId(bookingId);
+    if (bookingId) revealBooking(bookingId);
   }
 
   function onDragEnd(event: DragEndEvent) {
@@ -273,6 +308,15 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
     setArrangeMonth(null);
     setProposed(new Map());
   }, []);
+
+  // The green outline in a row: the same move as dropping the bar there.
+  const placeable = canChange && placing !== null && placing.status !== "pending";
+  const placeIn = useCallback(
+    (roomId: string) => {
+      if (placing) void move({ booking: placing, roomId });
+    },
+    [placing, move],
+  );
 
   const handleMove = (request: MoveRequest) => {
     setConfirm(null);
@@ -320,7 +364,7 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
           bookings={data.unassigned}
           selectedId={selectedId}
           acceptsDrop={Boolean(dragging?.assignment)}
-          onOpen={select}
+          onOpen={openFromTray}
           {...(canChange && data.unassigned.some((b) => b.status !== "pending" && b.checkout > (data.today ?? today))
             ? { onArrange: openArrange, arrangeDisabled: !online }
             : {})}
@@ -357,6 +401,9 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
                 selectedId={selectedId}
                 dropStates={dropStates}
                 proposed={proposed}
+                placing={placing}
+                onPlace={placeable ? placeIn : undefined}
+                placeDisabled={moving}
                 onOpen={select}
               />
             )}
@@ -369,7 +416,8 @@ export function CalendarScreen({ today }: CalendarScreenProps) {
               checkin={dragging.checkin}
               checkout={dragging.checkout}
               channel={dragging.channel}
-              className="shadow-raised w-64"
+              showDates
+              className="shadow-raised w-72"
               tabIndex={-1}
               aria-hidden="true"
             />

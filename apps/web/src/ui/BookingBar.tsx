@@ -30,6 +30,11 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "color" 
    * of view (the calendar passes the apartment column's width), so a long stay still shows whose it is.
    */
   stickyLeft?: number | undefined;
+  /**
+   * Writes the dates on the bar ("Τρ 12 – Τρ 19 Μαΐ · 7 νύχτες") in place of "Χρειάζεται διαμέρισμα", for bars that
+   * sit outside the timeline (the tray), where nothing else shows when the stay is. A pending stay still says so.
+   */
+  showDates?: boolean;
 };
 
 /** Bar colours per channel; the same in light and dark mode so a channel always looks the same. */
@@ -98,6 +103,7 @@ export function BookingBar({
   channelLabels,
   detail,
   stickyLeft,
+  showDates = false,
   className,
   style,
   type = "button",
@@ -148,7 +154,11 @@ export function BookingBar({
         <ChannelLogo channel={channel} label={channelLabel} muted={pending || needsRoom} />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-bold">{shownGuest ?? guest}</span>
-          <span className="truncate text-xs">{[nights, status, detail].filter(Boolean).join(" · ")}</span>
+          <span className="truncate text-xs">
+            {(showDates ? [range, nights, pending ? status : null, detail] : [nights, status, detail])
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
         </span>
       </span>
     </button>
