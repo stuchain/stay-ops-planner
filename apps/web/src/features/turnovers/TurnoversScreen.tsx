@@ -16,6 +16,7 @@ import { formatDay, type UiLocale } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { CleanerLinkPanel } from "./CleanerLinkPanel";
+import { CleaningSheet } from "./CleaningSheet";
 import { TurnoverCard } from "./TurnoverCard";
 import { useTurnoverActions, type TurnoverActions } from "./useTurnoverActions";
 
@@ -92,17 +93,14 @@ function DaySection({
   const tag = day === today ? t("todayTag") : day === addDays(today, 1) ? t("tomorrowTag") : null;
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="bg-surface rounded-card shadow-card print:border-border flex flex-col px-5 pt-4 pb-1 print:break-inside-avoid print:border print:shadow-none"
-    >
+    <section aria-labelledby={headingId} className="bg-surface rounded-card shadow-card flex flex-col px-5 pt-4 pb-1">
       <h2 id={headingId} className="flex flex-wrap items-baseline gap-3 text-lg font-semibold">
         <DateText date={day} withYear />
         {tag ? <Badge tone="info">{tag}</Badge> : null}
       </h2>
       <ul className="divide-border flex flex-col divide-y">
         {tasks.map((task) => (
-          <TurnoverCard key={task.id} task={task} canEdit={canEdit} actions={actions} />
+          <TurnoverCard key={task.id} task={task} canEdit={canEdit} actions={actions} removable />
         ))}
       </ul>
     </section>
@@ -141,7 +139,7 @@ function LinkPanel({ list, onClose }: { list: TurnoverList; onClose: () => void 
 /**
  * The cleaning schedule, a week at a time from today: one card per day with cleanings, a line per cleaning with
  * a big "Έγινε", and one grey line for days with none. Sending the schedule to the cleaner and printing sit at
- * the top, once.
+ * the top, once. Printing gives the plain sheet instead (CleaningSheet).
  */
 export function TurnoversScreen({ viewSwitch }: { viewSwitch?: ReactNode } = {}) {
   const t = useTranslations("turnovers");
@@ -173,44 +171,47 @@ export function TurnoversScreen({ viewSwitch }: { viewSwitch?: ReactNode } = {})
   const hasTasks = (list.data?.tasks.length ?? 0) > 0;
 
   return (
-    <div className="flex flex-col gap-6 p-8 phone:p-4">
-      <PageHeader
-        title={t("title")}
-        actions={
-          list.data ? (
-            <div className="flex flex-wrap items-center gap-3 print:hidden">
-              {viewSwitch}
-              {canEdit ? (
-                <Button icon={Link2} aria-expanded={linkOpen} onClick={() => setLinkOpen(!linkOpen)}>
-                  {t("link.open")}
-                </Button>
-              ) : null}
-              {hasTasks ? (
-                <Button icon={Printer} onClick={() => window.print()}>
-                  {t("print")}
-                </Button>
-              ) : null}
-              {list.data.cancelledCount > 0 || showCancelled ? (
-                <Button icon={showCancelled ? EyeOff : Eye} onClick={() => setShowCancelled(!showCancelled)}>
-                  {showCancelled ? t("hideCancelled") : t("showCancelled", { count: list.data.cancelledCount })}
-                </Button>
-              ) : null}
-            </div>
-          ) : undefined
-        }
-      />
-      {list.data ? (
-        <>
-          {canEdit && linkOpen ? <LinkPanel list={list.data} onClose={() => setLinkOpen(false)} /> : null}
-          {pager}
-          <Days list={list.data} canEdit={canEdit} actions={actions} />
-          {pager}
-        </>
-      ) : list.error ? (
-        <ErrorState message={errorText(list.error)} onRetry={() => void list.refetch()} />
-      ) : (
-        <Loading />
-      )}
+    <div className="flex flex-col gap-6 p-8 phone:p-4 print:p-0">
+      {list.data ? <CleaningSheet list={list.data} /> : null}
+      <div className="flex flex-col gap-6 print:hidden">
+        <PageHeader
+          title={t("title")}
+          actions={
+            list.data ? (
+              <div className="flex flex-wrap items-center gap-3 print:hidden">
+                {viewSwitch}
+                {canEdit ? (
+                  <Button icon={Link2} aria-expanded={linkOpen} onClick={() => setLinkOpen(!linkOpen)}>
+                    {t("link.open")}
+                  </Button>
+                ) : null}
+                {hasTasks ? (
+                  <Button icon={Printer} onClick={() => window.print()}>
+                    {t("print")}
+                  </Button>
+                ) : null}
+                {list.data.cancelledCount > 0 || showCancelled ? (
+                  <Button icon={showCancelled ? EyeOff : Eye} onClick={() => setShowCancelled(!showCancelled)}>
+                    {showCancelled ? t("hideCancelled") : t("showCancelled", { count: list.data.cancelledCount })}
+                  </Button>
+                ) : null}
+              </div>
+            ) : undefined
+          }
+        />
+        {list.data ? (
+          <>
+            {canEdit && linkOpen ? <LinkPanel list={list.data} onClose={() => setLinkOpen(false)} /> : null}
+            {pager}
+            <Days list={list.data} canEdit={canEdit} actions={actions} />
+            {pager}
+          </>
+        ) : list.error ? (
+          <ErrorState message={errorText(list.error)} onRetry={() => void list.refetch()} />
+        ) : (
+          <Loading />
+        )}
+      </div>
     </div>
   );
 }

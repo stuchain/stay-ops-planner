@@ -1147,19 +1147,10 @@
     "nextDays": "Επόμενες μέρες",
     "showCancelled": "Εμφάνιση ακυρωμένων ({count})",
     "hideCancelled": "Απόκρυψη ακυρωμένων",
-    "leaving": "Φεύγει",
-    "leavingAt": "{guest} · στις {time}",
-    "nextArrival": "Επόμενη άφιξη",
-    "sameDayAt": "Την ίδια μέρα στις {time}",
-    "onDayAt": "{date} στις {time}",
-    "nobodyComing": "Κανείς δεν έρχεται",
     "partyUnknown": "Άγνωστος αριθμός ατόμων",
     "adults": "{count, plural, one {# ενήλικας} other {# ενήλικες}}",
     "children": "{count, plural, one {# παιδί} other {# παιδιά}}",
     "infants": "{count, plural, one {# βρέφος} other {# βρέφη}}",
-    "window": "Ώρα καθαρισμού",
-    "windowRange": "{start} – {end}",
-    "serviceTag": "Ενδιάμεσο καθάρισμα",
     "status": {
       "todo": "Δεν έχει γίνει",
       "in_progress": "Γίνεται τώρα",
@@ -1168,30 +1159,12 @@
     },
     "markDone": "Έγινε",
     "reopen": "Δεν έγινε ακόμα",
-    "assignee": "Ποιος καθαρίζει",
-    "assigneeNone": "Δεν έχει οριστεί",
-    "assigneePlaceholder": "Όνομα",
-    "change": "Αλλαγή",
-    "cancel": "Άκυρο",
-    "timeFrom": "Από",
-    "timeTo": "Έως",
-    "conflict": "{name}: υπάρχει άλλο καθάρισμα την ίδια ώρα.",
-    "notes": "Σημείωση",
     "print": "Εκτύπωση",
-    "line": {
-      "sameDay": "Φεύγουν {leave} · <b>έρχονται {arrive} ίδια μέρα</b>",
-      "otherDay": "Φεύγουν {leave} · έρχονται {date}",
-      "nobody": "Φεύγουν {leave} · δεν έρχεται κανείς μετά"
-    },
     "empty": {
       "todayAndTomorrow": "Σήμερα και αύριο δεν έχει καθάρισμα.",
       "one": "{day}: δεν έχει καθάρισμα.",
       "range": "{from} έως {to}: δεν έχει καθάρισμα."
     },
-    "details": "Λεπτομέρειες",
-    "saveTime": "Αποθήκευση ώρας",
-    "saveAssignee": "Αποθήκευση ονόματος",
-    "close": "Κλείσιμο",
     "link": {
       "open": "Στείλτε το πρόγραμμα στην καθαρίστρια",
       "whichDay": "Για ποια μέρα;",
@@ -1205,27 +1178,30 @@
       "whatsapp": "Άνοιγμα στο WhatsApp",
       "whatsappText": "Πρόγραμμα καθαρισμού για {date}: {url}",
       "close": "Κλείσιμο"
-    }
+    },
+    "nobodyBooked": "Δεν έχει κράτηση ακόμα",
+    "partyLine": "{guest} · {people}",
+    "remove": "Αφαίρεση καθαρίσματος {kind} στο {room}",
+    "sheet": {
+      "title": "Πρόγραμμα καθαρισμού",
+      "range": "{from} έως {to}",
+      "apartment": "Διαμέρισμα",
+      "kind": "Είδος",
+      "guest": "Ποιος έρχεται / μένει",
+      "adults": "Ενήλικες",
+      "children": "Παιδιά"
+    },
+    "cancel": "Άκυρο"
   },
   "cleanerLink": {
     "title": "Πρόγραμμα καθαρισμού",
     "documentTitle": "Πρόγραμμα καθαρισμού {date}",
     "readOnly": "Μόνο για ανάγνωση",
     "empty": "Δεν υπάρχει καθάρισμα αυτή τη μέρα.",
-    "leaving": "Φεύγουν οι επισκέπτες",
-    "window": "Ώρα καθαρισμού",
-    "windowRange": "{start} – {end}",
-    "nextArrival": "Επόμενη άφιξη",
-    "sameDayAt": "Την ίδια μέρα στις {time}",
-    "onDayAt": "{date} στις {time}",
-    "nobodyComing": "Κανείς δεν έρχεται",
     "partyUnknown": "Άγνωστος αριθμός ατόμων",
     "adults": "{count, plural, one {# ενήλικας} other {# ενήλικες}}",
     "children": "{count, plural, one {# παιδί} other {# παιδιά}}",
     "infants": "{count, plural, one {# βρέφος} other {# βρέφη}}",
-    "cleaner": "Καθαρίζει",
-    "notes": "Σημείωση",
-    "serviceTag": "Ενδιάμεσο καθάρισμα",
     "done": "Έγινε",
     "print": "Εκτύπωση",
     "invalid": {
@@ -1235,6 +1211,14 @@
     "expired": {
       "title": "Ο σύνδεσμος έχει λήξει",
       "text": "Ζητήστε νέο σύνδεσμο από τον υπεύθυνο."
+    },
+    "coming": "Έρχονται",
+    "staying": "Μένουν",
+    "nobodyBooked": "Δεν έχει κράτηση ακόμα",
+    "kinds": {
+      "AA": "Αναχώρηση και άφιξη",
+      "A": "Αναχώρηση",
+      "S": "Σέρβις"
     }
   },
   "calendarFeed": {

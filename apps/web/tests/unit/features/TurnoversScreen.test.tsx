@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IsoDate } from "@stay-ops/domain";
 import type { TurnoverList, TurnoverTask } from "@/api/types";
 import { TurnoversScreen } from "@/features/turnovers/TurnoversScreen";
-import { latinWords, render, screen, within } from "../intl";
+import { Toaster } from "@/ui/Toast";
+import { render, screen, within } from "../intl";
 
 const iso = (s: string) => s as IsoDate;
 
@@ -19,7 +20,8 @@ vi.mock("@/api/client", () => {
     mutationOptions: () => ({
       mutationFn: async (input: unknown) => {
         calls.push({ name, input });
-        return name === "createLink" ? { path: "/c/TOKEN", expiresAt: "2030-06-17T00:00:00.000Z" } : { ok: true };
+        if (name === "createLink") return { path: "/c/TOKEN", expiresAt: "2030-06-17T00:00:00.000Z" };
+        return name === "remove" ? { version: "2030-06-09T11:00:00.000Z" } : { ok: true };
       },
     }),
   });
@@ -36,8 +38,8 @@ vi.mock("@/api/client", () => {
           },
         },
         setStatus: mutation("setStatus"),
-        setAssignee: mutation("setAssignee"),
-        reschedule: mutation("reschedule"),
+        remove: mutation("remove"),
+        restore: mutation("restore"),
         createLink: mutation("createLink"),
       },
     }),
@@ -49,9 +51,10 @@ function task(over: Partial<TurnoverTask> & Pick<TurnoverTask, "id">): TurnoverT
     day: iso("2030-06-10"),
     status: "todo",
     taskType: "turnover",
-    room: { id: "r1", name: "Onar", color: "#0F766E" },
+    room: { id: "r1", name: "Onar", label: "1 - Onar", color: "#0F766E" },
     leaving: { guestName: "Maria Papadopoulou", time: "11:00" },
     next: { checkin: iso("2030-06-10"), time: "15:00", party: { adults: 2, children: 1, infants: 1 }, sameDay: true },
+    guest: { name: "Nikos Georgiou", party: { adults: 2, children: 1, infants: 1 } },
     start: "11:00",
     end: "13:00",
     assigneeName: null,
@@ -76,11 +79,14 @@ function show() {
   return render(
     <Wrap>
       <TurnoversScreen />
+      <Toaster />
     </Wrap>,
   );
 }
 
 beforeEach(() => {
+  // sonner's toast asks for pointer capture, which jsdom lacks.
+  Element.prototype.setPointerCapture = () => {};
   role = "operator";
   calls.length = 0;
   listInputs.length = 0;
@@ -89,19 +95,20 @@ beforeEach(() => {
 describe("TurnoversScreen", () => {
   it("shows a card for a day with cleanings, one line per cleaning, and one grey line for the empty days", async () => {
     listResult = list([task({ id: "t1" })]);
-    const { container } = show();
+    show();
     expect(await screen.findByRole("heading", { level: 2 })).toHaveTextContent("Σήμερα");
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
     const item = screen.getByRole("listitem");
-    expect(item).toHaveTextContent("Onar");
-    expect(item).toHaveTextContent("Φεύγουν 11:00 · έρχονται 15:00 ίδια μέρα");
-    expect(within(item).getByText("έρχονται 15:00 ίδια μέρα").tagName).toBe("STRONG");
+    // The numbered apartment, the kind and who comes; babies count as children. No times, no who leaves.
+    expect(item).toHaveTextContent("1 - Onar");
+    expect(item).toHaveTextContent("A-A");
+    expect(item).toHaveTextContent("Nikos Georgiou · 2 ενήλικες, 2 παιδιά");
+    expect(item.textContent).not.toMatch(/\d{2}:\d{2}/);
+    expect(item).not.toHaveTextContent("Maria");
     expect(screen.queryByText("Δεν έχει γίνει")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Ξεκινάω" })).not.toBeInTheDocument();
     const empty = screen.getAllByTestId("turnovers-empty-days");
     expect(empty).toHaveLength(1);
     expect(empty[0]).toHaveTextContent("Αύριο έως Κυρ 16 Ιουν: δεν έχει καθάρισμα.");
-    expect(latinWords(container.textContent ?? "", ["Onar"])).toEqual([]);
   });
 
   it("joins today and tomorrow into one sentence when both are empty", async () => {
@@ -112,56 +119,43 @@ describe("TurnoversScreen", () => {
     expect(empty).toEqual(["Σήμερα και αύριο δεν έχει καθάρισμα.", "Πεμ 13 Ιουν έως Σαβ 15 Ιουν: δεν έχει καθάρισμα."]);
   });
 
-  it("names the day the next guests come when it is not the same day, or says nobody comes", async () => {
+  it("shows who is staying for a service, and says when nobody is booked after an A", async () => {
     listResult = list([
       task({
         id: "t1",
-        next: { checkin: iso("2030-06-14"), time: "15:00", party: null, sameDay: false },
+        kind: "S",
+        taskType: "service",
+        guest: { name: "Anna Lind", party: { adults: 1, children: 0, infants: 0 } },
       }),
-      task({ id: "t2", room: { id: "r2", name: "Iris", color: null }, next: null }),
+      task({ id: "t2", kind: "A", room: { id: "r2", name: "Iris", label: "3 - Iris", color: null }, guest: null }),
     ]);
     show();
     const items = await screen.findAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("Φεύγουν 11:00 · έρχονται Παρ 14 Ιουν");
-    expect(items[1]).toHaveTextContent("Φεύγουν 11:00 · δεν έρχεται κανείς μετά");
+    expect(items[0]).toHaveTextContent("S");
+    expect(items[0]).toHaveTextContent("Anna Lind · 1 ενήλικας");
+    expect(items[1]).toHaveTextContent("3 - Iris");
+    expect(items[1]).toHaveTextContent("Δεν έχει κράτηση ακόμα");
   });
 
-  it("keeps who leaves, who comes and the cleaning time behind Αλλαγή", async () => {
-    listResult = list([task({ id: "t1" })]);
+  it("removes an A with the red × and offers Undo; an A-A has no ×", async () => {
+    listResult = list([task({ id: "t1" }), task({ id: "t2", kind: "A" })]);
     show();
-    const toggle = await screen.findByRole("button", { name: "Αλλαγή" });
-    expect(screen.queryByText("Maria Papadopoulou · στις 11:00")).not.toBeInTheDocument();
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Maria Papadopoulou · στις 11:00")).toBeInTheDocument();
-    expect(screen.getByText("Την ίδια μέρα στις 15:00")).toBeInTheDocument();
-    expect(screen.getByText("2 ενήλικες, 1 παιδί, 1 βρέφος")).toBeInTheDocument();
-    expect(screen.getByLabelText("Από")).toHaveValue("11:00");
-    expect(screen.getByLabelText("Έως")).toHaveValue("13:00");
-  });
-
-  it("changes the cleaning time with the version it was looking at", async () => {
-    listResult = list([task({ id: "t1" })]);
-    show();
-    await userEvent.click(await screen.findByRole("button", { name: "Αλλαγή" }));
-    const from = screen.getByLabelText("Από");
-    await userEvent.clear(from);
-    await userEvent.type(from, "12:00");
-    await userEvent.click(screen.getByRole("button", { name: "Αποθήκευση ώρας" }));
+    const buttons = await screen.findAllByTestId("cleaning-remove");
+    expect(buttons).toHaveLength(1);
+    await userEvent.click(buttons[0]!);
     await vi.waitFor(() =>
       expect(calls).toContainEqual({
-        name: "reschedule",
-        input: { id: "t1", expectedVersion: "2030-06-09T10:00:00.000Z", start: "12:00", end: "13:00" },
+        name: "remove",
+        input: { id: "t2", expectedVersion: "2030-06-09T10:00:00.000Z" },
       }),
     );
-  });
-
-  it("says when nobody comes next", async () => {
-    listResult = list([task({ id: "t1", next: null })]);
-    show();
-    await userEvent.click(await screen.findByRole("button", { name: "Αλλαγή" }));
-    expect(screen.getByText("Κανείς δεν έρχεται")).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Αναίρεση" }));
+    await vi.waitFor(() =>
+      expect(calls).toContainEqual({
+        name: "restore",
+        input: { id: "t2", expectedVersion: "2030-06-09T11:00:00.000Z" },
+      }),
+    );
   });
 
   it("marks a cleaning done with the version it was looking at", async () => {
@@ -176,15 +170,12 @@ describe("TurnoversScreen", () => {
     );
   });
 
-  it("shows a done cleaning in green with a small undo, and no time change for it", async () => {
+  it("shows a done cleaning in green with a small undo", async () => {
     listResult = list([task({ id: "t1", status: "done" })]);
     show();
     expect(await screen.findByRole("button", { name: "Δεν έγινε ακόμα" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Έγινε" })).not.toBeInTheDocument();
-    expect(screen.getByText("Έγινε")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Αλλαγή" }));
-    expect(screen.queryByLabelText("Από")).not.toBeInTheDocument();
-    expect(screen.getByText("11:00 – 13:00")).toBeInTheDocument();
+    expect(screen.queryByTestId("cleaning-remove")).not.toBeInTheDocument();
   });
 
   it("still says when a cleaning is under way", async () => {
@@ -203,30 +194,7 @@ describe("TurnoversScreen", () => {
       expect(screen.queryByRole("button", { name: "Στείλτε το πρόγραμμα στην καθαρίστρια" })).toBeNull(),
     );
     expect(screen.queryByRole("button", { name: "Έγινε" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Αλλαγή" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Λεπτομέρειες" }));
-    expect(screen.getByText("Maria Papadopoulou · στις 11:00")).toBeInTheDocument();
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-  });
-
-  it("saves who cleans", async () => {
-    listResult = list([task({ id: "t1" })]);
-    show();
-    await userEvent.click(await screen.findByRole("button", { name: "Αλλαγή" }));
-    await userEvent.type(screen.getByRole("textbox", { name: /Ποιος καθαρίζει/ }), "Ελένη");
-    await userEvent.click(screen.getByRole("button", { name: "Αποθήκευση ονόματος" }));
-    await vi.waitFor(() =>
-      expect(calls).toContainEqual({
-        name: "setAssignee",
-        input: { id: "t1", expectedVersion: "2030-06-09T10:00:00.000Z", assigneeName: "Ελένη" },
-      }),
-    );
-  });
-
-  it("warns when the same cleaner has another cleaning at the same time", async () => {
-    listResult = list([task({ id: "t1", assigneeName: "Ελένη", conflictsWith: ["t2"] })]);
-    show();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Ελένη: υπάρχει άλλο καθάρισμα την ίδια ώρα.");
+    expect(screen.queryByTestId("cleaning-remove")).not.toBeInTheDocument();
   });
 
   it("hides cancelled cleanings until asked, and pages by week from today", async () => {
@@ -241,14 +209,43 @@ describe("TurnoversScreen", () => {
     await vi.waitFor(() => expect(listInputs).toContainEqual({ page: 1, showCancelled: true }));
   });
 
-  it("prints the days on screen with one button at the top", async () => {
+  it("prints a plain sheet: apartment, kind, who comes or stays, adults and children", async () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => {});
-    listResult = list([task({ id: "t1" }), task({ id: "t2", day: iso("2030-06-12") })]);
+    listResult = list([
+      task({ id: "t1" }),
+      task({
+        id: "t2",
+        day: iso("2030-06-12"),
+        kind: "S",
+        taskType: "service",
+        guest: { name: "Anna Lind", party: { adults: 1, children: 0, infants: 0 } },
+      }),
+    ]);
     show();
     await userEvent.click(await screen.findByRole("button", { name: "Εκτύπωση" }));
     expect(screen.getAllByRole("button", { name: "Εκτύπωση" })).toHaveLength(1);
     expect(print).toHaveBeenCalledTimes(1);
     print.mockRestore();
+    const sheet = screen.getByTestId("cleaning-sheet");
+    const tables = within(sheet).getAllByRole("table");
+    expect(tables).toHaveLength(2);
+    expect(
+      within(tables[0]!)
+        .getAllByRole("columnheader")
+        .map((th) => th.textContent),
+    ).toEqual(["Διαμέρισμα", "Είδος", "Ποιος έρχεται / μένει", "Ενήλικες", "Παιδιά"]);
+    expect(
+      within(tables[0]!)
+        .getAllByRole("cell")
+        .map((td) => td.textContent),
+    ).toEqual(["1 - Onar", "A-A", "Nikos Georgiou", "2", "2"]);
+    expect(
+      within(tables[1]!)
+        .getAllByRole("cell")
+        .map((td) => td.textContent),
+    ).toEqual(["1 - Onar", "S", "Anna Lind", "1", "0"]);
+    expect(sheet.textContent).not.toMatch(/\d{2}:\d{2}/);
+    expect(sheet).toHaveTextContent("Αναχώρηση και άφιξη");
   });
 
   it("sends the schedule of a chosen day to the cleaner, with copy and WhatsApp", async () => {

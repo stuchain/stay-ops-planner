@@ -28,8 +28,9 @@ import { formatDay, formatRange, type UiLocale } from "@/ui/format";
 import { PageHeader } from "@/ui/PageHeader";
 import { SidePanel } from "@/ui/SidePanel";
 import { Skeleton } from "@/ui/Skeleton";
-import { showToast, undoToast } from "@/ui/Toast";
+import { showToast } from "@/ui/Toast";
 import { CleanerLinkPanel } from "./CleanerLinkPanel";
+import { KIND_STYLE, KindChip } from "./KindChip";
 import { TurnoverCard } from "./TurnoverCard";
 import { useTurnoverActions } from "./useTurnoverActions";
 
@@ -41,12 +42,6 @@ const HEAD_PX = 168;
 
 type Kind = TurnoverTask["kind"];
 const KINDS: Kind[] = ["AA", "A", "S"];
-
-const KIND_STYLE: Record<Kind, string> = {
-  AA: "border-warning bg-warning-soft text-warning-text",
-  A: "border-accent bg-accent-soft text-accent",
-  S: "border-text-muted bg-surface text-text border-dashed",
-};
 
 /** The Monday on or before a day. */
 export function mondayOf(day: IsoDate): IsoDate {
@@ -114,21 +109,6 @@ export function kindsFor(data: CalendarData, roomId: string, day: IsoDate): Reco
     A: turnover(afterCheckout),
     S: allDay ? { ok: true } : { ok: false },
   };
-}
-
-function KindChip({ kind, done }: { kind: Kind; done?: boolean }) {
-  const t = useTranslations("cleaningCalendar");
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-1 rounded-sm border-2 px-2 text-base font-bold whitespace-nowrap",
-        done ? "border-success bg-success-soft text-success-text" : KIND_STYLE[kind],
-      )}
-    >
-      {done ? <Check size={16} aria-hidden="true" /> : kind === "AA" ? <Lock size={14} aria-hidden="true" /> : null}
-      {t(`kinds.${kind}.short`)}
-    </span>
-  );
 }
 
 function CleaningTag({
@@ -632,9 +612,7 @@ export function CleaningCalendar({ viewSwitch, onPrint }: { viewSwitch: ReactNod
     refetchInterval: 60_000,
   });
   const move = useMutation({ ...trpc.cleaning.move.mutationOptions(), meta: { handlesErrors: true } });
-  const remove = useMutation({ ...trpc.cleaning.remove.mutationOptions(), meta: { handlesErrors: true } });
-  const restore = useMutation({ ...trpc.cleaning.restore.mutationOptions(), meta: { handlesErrors: true } });
-  const tCommon = useTranslations("common");
+  const actions = useTurnoverActions();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const data = calendar.data;
   const days = useMemo(() => Array.from({ length: DAYS }, (_, i) => addDays(from, i)), [from]);
@@ -664,28 +642,6 @@ export function CleaningCalendar({ viewSwitch, onPrint }: { viewSwitch: ReactNod
         delete rest[task.id];
         return rest;
       });
-    }
-  }
-
-  const refresh = () => queryClient.invalidateQueries({ queryKey: trpc.cleaning.pathKey() });
-
-  async function removeTask(task: TurnoverTask) {
-    try {
-      const { version } = await remove.mutateAsync({ id: task.id, expectedVersion: task.version });
-      undoToast({
-        message: t("detail.removed"),
-        undoLabel: tCommon("undo"),
-        onUndo: () =>
-          void restore
-            .mutateAsync({ id: task.id, expectedVersion: version })
-            .then(() => showToast({ message: t("detail.restored"), tone: "success" }))
-            .catch((error: unknown) => showToast({ message: errorText(error), tone: "danger" }))
-            .finally(() => void refresh()),
-      });
-    } catch (error) {
-      showToast({ message: errorText(error), tone: "danger" });
-    } finally {
-      await refresh();
     }
   }
 
@@ -807,7 +763,7 @@ export function CleaningCalendar({ viewSwitch, onPrint }: { viewSwitch: ReactNod
                   dragging={data.tasks.find((x) => x.id === dragging?.taskId) ?? null}
                   onAdd={(roomId, day, kind) => setAdding({ roomId, day, kind })}
                   onOpen={setOpenId}
-                  onRemove={(task) => void removeTask(task)}
+                  onRemove={(task) => void actions.remove(task)}
                 />
               ))}
             </div>

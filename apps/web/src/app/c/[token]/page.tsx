@@ -30,15 +30,11 @@ export default async function CleanerPage({ params }: Props) {
   return (
     <NextIntlClientProvider
       locale="el"
-      messages={{ cleanerLink: el.cleanerLink, common: el.common, ui: el.ui }}
+      messages={{ cleanerLink: el.cleanerLink, cleaningCalendar: el.cleaningCalendar, common: el.common, ui: el.ui }}
       timeZone="Europe/Athens"
     >
       <div id="cleaner-root" lang="el" data-ui="new" data-text-size="large">
-        {check.ok ? (
-          <CleanerDayView data={await getCleanerDay(check.day)} />
-        ) : (
-          <LinkProblem reason={check.reason} />
-        )}
+        {check.ok ? <CleanerDayView data={await getCleanerDay(check.day)} /> : <LinkProblem reason={check.reason} />}
       </div>
     </NextIntlClientProvider>
   );

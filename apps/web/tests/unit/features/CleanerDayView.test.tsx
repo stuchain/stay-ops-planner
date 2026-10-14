@@ -10,42 +10,43 @@ const day: CleanerDay = {
   tasks: [
     {
       id: "t1",
-      apartment: "Onar",
-      color: "#0F766E",
+      apartment: "1 - Onar",
       status: "todo",
-      leaveTime: "11:00",
-      start: "11:00",
-      end: "13:00",
-      arrival: { sameDay: true, day: "2030-06-10" as IsoDate, time: "15:00", adults: 2, children: 0, infants: 1 },
-      assigneeName: "Ελένη",
-      notes: "Αλλάξτε τα σεντόνια",
+      kind: "AA",
+      people: { adults: 2, children: 1 },
+      nobodyBooked: false,
     },
+    { id: "t2", apartment: "3 - Iris", status: "done", kind: "A", people: null, nobodyBooked: true },
     {
-      id: "t2",
-      apartment: "Iris",
-      color: null,
-      status: "done",
-      leaveTime: "11:00",
-      start: "11:00",
-      end: "13:00",
-      arrival: null,
-      assigneeName: null,
-      notes: null,
+      id: "t3",
+      apartment: "2 - Cosmos",
+      status: "todo",
+      kind: "S",
+      people: { adults: 1, children: 0 },
+      nobodyBooked: false,
     },
   ],
 };
 
 describe("CleanerDayView", () => {
-  it("shows the day in Greek, with no guest details", () => {
+  it("shows the day in Greek with the kind and how many people, and no times or names", () => {
     const { container } = render(<CleanerDayView data={day} />);
     expect(screen.getByRole("heading", { level: 1, name: "Πρόγραμμα καθαρισμού" })).toBeInTheDocument();
-    expect(screen.getByText("Την ίδια μέρα στις 15:00")).toBeInTheDocument();
-    expect(screen.getByText("2 ενήλικες, 1 βρέφος")).toBeInTheDocument();
-    expect(screen.getByText("Κανείς δεν έρχεται")).toBeInTheDocument();
-    expect(screen.getByText("Αλλάξτε τα σεντόνια")).toBeInTheDocument();
-    expect(screen.getByText("Έγινε")).toBeInTheDocument();
+    const cards = screen.getAllByRole("listitem");
+    expect(cards[0]).toHaveTextContent("1 - Onar");
+    expect(cards[0]).toHaveTextContent("A-AΑναχώρηση και άφιξη");
+    expect(cards[0]).toHaveTextContent("Έρχονται2 ενήλικες, 1 παιδί");
+    expect(cards[1]).toHaveTextContent("Δεν έχει κράτηση ακόμα");
+    expect(cards[1]).toHaveTextContent("Έγινε");
+    expect(cards[2]).toHaveTextContent("Μένουν1 ενήλικας");
+    expect(container.textContent).not.toMatch(/\d{2}:\d{2}/);
     expect(screen.getByRole("button", { name: "Εκτύπωση" })).toBeInTheDocument();
-    expect(latinWords(container.textContent ?? "")).toEqual([]);
+    // Every piece of text is Greek, apart from the apartment names and the A-A / A / S letters.
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const words: string[] = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode())
+      words.push(...latinWords(node.textContent ?? "", ["A-A", "S"]));
+    expect(words).toEqual([]);
   });
 
   it("says so when there is nothing to clean", () => {

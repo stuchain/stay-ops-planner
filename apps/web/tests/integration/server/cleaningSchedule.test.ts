@@ -153,8 +153,11 @@ describe("cleaning schedule use cases", () => {
     expect(first).toMatchObject({
       day: "2030-07-05",
       status: "todo",
-      room: { name: "Onar", color: "#0F766E" },
+      // Numbered in calendar order (here by name: Cosmos, Onar), as the list and the paper show it.
+      room: { name: "Onar", label: "2 - Onar", color: "#0F766E" },
       leaving: { guestName: "Maria", time: "11:00" },
+      // Who the cleaning is for: the guest who comes next.
+      guest: { name: "Nikos", party: { adults: 2, children: 1, infants: 1 } },
       next: {
         checkin: "2030-07-05",
         time: "15:00",
@@ -170,7 +173,19 @@ describe("cleaning schedule use cases", () => {
     expect(list.tasks.find((t) => t.leaving.guestName === "Nikos")).toMatchObject({
       kind: "A",
       next: null,
+      guest: null,
       movable: { from: "2030-07-08", to: null },
+    });
+  });
+
+  it("names the guest who is staying on a service cleaning", async () => {
+    const { addCleaning, loadTurnovers } = await uc();
+    await stay(onar.id, "Nikos", "2030-07-05", "2030-07-08", { adults: 3, children: 1 });
+    await addCleaning({ roomId: onar.id, day: iso("2030-07-06"), kind: "S", notes: null, actorUserId: actorId }, NOW);
+    const list = await loadTurnovers(iso("2030-07-01"), 7, { includeCancelled: false }, NOW);
+    expect(list.tasks.find((t) => t.kind === "S")).toMatchObject({
+      day: "2030-07-06",
+      guest: { name: "Nikos", party: { adults: 3, children: 1, infants: 0 } },
     });
   });
 
@@ -286,14 +301,14 @@ describe("cleaning schedule use cases", () => {
     const day = await getCleanerDay(iso("2030-07-05"));
     expect(day.tasks).toHaveLength(1);
     expect(day.tasks[0]).toMatchObject({
-      apartment: "Onar",
-      start: "11:00",
-      end: "13:00",
-      notes: "Αλλαγή σεντονιών",
-      arrival: { sameDay: true, time: "15:00", adults: 2, children: 2, infants: 1 },
+      kind: "AA",
+      // Babies count as children; no times, note or cleaner (Stelios, 2026-10-14).
+      people: { adults: 2, children: 3 },
+      nobodyBooked: false,
     });
+    expect(day.tasks[0]?.apartment).toMatch(/^\d+ - Onar$/);
     const json = JSON.stringify(day);
-    for (const secret of ["Maria", "Nikos", "Zoe", "example.com", "690", "123456", "1234.56"]) {
+    for (const secret of ["Maria", "Nikos", "Zoe", "example.com", "690", "123456", "1234.56", "σεντονιών", "11:00"]) {
       expect(json).not.toContain(secret);
     }
     expect((await getCleanerDay(iso("2030-07-09"))).tasks).toEqual([]);

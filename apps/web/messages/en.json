@@ -1147,19 +1147,10 @@
     "nextDays": "Next days",
     "showCancelled": "Show cancelled ({count})",
     "hideCancelled": "Hide cancelled",
-    "leaving": "Leaving",
-    "leavingAt": "{guest} · at {time}",
-    "nextArrival": "Next arrival",
-    "sameDayAt": "Same day at {time}",
-    "onDayAt": "{date} at {time}",
-    "nobodyComing": "Nobody is coming",
     "partyUnknown": "Number of guests unknown",
     "adults": "{count, plural, one {# adult} other {# adults}}",
     "children": "{count, plural, one {# child} other {# children}}",
     "infants": "{count, plural, one {# infant} other {# infants}}",
-    "window": "Cleaning time",
-    "windowRange": "{start} – {end}",
-    "serviceTag": "Cleaning in between",
     "status": {
       "todo": "Not done",
       "in_progress": "In progress",
@@ -1168,30 +1159,12 @@
     },
     "markDone": "Done",
     "reopen": "Not done yet",
-    "assignee": "Who cleans",
-    "assigneeNone": "Not set",
-    "assigneePlaceholder": "Name",
-    "change": "Change",
-    "cancel": "Cancel",
-    "timeFrom": "From",
-    "timeTo": "To",
-    "conflict": "{name}: another cleaning at the same time.",
-    "notes": "Note",
     "print": "Print",
-    "line": {
-      "sameDay": "Leave {leave} · <b>next guests {arrive} same day</b>",
-      "otherDay": "Leave {leave} · next guests {date}",
-      "nobody": "Leave {leave} · nobody comes next"
-    },
     "empty": {
       "todayAndTomorrow": "No cleaning today or tomorrow.",
       "one": "{day}: no cleaning.",
       "range": "{from} to {to}: no cleaning."
     },
-    "details": "Details",
-    "saveTime": "Save time",
-    "saveAssignee": "Save name",
-    "close": "Close",
     "link": {
       "open": "Send the schedule to the cleaner",
       "whichDay": "For which day?",
@@ -1205,27 +1178,30 @@
       "whatsapp": "Open in WhatsApp",
       "whatsappText": "Cleaning schedule for {date}: {url}",
       "close": "Close"
-    }
+    },
+    "nobodyBooked": "Nobody booked yet",
+    "partyLine": "{guest} · {people}",
+    "remove": "Remove the {kind} cleaning in {room}",
+    "sheet": {
+      "title": "Cleaning schedule",
+      "range": "{from} to {to}",
+      "apartment": "Apartment",
+      "kind": "Kind",
+      "guest": "Who is coming / staying",
+      "adults": "Adults",
+      "children": "Children"
+    },
+    "cancel": "Cancel"
   },
   "cleanerLink": {
     "title": "Cleaning schedule",
     "documentTitle": "Cleaning schedule {date}",
     "readOnly": "Read only",
     "empty": "Nothing to clean on this day.",
-    "leaving": "Guests leave",
-    "window": "Cleaning time",
-    "windowRange": "{start} – {end}",
-    "nextArrival": "Next arrival",
-    "sameDayAt": "Same day at {time}",
-    "onDayAt": "{date} at {time}",
-    "nobodyComing": "Nobody is coming",
     "partyUnknown": "Number of guests unknown",
     "adults": "{count, plural, one {# adult} other {# adults}}",
     "children": "{count, plural, one {# child} other {# children}}",
     "infants": "{count, plural, one {# infant} other {# infants}}",
-    "cleaner": "Cleaner",
-    "notes": "Note",
-    "serviceTag": "Cleaning in between",
     "done": "Done",
     "print": "Print",
     "invalid": {
@@ -1235,6 +1211,14 @@
     "expired": {
       "title": "This link has expired",
       "text": "Ask for a new link."
+    },
+    "coming": "Coming",
+    "staying": "Staying",
+    "nobodyBooked": "Nobody booked yet",
+    "kinds": {
+      "AA": "Leaves and arrives",
+      "A": "Leaves",
+      "S": "Service"
     }
   },
   "calendarFeed": {

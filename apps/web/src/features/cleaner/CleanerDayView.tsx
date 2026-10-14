@@ -2,76 +2,50 @@
 
 import { Check, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
 import type { CleanerDay, CleanerTask } from "@/api/types";
-import { Badge } from "@/ui/Badge";
 import { ApartmentChip } from "@/ui/ApartmentChip";
+import { Badge } from "@/ui/Badge";
 import { Button } from "@/ui/Button";
 import { formatDay } from "@/ui/format";
+import { KindChip } from "@/features/turnovers/KindChip";
 
-function Party({ arrival }: { arrival: NonNullable<CleanerTask["arrival"]> }) {
+/** "2 ενήλικες, 1 παιδί"; babies are already counted with the children. */
+function People({ people }: { people: NonNullable<CleanerTask["people"]> }) {
   const t = useTranslations("cleanerLink");
-  if (arrival.adults === null || arrival.children === null || arrival.infants === null) {
-    return <span className="text-text-muted">{t("partyUnknown")}</span>;
-  }
-  const parts = [t("adults", { count: arrival.adults })];
-  if (arrival.children > 0) parts.push(t("children", { count: arrival.children }));
-  if (arrival.infants > 0) parts.push(t("infants", { count: arrival.infants }));
-  return <span>{parts.join(", ")}</span>;
+  const parts = [t("adults", { count: people.adults })];
+  if (people.children > 0) parts.push(t("children", { count: people.children }));
+  return <>{parts.join(", ")}</>;
 }
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-text-muted text-base">{label}</dt>
-      <dd className="text-xl font-semibold">{children}</dd>
-    </div>
-  );
-}
-
+/** One cleaning: the apartment, A-A / A / S, and how many people come (or stay). No times, names or notes. */
 function TaskCard({ task }: { task: CleanerTask }) {
   const t = useTranslations("cleanerLink");
-  const arrival = task.arrival;
   return (
     <li className="bg-surface rounded-card shadow-card flex flex-col gap-4 p-5 print:break-inside-avoid print:border print:border-border print:shadow-none">
       <div className="flex flex-wrap items-center gap-3">
         <ApartmentChip name={task.apartment} className="text-xl" />
+        <KindChip kind={task.kind} />
+        <span className="text-lg">{t(`kinds.${task.kind}`)}</span>
         {task.status === "done" ? (
           <Badge tone="success" icon={Check} size="lg">
             {t("done")}
           </Badge>
         ) : null}
       </div>
-      <dl className="flex flex-col gap-3">
-        <Fact label={t("window")}>{t("windowRange", { start: task.start, end: task.end })}</Fact>
-        <Fact label={t("leaving")}>{task.leaveTime}</Fact>
-        <Fact label={t("nextArrival")}>
-          {arrival ? (
-            <span className="flex flex-col">
-              <span>
-                {arrival.sameDay
-                  ? t("sameDayAt", { time: arrival.time })
-                  : t("onDayAt", { date: formatDay(arrival.day, "el"), time: arrival.time })}
-              </span>
-              <span className="text-lg font-normal">
-                <Party arrival={arrival} />
-              </span>
-            </span>
-          ) : (
-            <span className="text-text-muted">{t("nobodyComing")}</span>
-          )}
-        </Fact>
-      </dl>
-      {task.assigneeName ? (
-        <p className="text-lg">
-          <span className="font-semibold">{t("cleaner")}:</span> {task.assigneeName}
-        </p>
-      ) : null}
-      {task.notes ? (
-        <p className="text-lg">
-          <span className="font-semibold">{t("notes")}:</span> {task.notes}
-        </p>
-      ) : null}
+      {task.nobodyBooked ? (
+        <p className="text-text-muted text-xl">{t("nobodyBooked")}</p>
+      ) : (
+        <dl className="flex flex-col gap-1">
+          <dt className="text-text-muted text-base">{task.kind === "S" ? t("staying") : t("coming")}</dt>
+          <dd className="text-xl font-semibold">
+            {task.people ? (
+              <People people={task.people} />
+            ) : (
+              <span className="text-text-muted">{t("partyUnknown")}</span>
+            )}
+          </dd>
+        </dl>
+      )}
     </li>
   );
 }

@@ -46,9 +46,15 @@ export type TurnoverTask = {
   status: TurnoverStatus;
   /** `turnover` (guest left) or `service` (a clean in between). */
   taskType: string;
-  room: { id: string; name: string; color: string | null };
+  /** `label` is the name with its number in calendar order, "1 - Onar", as the list and the paper show it. */
+  room: { id: string; name: string; label: string; color: string | null };
   /** The guest who leaves, and when (the standard check-out time). */
   leaving: { guestName: string | null; time: string };
+  /**
+   * Who the cleaning is for, shown instead of times (Stelios, 2026-10-14): the guest who comes next for A-A and A
+   * (null when nobody is booked), the guest who is staying for S.
+   */
+  guest: { name: string | null; party: Party | null } | null;
   /** The next guest in the same apartment, or null when nobody comes. */
   next: { checkin: IsoDate; time: string; party: Party | null; sameDay: boolean } | null;
   /** The cleaning window as `HH:MM` in the business time zone. */
@@ -132,7 +138,7 @@ export async function loadTurnovers(
   await ensureTurnoversBetween(from, to);
   const where: Prisma.CleaningTaskWhereInput = { plannedStart: { gte: dayStart(from), lt: dayStart(to) } };
 
-  const [rows, cancelledCount] = await Promise.all([
+  const [rows, cancelledCount, rooms] = await Promise.all([
     prisma.cleaningTask.findMany({
       where: opts.includeCancelled ? where : { ...where, status: { not: "cancelled" } },
       orderBy: [{ plannedStart: "asc" }, { id: "asc" }],
@@ -142,13 +148,16 @@ export async function loadTurnovers(
           select: {
             guestName: true,
             checkoutDate: true,
+            ...partySelect,
             assignments: { select: { roomId: true, startDate: true, endDate: true } },
           },
         },
       },
     }),
     prisma.cleaningTask.count({ where: { ...where, status: "cancelled" } }),
+    listCalendarRooms(),
   ]);
+  const numbers = new Map(rooms.filter((r) => r.isActive).map((r, i) => [r.id, i + 1]));
 
   const nexts = await Promise.all(
     rows.map((row) =>
@@ -189,13 +198,21 @@ export async function loadTurnovers(
     const checkout = dbDateToIso(row.booking.checkoutDate);
     const sameDay = checkin === checkout;
     const kind: CleaningKind = row.taskType !== TURNOVER_TASK_TYPE ? "S" : sameDay ? "AA" : "A";
+    const name = row.room.displayName ?? row.room.code ?? row.room.id;
+    const number = numbers.get(row.room.id);
     tasks.push({
       id: row.id,
       day,
       status: asStatus(row.status),
       taskType: row.taskType,
-      room: { id: row.room.id, name: row.room.displayName ?? row.room.code ?? row.room.id, color: row.room.color },
+      room: { id: row.room.id, name, label: number ? `${number} - ${name}` : name, color: row.room.color },
       leaving: { guestName: row.booking.guestName, time: DEFAULT_CHECKOUT_TIME },
+      guest:
+        kind === "S"
+          ? { name: row.booking.guestName, party: partyOf(row.booking) }
+          : next
+            ? { name: next.booking.guestName, party: partyOf(next.booking) }
+            : null,
       next:
         next && checkin
           ? {
