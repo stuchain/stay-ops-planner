@@ -34,13 +34,13 @@ for (const viewport of [{ width: 1366, height: 768 }] as const) {
       const tomorrow = page.getByRole("region", { name: "Επόμενες μέρες" });
       await expect(tomorrow.getByRole("heading", { name: "Αύριο" })).toBeVisible();
 
-      const arriving = tomorrow.getByRole("link", { name: new RegExp(GUEST.arrivesTomorrow) });
+      const arriving = tomorrow.getByRole("link", { name: new RegExp(`^Έρχεται ${GUEST.arrivesTomorrow}`) });
       await expect(arriving).toBeVisible();
       // The stay's apartment colour chip and a sentence with the party and nights, not a code.
       await expect(arriving).toContainText(ROOM.gamma);
       await expect(arriving).toContainText("2 άτομα · 2 νύχτες");
 
-      const leaving = tomorrow.getByRole("link", { name: new RegExp(GUEST.leavesTomorrow) });
+      const leaving = tomorrow.getByRole("link", { name: new RegExp(`^Φεύγει ${GUEST.leavesTomorrow}`) }).first();
       await expect(leaving).toBeVisible();
       await expect(leaving).toContainText("Έμειναν 3 νύχτες");
       await expect(leaving).toContainText("Φεύγει");

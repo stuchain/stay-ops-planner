@@ -347,6 +347,7 @@ for (const viewport of VIEWPORTS) {
       expect(serious(await scan()), "calendar").toEqual([]);
 
       await openPanel(page, bar(room(page, ROOM.beta), GUEST.moverInBeta));
+      await showMoves(page);
       await expect(moveButton(page, ROOM.gamma)).toBeEnabled();
       expect(serious(await scan()), "calendar with the booking panel open").toEqual([]);
     });
