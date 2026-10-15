@@ -10,13 +10,15 @@ name: Post-deploy health check
 # production deployments (merges to `main`). Requires the Vercel GitHub
 # integration to be configured to emit GitHub Deployments (default behavior).
 #
-# It also runs on a schedule (every 15 minutes) as an uptime check of production's /api/health.
+# It also runs on a schedule (hourly, 05:17-19:17 UTC, so daytime in Athens) as an uptime check of
+# production's /api/health. Not at night: /api/health reads the database, and every wake-up uses
+# Neon's free compute.
 # A failed scheduled run makes GitHub email the person who last edited the cron line (and anyone
 # watching the repo's Actions). See docs/ops/monitoring.md. Needs repo secret PRODUCTION_URL.
 on:
   deployment_status:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "17 5-19 * * *"
   workflow_dispatch:
 
 permissions:

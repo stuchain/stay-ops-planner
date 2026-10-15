@@ -1,6 +1,6 @@
 name: Daily reminders
 
-# Every morning asks the app to send the daily reminder (P4-3): arrivals and departures today,
+# Every morning asks the app to sync Hosthub and then send the daily reminder (P4-3): arrivals and departures today,
 # arrivals tomorrow and bookings without an apartment, by email (Resend) and/or Telegram. 05:00 UTC is
 # 08:00 in Athens in summer and 07:00 in winter. Sent at most once a day and only when there is something
 # to say; switch it off in Dev mode > System. Logic: apps/web/src/server/reminders. Setup: docs/ops/monitoring.md.
@@ -36,7 +36,7 @@ jobs:
             echo "::notice::Not set up yet: add repo secrets PRODUCTION_URL and CRON_SECRET (docs/ops/monitoring.md). Skipping."
             exit 0
           fi
-          curl_opts=(--silent --show-error --max-time 60 --header "Authorization: Bearer ${CRON_SECRET}")
+          curl_opts=(--silent --show-error --max-time 300 --header "Authorization: Bearer ${CRON_SECRET}")
           if [[ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]]; then
             curl_opts+=(--header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
           fi
