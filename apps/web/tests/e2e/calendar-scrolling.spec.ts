@@ -87,6 +87,11 @@ async function wheel(page: Page, steps: number, dx: number): Promise<void> {
 }
 
 /** The visible month labels in the day header. */
+/** The day column at the left edge. Month names alone do not show a move: near the end of a month, both views show two months. */
+async function firstDay(page: Page): Promise<number> {
+  return grid(page).evaluate((el, w) => Math.round(el.scrollLeft / w), MONTH_DAY_WIDTH);
+}
+
 async function visibleMonths(page: Page): Promise<string> {
   return grid(page).evaluate((el) => {
     const view = el.getBoundingClientRect();
@@ -283,17 +288,17 @@ test.describe("calendar scrolling and stays far from today @calendar", () => {
   });
 
   test("moves a month with the arrows and the keyboard, and comes back with Σήμερα and T", async ({ page }) => {
-    const months = await visibleMonths(page);
+    const start = await firstDay(page);
     await page.getByRole("button", { name: "Επόμενος μήνας" }).click();
-    await expect.poll(() => visibleMonths(page)).not.toBe(months);
+    await expect.poll(() => firstDay(page)).not.toBe(start);
     await page.getByRole("button", { name: "Σήμερα", exact: true }).click();
-    await expect.poll(() => visibleMonths(page)).toBe(months);
+    await expect.poll(() => firstDay(page)).toBe(start);
 
     await grid(page).focus();
     await page.keyboard.press("ArrowLeft");
-    await expect.poll(() => visibleMonths(page)).not.toBe(months);
+    await expect.poll(() => firstDay(page)).not.toBe(start);
     await page.keyboard.press("t");
-    await expect.poll(() => visibleMonths(page)).toBe(months);
+    await expect.poll(() => firstDay(page)).toBe(start);
     await expect(bar(room(page, ROOM.alpha), GUEST.placedInAlpha)).toBeVisible();
   });
 
