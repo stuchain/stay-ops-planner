@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DomainError, isIsoDate, type IsoDate } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
+import { removeCalendarFeed } from "@/server/useCases/calendarFeed";
 import { applyPaperCalendar, previewPaperCalendar } from "@/server/useCases/paperCalendar";
 import { addFamilyMember, listFamily, setFamilyActive } from "@/server/useCases/family";
 import { adminProcedure, createTRPCRouter } from "../trpc";
@@ -11,7 +12,7 @@ const day = z
   .transform((v) => v as IsoDate);
 
 /** The Excel file as base64; the calendar file is well under 1 MB. */
-const MAX_FILE_BASE64 = 6_000_000;
+const MAX_FILE_BASE64 = 2_000_000;
 
 export const adminRouter = createTRPCRouter({
   /** Signs a user out on every device: their older sessions stop working at once. */
@@ -21,6 +22,8 @@ export const adminRouter = createTRPCRouter({
       data: { sessionVersion: { increment: 1 } },
     });
     if (found.count === 0) throw new DomainError("NOT_FOUND");
+    // The phone calendar address is a login of its own (it lists guests and phones): it stops too.
+    await removeCalendarFeed(input.userId);
     return { ok: true as const };
   }),
 

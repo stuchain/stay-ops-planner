@@ -3,6 +3,7 @@ import { DomainError } from "@stay-ops/domain";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, isAcceptablePasswordLength } from "@/modules/auth/password";
 import { loginLockSeconds, unlockLogin } from "@/modules/auth/loginThrottle";
+import { removeCalendarFeed } from "./calendarFeed";
 
 export type DevUserRow = {
   id: string;
@@ -88,6 +89,8 @@ export async function unlockUser(args: { actorUserId: string; userId: string }) 
 export async function signOutUserEverywhere(args: { actorUserId: string; userId: string }) {
   const user = await requireUser(args.userId);
   await prisma.user.update({ where: { id: user.id }, data: { sessionVersion: { increment: 1 } } });
+  // The phone calendar address is a login of its own (it lists guests and phones): it stops too.
+  await removeCalendarFeed(user.id);
   await audit({ actorUserId: args.actorUserId, userId: user.id, action: "user.sign_out_everywhere" });
   return { ok: true as const };
 }

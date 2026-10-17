@@ -9,6 +9,7 @@ import { domainErrorShape } from "@/server/api/trpc";
 import { createSessionToken, verifySessionToken } from "@/modules/auth/session";
 import { verifyAndLoadAuthContext } from "@/modules/auth/guard";
 import { classifySyncError, getSyncStatus } from "@/server/useCases/syncStatus";
+import { resolveCalendarFeedToken } from "@/server/useCases/calendarFeed";
 
 process.env.SESSION_SECRET ??= "0123456789abcdef0123456789abcdef";
 
@@ -135,9 +136,12 @@ describe("sessionVersion", () => {
     expect(verifySessionToken(token)?.sessionVersion).toBe(version);
     expect(await verifyAndLoadAuthContext(token)).not.toBeNull();
 
+    const feed = await as("operator", ids.operator!).me.createCalendarFeed();
     await as("admin", ids.admin!).admin.signOutEverywhere({ userId: ids.operator! });
 
     expect(await verifyAndLoadAuthContext(token)).toBeNull();
+    // The phone calendar address (guest names and phones) stops with the sessions.
+    expect(await resolveCalendarFeedToken(feed.path.replace(/^\/feed\/|\.ics$/g, ""))).toBeNull();
     const fresh = createSessionToken(ids.operator!, "operator", Date.now(), version + 1).token;
     expect(await verifyAndLoadAuthContext(fresh)).not.toBeNull();
   });

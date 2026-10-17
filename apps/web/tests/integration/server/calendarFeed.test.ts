@@ -83,6 +83,20 @@ describe("calendar feed address", () => {
     expect(await resolveCalendarFeedToken(tokenOf(second.path))).toBeNull();
   });
 
+  it("keeps the address encrypted in the database, and still accepts one stored before that", async () => {
+    const u = await user();
+    const feed = await createCalendarFeed(u.id);
+    const row = await prisma.setting.findUniqueOrThrow({ where: { key: `calendarFeed:${u.id}` } });
+    expect(JSON.stringify(row)).not.toContain(tokenOf(feed.path).split(".")[1]);
+
+    const legacy = `${u.id}.${"a".repeat(43)}`;
+    await prisma.setting.update({
+      where: { key: `calendarFeed:${u.id}` },
+      data: { value: { token: legacy, createdAt: feed.createdAt } },
+    });
+    expect(await resolveCalendarFeedToken(legacy)).toEqual({ userId: u.id, locale: "el" });
+  });
+
   it("rejects made-up, damaged and another user's tokens, and users who left", async () => {
     const a = await user();
     const b = await user();

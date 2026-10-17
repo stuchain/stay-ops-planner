@@ -5,7 +5,7 @@ import { isIsoDate, type IsoDate, type PaperNight } from "@stay-ops/domain";
  * Reads the family's calendar sheet (Φύλλο1 of imerologio-2026.xlsx). Its layout, from the file itself:
  * - two months side by side; each month starts with a banner row "ΙΑΝΟΥΑΡΙΟΣ 2026" and has one row per week;
  * - each day is a block of 4 columns, one per apartment in the calendar's order (Onar, Cosmos, Iris, Helios);
- * - the first column of a block also holds the day number: "1" when free, "1  TODNER  2" when Onar is taken;
+ * - the first column of a block also holds the day number: "1" when free, "1  SMITH  2" when Onar is taken;
  * - a guest's name is written in every night's cell (not on the check-out day), with the number of guests.
  */
 
@@ -79,6 +79,8 @@ export async function readCalendarSheet(file: Buffer | ArrayBuffer): Promise<Pap
   }
   const sheet = workbook.getWorksheet("Φύλλο1") ?? workbook.worksheets[0];
   if (!sheet) throw new CalendarSheetError("no sheet");
+  // A year of the paper calendar is well under a thousand rows; refuse anything far bigger before walking it.
+  if (sheet.rowCount > 5_000) throw new CalendarSheetError("too many rows");
 
   const text = (row: number, column: number) => cellText(sheet.getCell(row, column).value);
 

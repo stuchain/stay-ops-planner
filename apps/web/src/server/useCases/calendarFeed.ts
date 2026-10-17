@@ -7,6 +7,7 @@ import el from "../../../messages/el.json";
 import en from "../../../messages/en.json";
 import { prisma } from "@/lib/prisma";
 import { resolveHosthubApiToken } from "@/modules/integrations/hosthubToken";
+import { decryptSecret, encryptSecret } from "@/modules/secrets/crypto";
 import { buildIcs } from "@/server/calendarFeed/ics";
 import { hosthubSource } from "@/server/sync/hosthubSource";
 import { dbDateToIso, isoToDbDate, todayIso } from "@/server/time";
@@ -17,11 +18,17 @@ import { syncHosthub } from "./syncHosthub";
 /**
  * The phone calendar feed: a private address per user that calendar apps (iPhone, Google) subscribe to.
  * The token is the only key, so it is long and random; making a new one or switching it off stops the old
- * address at once. Stored in `settings` under `calendarFeed:<userId>`, so Settings can show it again.
+ * address at once. Stored in `settings` under `calendarFeed:<userId>`, encrypted (AES-256-GCM, like the Hosthub
+ * key) so a copy of the database or a backup does not hand out the address; Settings can still show it again.
  */
 const KEY_PREFIX = "calendarFeed:";
 
-const storedSchema = z.object({ token: z.string().min(1), createdAt: z.string() });
+const blobSchema = z.object({ ciphertext: z.string(), iv: z.string(), tag: z.string() });
+/** `token` is how addresses made before 17 Oct 2026 were kept; they keep working until replaced. */
+const storedSchema = z.union([
+  z.object({ enc: blobSchema, createdAt: z.string() }),
+  z.object({ token: z.string().min(1), createdAt: z.string() }),
+]);
 
 /** The address path; the app adds its own origin. */
 export function calendarFeedPath(token: string): string {
@@ -30,9 +37,16 @@ export function calendarFeedPath(token: string): string {
 
 export type CalendarFeedInfo = { path: string; createdAt: string } | null;
 
-async function stored(userId: string): Promise<z.infer<typeof storedSchema> | null> {
+async function stored(userId: string): Promise<{ token: string; createdAt: string } | null> {
   const parsed = storedSchema.safeParse(await readSetting(KEY_PREFIX + userId));
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) return null;
+  if ("token" in parsed.data) return parsed.data;
+  try {
+    return { token: decryptSecret(parsed.data.enc), createdAt: parsed.data.createdAt };
+  } catch {
+    // The encryption key changed: the old address can't be checked, so it simply stops working.
+    return null;
+  }
 }
 
 export async function getCalendarFeed(userId: string): Promise<CalendarFeedInfo> {
@@ -47,7 +61,7 @@ export async function createCalendarFeed(
 ): Promise<NonNullable<CalendarFeedInfo>> {
   const token = `${userId}.${randomBytes(32).toString("base64url")}`;
   const createdAt = now.toISOString();
-  await writeSetting(KEY_PREFIX + userId, { token, createdAt });
+  await writeSetting(KEY_PREFIX + userId, { enc: encryptSecret(token), createdAt });
   return { path: calendarFeedPath(token), createdAt };
 }
 

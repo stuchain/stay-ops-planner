@@ -686,7 +686,7 @@
       "savePassword": "Save password",
       "passwordSaved": "The new password was saved.",
       "signOutTitle": "Sign out everywhere",
-      "signOutText": "The user will have to sign in again on every device.",
+      "signOutText": "The user will have to sign in again on every device, and their phone calendar address stops working.",
       "signOut": "Sign out everywhere",
       "signOutConfirm": "Yes, sign out",
       "cancel": "Cancel",
