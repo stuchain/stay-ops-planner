@@ -113,4 +113,26 @@ describe("auth.login", () => {
     expect(await prisma.loginAttempt.count({ where: { email: target, succeeded: false } })).toBeLessThanOrEqual(5);
     await prisma.loginAttempt.deleteMany({ where: { email: target } });
   });
+
+  it("blocks only the IP that guessed wrong, so a stranger can't lock the owner out", async () => {
+    const target = "owner@example.com";
+    await prisma.loginAttempt.deleteMany({ where: { email: target } });
+    await prisma.user.upsert({
+      where: { email: target },
+      update: { passwordHash: await bcrypt.hash(password, 4), isActive: true },
+      create: { email: target, passwordHash: await bcrypt.hash(password, 4), isActive: true },
+    });
+    const attempt = (ip: string, pw: string) =>
+      POST_LOGIN(
+        new Request("http://localhost/api/auth/login", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-forwarded-for": ip },
+          body: JSON.stringify({ email: target, password: pw }),
+        }),
+      ).then((r) => r.status);
+    for (let i = 0; i < 6; i++) await attempt("198.51.100.7", "wrong-guess");
+    expect(await attempt("198.51.100.7", password)).toBe(429);
+    expect(await attempt("192.0.2.44", password)).toBe(200);
+    await prisma.loginAttempt.deleteMany({ where: { email: target } });
+  });
 });

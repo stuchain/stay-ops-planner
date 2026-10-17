@@ -3,7 +3,10 @@ import { AuthError } from "./errors";
 
 /** Both users share one home IP, so the per-IP limit is well above the per-email one. */
 export const LOGIN_IP_LIMIT = 30;
+/** Wrong passwords for one email from one IP. Only that IP is blocked, so a stranger can't lock the owner out. */
 export const LOGIN_EMAIL_LIMIT = 5;
+/** Wrong passwords for one email from all IPs together: the cap on guesses spread over many machines. */
+export const LOGIN_EMAIL_ANY_IP_LIMIT = 50;
 /** Same window as `assertLoginAllowed` (used by diagnostics). */
 export const LOGIN_WINDOW_MS = 15 * 60_000;
 
@@ -17,7 +20,10 @@ export function secondsUntilUnlocked(times: readonly Date[], limit: number, now 
   return Math.max(1, Math.ceil((decisive.getTime() + LOGIN_WINDOW_MS - now) / 1000));
 }
 
-async function failureTimes(where: { email: string } | { ip: string }, now: number): Promise<Date[]> {
+async function failureTimes(
+  where: { email: string } | { ip: string } | { email: string; ip: string },
+  now: number,
+): Promise<Date[]> {
   const rows = await prisma.loginAttempt.findMany({
     where: { ...where, succeeded: false, createdAt: { gte: new Date(now - LOGIN_WINDOW_MS) } },
     select: { createdAt: true },
@@ -36,12 +42,15 @@ export async function loginLockSeconds(
   now = Date.now(),
   pending = 0,
 ): Promise<number | null> {
-  const [emailTimes, ipTimes] = await Promise.all([
+  const [emailTimes, emailIpTimes, ipTimes] = await Promise.all([
     failureTimes({ email: emailNorm }, now),
+    // Without an IP (Dev mode's user list) the email's own failures stand in for "this IP".
+    ip ? failureTimes({ email: emailNorm, ip }, now) : failureTimes({ email: emailNorm }, now),
     ip ? failureTimes({ ip }, now) : Promise.resolve([] as Date[]),
   ]);
   const waits = [
-    secondsUntilUnlocked(emailTimes, LOGIN_EMAIL_LIMIT + pending, now),
+    secondsUntilUnlocked(emailTimes, LOGIN_EMAIL_ANY_IP_LIMIT + pending, now),
+    secondsUntilUnlocked(emailIpTimes, LOGIN_EMAIL_LIMIT + pending, now),
     secondsUntilUnlocked(ipTimes, LOGIN_IP_LIMIT + pending, now),
   ].filter((n): n is number => n !== null);
   return waits.length ? Math.max(...waits) : null;
@@ -53,7 +62,10 @@ export async function loginLockSeconds(
  * (`clearLoginFailures`); a blocked attempt drops it (`dropPendingLoginAttempt`).
  */
 export async function recordPendingLoginAttempt(emailNorm: string, ip: string): Promise<string> {
-  const row = await prisma.loginAttempt.create({ data: { email: emailNorm, ip, succeeded: false }, select: { id: true } });
+  const row = await prisma.loginAttempt.create({
+    data: { email: emailNorm, ip, succeeded: false },
+    select: { id: true },
+  });
   return row.id;
 }
 
