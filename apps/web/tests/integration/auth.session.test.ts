@@ -28,9 +28,7 @@ describe("auth.session", () => {
 
     const loginModule = await import("../../src/app/api/auth/login/route");
     const meModule = await import("../../src/app/api/auth/me/route");
-    const logoutModule = await import(
-      "../../src/app/api/auth/logout/route"
-    );
+    const logoutModule = await import("../../src/app/api/auth/logout/route");
 
     POST_LOGIN = loginModule.POST;
     GET_ME = meModule.GET;
@@ -60,6 +58,7 @@ describe("auth.session", () => {
       }),
     );
     expect(meRes1.status).toBe(200);
+    const copiedCookie = jar.getCookieHeader();
 
     const logoutRes = await POST_LOGOUT(
       new Request("http://localhost/api/auth/logout", {
@@ -71,6 +70,12 @@ describe("auth.session", () => {
     );
     expect(logoutRes.status).toBe(204);
     jar.applySetCookieHeader(logoutRes);
+
+    // A copy of the cookie (another device, a stolen one) stops working too.
+    const meCopied = await GET_ME(
+      new Request("http://localhost/api/auth/me", { method: "GET", headers: { cookie: copiedCookie } }),
+    );
+    expect(meCopied.status).toBe(401);
     expect(jar.getCookieHeader()).toBe("");
 
     const meRes2 = await GET_ME(
@@ -84,4 +89,3 @@ describe("auth.session", () => {
     expect(json.error.code).toBe("UNAUTHORIZED");
   });
 });
-
