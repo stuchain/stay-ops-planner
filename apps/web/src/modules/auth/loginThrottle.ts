@@ -26,21 +26,43 @@ async function failureTimes(where: { email: string } | { ip: string }, now: numb
   return rows.map((r) => r.createdAt);
 }
 
-/** Seconds the sign-in with this email stays blocked (the longer of the email and IP blocks), or null. */
-export async function loginLockSeconds(emailNorm: string, ip?: string, now = Date.now()): Promise<number | null> {
+/**
+ * Seconds the sign-in with this email stays blocked (the longer of the email and IP blocks), or null.
+ * `pending` counts failures already written for the attempt being checked (see `recordPendingLoginAttempt`).
+ */
+export async function loginLockSeconds(
+  emailNorm: string,
+  ip?: string,
+  now = Date.now(),
+  pending = 0,
+): Promise<number | null> {
   const [emailTimes, ipTimes] = await Promise.all([
     failureTimes({ email: emailNorm }, now),
     ip ? failureTimes({ ip }, now) : Promise.resolve([] as Date[]),
   ]);
   const waits = [
-    secondsUntilUnlocked(emailTimes, LOGIN_EMAIL_LIMIT, now),
-    secondsUntilUnlocked(ipTimes, LOGIN_IP_LIMIT, now),
+    secondsUntilUnlocked(emailTimes, LOGIN_EMAIL_LIMIT + pending, now),
+    secondsUntilUnlocked(ipTimes, LOGIN_IP_LIMIT + pending, now),
   ].filter((n): n is number => n !== null);
   return waits.length ? Math.max(...waits) : null;
 }
 
-export async function assertLoginAllowed(emailNorm: string, ip: string): Promise<void> {
-  const wait = await loginLockSeconds(emailNorm, ip);
+/**
+ * Writes the attempt as a failure before the password is checked, so guesses sent all at once count against
+ * each other instead of all passing the check before any failure is recorded. Success clears it
+ * (`clearLoginFailures`); a blocked attempt drops it (`dropPendingLoginAttempt`).
+ */
+export async function recordPendingLoginAttempt(emailNorm: string, ip: string): Promise<string> {
+  const row = await prisma.loginAttempt.create({ data: { email: emailNorm, ip, succeeded: false }, select: { id: true } });
+  return row.id;
+}
+
+export async function dropPendingLoginAttempt(id: string): Promise<void> {
+  await prisma.loginAttempt.deleteMany({ where: { id } });
+}
+
+export async function assertLoginAllowed(emailNorm: string, ip: string, pending = 0): Promise<void> {
+  const wait = await loginLockSeconds(emailNorm, ip, Date.now(), pending);
   if (wait === null) return;
   throw new AuthError({
     code: "RATE_LIMITED",

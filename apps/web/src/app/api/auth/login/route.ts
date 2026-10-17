@@ -6,7 +6,12 @@ import { getClientIp } from "@/lib/clientIp";
 import { prisma } from "@/lib/prisma";
 import { LoginBodySchema, loginWithEmailPassword } from "@/modules/auth/service";
 import { AuthError } from "@/modules/auth/errors";
-import { assertLoginAllowed, clearLoginFailures } from "@/modules/auth/loginThrottle";
+import {
+  assertLoginAllowed,
+  clearLoginFailures,
+  dropPendingLoginAttempt,
+  recordPendingLoginAttempt,
+} from "@/modules/auth/loginThrottle";
 import { setSessionCookie } from "@/modules/auth/session";
 
 function emailNormFromBody(email: string) {
@@ -33,9 +38,11 @@ async function postLogin(request: Request) {
   const emailNorm = emailNormFromBody(parsed.data.email);
   const ip = getClientIp(request);
 
+  const pendingId = await recordPendingLoginAttempt(emailNorm, ip);
   try {
-    await assertLoginAllowed(emailNorm, ip);
+    await assertLoginAllowed(emailNorm, ip, 1);
   } catch (err) {
+    await dropPendingLoginAttempt(pendingId).catch(() => undefined);
     if (err instanceof AuthError && err.code === "RATE_LIMITED") {
       try {
         await prisma.$transaction(async (tx) => {
@@ -92,10 +99,8 @@ async function postLogin(request: Request) {
     if (err instanceof AuthError) {
       if (err.code === "INVALID_CREDENTIALS") {
         try {
+          // The failure itself was written before the check (recordPendingLoginAttempt).
           await prisma.$transaction(async (tx) => {
-            await tx.loginAttempt.create({
-              data: { email: emailNorm, ip, succeeded: false },
-            });
             await writeAuditSnapshot(tx, {
               entityType: "auth",
               entityId: emailHash(emailNorm),
@@ -110,8 +115,10 @@ async function postLogin(request: Request) {
         }
         return respondAuthError(request, err);
       }
+      await dropPendingLoginAttempt(pendingId).catch(() => undefined);
       return respondAuthError(request, err);
     }
+    await dropPendingLoginAttempt(pendingId).catch(() => undefined);
     throw err;
   }
 }

@@ -60,9 +60,9 @@ describe("auth.login", () => {
     expect(meRes.status).toBe(200);
     const json = (await meRes.json()) as { data: { user: { email: string; uiLocale?: string } } };
     expect(json.data.user.email).toBe(email);
-    expect(json.data.user.uiLocale === "en" || json.data.user.uiLocale === "el" || json.data.user.uiLocale == null).toBe(
-      true,
-    );
+    expect(
+      json.data.user.uiLocale === "en" || json.data.user.uiLocale === "el" || json.data.user.uiLocale == null,
+    ).toBe(true);
   });
 
   it("accepts login when submitted email casing differs from the stored row", async () => {
@@ -87,5 +87,30 @@ describe("auth.login", () => {
     const json = (await loginRes.json()) as { data: { user: { email: string } } };
     expect(json.data.user.email).toBe(storedEmail);
   });
-});
 
+  it("counts wrong passwords sent all at once against each other", async () => {
+    const target = "burst@example.com";
+    await prisma.loginAttempt.deleteMany({ where: { email: target } });
+    await prisma.user.upsert({
+      where: { email: target },
+      update: { passwordHash: await bcrypt.hash(password, 4), isActive: true },
+      create: { email: target, passwordHash: await bcrypt.hash(password, 4), isActive: true },
+    });
+    const statuses = await Promise.all(
+      Array.from({ length: 12 }, () =>
+        POST_LOGIN(
+          new Request("http://localhost/api/auth/login", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.9" },
+            body: JSON.stringify({ email: target, password: "wrong-guess" }),
+          }),
+        ).then((r) => r.status),
+      ),
+    );
+    expect(statuses.filter((s) => s === 401).length).toBeLessThanOrEqual(5);
+    expect(statuses.filter((s) => s === 429).length).toBeGreaterThanOrEqual(7);
+    // The blocked tries leave no rows of their own behind: the block lifts on time.
+    expect(await prisma.loginAttempt.count({ where: { email: target, succeeded: false } })).toBeLessThanOrEqual(5);
+    await prisma.loginAttempt.deleteMany({ where: { email: target } });
+  });
+});
