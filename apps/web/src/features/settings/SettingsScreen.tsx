@@ -10,6 +10,7 @@ import { PageHeader } from "@/ui/PageHeader";
 import { Skeleton } from "@/ui/Skeleton";
 import { HosthubTokenCard } from "@/features/dev/HosthubScreen";
 import { CalendarFeedCard } from "./CalendarFeedCard";
+import { EmailCard } from "./EmailCard";
 import { DevModeCard } from "./DevModeCard";
 import { FamilyCard } from "./FamilyCard";
 import { HosthubCard } from "./HosthubCard";
@@ -50,6 +51,7 @@ export function SettingsScreen() {
           {/* The phone calendar lists every guest with their phone: not for family accounts. */}
           {me.data.role === "viewer" ? null : <CalendarFeedCard />}
           <PasswordCard />
+          <EmailCard />
           <LanguageCard locale={me.data.locale === "en" ? "en" : "el"} />
           {me.data.role === "admin" ? (
             <>

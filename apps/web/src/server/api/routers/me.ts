@@ -54,6 +54,28 @@ export const meRouter = createTRPCRouter({
       return { locale: user.uiLocale, textSize: user.textSize, theme: user.theme };
     }),
 
+  /**
+   * The signed-in user changes the e-mail they sign in with; the current password must match. The address is
+   * only a login name (nothing is sent to it), so one that isn't public stops strangers guessing at the login.
+   */
+  changeEmail: userProcedure
+    .input(z.object({ currentPassword: z.string().min(1).max(200), newEmail: z.string().trim().email().max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.user.userId },
+        select: { passwordHash: true },
+      });
+      if (!user) throw new DomainError("UNAUTHORIZED");
+      if (!(await comparePassword(input.currentPassword, user.passwordHash))) throw new DomainError("WRONG_PASSWORD");
+      const email = input.newEmail.toLowerCase();
+      const taken = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM users WHERE LOWER(TRIM(email)) = ${email} AND id <> ${ctx.user.userId} LIMIT 1
+      `;
+      if (taken.length > 0) throw new DomainError("EMAIL_TAKEN");
+      await prisma.user.update({ where: { id: ctx.user.userId }, data: { email } });
+      return { ok: true as const, email };
+    }),
+
   /** The signed-in user changes their own password; the current one must match. */
   changePassword: userProcedure
     .input(z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(1) }))

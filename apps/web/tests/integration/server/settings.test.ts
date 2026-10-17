@@ -169,3 +169,27 @@ describe("Hosthub banner condition", () => {
     expect((await getSyncStatus()).problem).toBe("none");
   });
 });
+
+describe("me.changeEmail", () => {
+  it("changes the sign-in e-mail with the current password, refusing a wrong password or a taken address", async () => {
+    await prisma.user.deleteMany({ where: { email: { in: ["p24-mail@example.com", "secret-login@example.com"] } } });
+    const u = await prisma.user.create({
+      data: { email: "p24-mail@example.com", passwordHash: await bcrypt.hash(OLD, 4), role: "admin", isActive: true },
+    });
+    const me = as("admin", u.id);
+
+    expect(
+      (await failure(me.me.changeEmail({ currentPassword: "nope", newEmail: "x@example.com" }))).domain,
+    ).toMatchObject({ code: "WRONG_PASSWORD" });
+    expect(
+      (await failure(me.me.changeEmail({ currentPassword: OLD, newEmail: "P24-Operator@example.com" }))).domain,
+    ).toMatchObject({ code: "EMAIL_TAKEN" });
+
+    expect(await me.me.changeEmail({ currentPassword: OLD, newEmail: " Secret-Login@Example.com " })).toEqual({
+      ok: true,
+      email: "secret-login@example.com",
+    });
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).email).toBe("secret-login@example.com");
+    await prisma.user.delete({ where: { id: u.id } });
+  });
+});

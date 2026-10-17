@@ -809,6 +809,16 @@
       "fillAll": "Fill in all three fields.",
       "done": "The password was changed."
     },
+    "email": {
+      "title": "Sign-in e-mail",
+      "why": "Nothing is sent to this address, so it can be one nobody else knows. Then a stranger can't block or guess your sign-in.",
+      "next": "New sign-in e-mail",
+      "password": "Current password",
+      "submit": "Change e-mail",
+      "saving": "Changing the e-mail…",
+      "fillAll": "Fill in both fields.",
+      "done": "Done. From now on, sign in with the new e-mail."
+    },
     "dev": {
       "title": "Developer mode",
       "description": "For whoever builds and checks the app. It does not change what you are allowed to do.",
