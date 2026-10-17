@@ -75,7 +75,8 @@ export function notifiersFromEnv(
  */
 export async function deliver(notifiers: Notifier[], alert: Alert): Promise<"sent" | "failed" | "unconfigured"> {
   if (notifiers.length === 0) {
-    log("warn", "alert_not_delivered_no_notifier", { subject: alert.subject, body: alert.body });
+    // Only the subject: bodies can hold guest names, and Vercel logs are kept outside the app.
+    log("warn", "alert_not_delivered_no_notifier", { subject: alert.subject });
     return "unconfigured";
   }
   let sent = false;

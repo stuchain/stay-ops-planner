@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import {
+  scrubBreadcrumb,
   scrubSentryEvent,
   sentryEnvironment,
   sentryReleaseFallback,
@@ -18,5 +19,11 @@ Sentry.init({
   sendDefaultPii: false,
   beforeSend(event) {
     return scrubSentryEvent(event);
+  },
+  beforeSendTransaction(event) {
+    return scrubSentryEvent(event);
+  },
+  beforeBreadcrumb(breadcrumb) {
+    return scrubBreadcrumb(breadcrumb);
   },
 });

@@ -19,12 +19,21 @@ const SENSITIVE_KEY_RE = new RegExp(
     "access_token",
     "refresh_token",
     "client_secret",
+    // Guest personal data (names, phones, e-mails, passports) must never reach logs or Sentry.
+    "guest",
+    "phone",
+    "email",
+    "passport",
+    "identification",
   ].join("|"),
   "i",
 );
 
+/** Keys that carry free text typed by a user (search box, tRPC input), matched exactly. */
+const SENSITIVE_EXACT_KEYS = new Set(["q", "text", "input", "query", "query_string"]);
+
 function isSensitiveKey(key: string): boolean {
-  return SENSITIVE_KEY_RE.test(key);
+  return SENSITIVE_KEY_RE.test(key) || SENSITIVE_EXACT_KEYS.has(key.toLowerCase());
 }
 
 export function redactForTelemetry(value: unknown): unknown {

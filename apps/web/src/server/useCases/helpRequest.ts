@@ -33,9 +33,11 @@ export async function sendHelpRequest(
   });
   if (recent >= HELP_PER_HOUR) throw new DomainError("TOO_MANY_REQUESTS");
 
+  // A search address holds what was typed (a guest's name or phone): keep the page, drop that.
+  const page = input.page.replace(/([?&]q=)[^&#]*/g, "$1…");
   const lines = [
     `From: ${user.email}`,
-    `Page: ${input.page}`,
+    `Page: ${page}`,
     `When: ${now.toISOString()}`,
     "",
     input.message.trim() ? `Message:\n${input.message.trim()}` : "Message: (none)",
@@ -56,7 +58,7 @@ export async function sendHelpRequest(
       entityType: "user",
       entityId: user.id,
       before: null,
-      after: { page: input.page, sentryEventId: input.sentryEventId },
+      after: { page, sentryEventId: input.sentryEventId },
     });
   }
   return { status };
