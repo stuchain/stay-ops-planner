@@ -77,15 +77,19 @@ function sameToken(a: string, b: string): boolean {
   return timingSafeEqual(digest(a), digest(b));
 }
 
-/** The user a feed token belongs to, or null when it is unknown, replaced, switched off or the user left. */
+/** The user a feed token belongs to, or null when it is unknown, replaced, switched off, the user left or is family. */
 export async function resolveCalendarFeedToken(token: string): Promise<{ userId: string; locale: "el" | "en" } | null> {
   const match = TOKEN_SHAPE.exec(token);
   const userId = match?.[1];
   if (!userId) return null;
   const row = await stored(userId);
   if (!row || !sameToken(row.token, token)) return null;
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isActive: true, uiLocale: true } });
-  if (!user?.isActive) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isActive: true, uiLocale: true, role: true },
+  });
+  // Family (viewer) accounts don't get the feed: it lists every guest with their phone.
+  if (!user?.isActive || user.role === "viewer") return null;
   return { userId, locale: user.uiLocale === "en" ? "en" : "el" };
 }
 

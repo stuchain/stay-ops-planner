@@ -97,6 +97,13 @@ describe("calendar feed address", () => {
     expect(await resolveCalendarFeedToken(legacy)).toEqual({ userId: u.id, locale: "el" });
   });
 
+  it("is not served to family (viewer) accounts", async () => {
+    const u = await user();
+    const feed = await createCalendarFeed(u.id);
+    await prisma.user.update({ where: { id: u.id }, data: { role: "viewer" } });
+    expect(await resolveCalendarFeedToken(tokenOf(feed.path))).toBeNull();
+  });
+
   it("rejects made-up, damaged and another user's tokens, and users who left", async () => {
     const a = await user();
     const b = await user();

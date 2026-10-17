@@ -47,7 +47,8 @@ export function SettingsScreen() {
       ) : (
         <>
           <TextSizeCard textSize={toTextSize(me.data.textSize)} />
-          <CalendarFeedCard />
+          {/* The phone calendar lists every guest with their phone: not for family accounts. */}
+          {me.data.role === "viewer" ? null : <CalendarFeedCard />}
           <PasswordCard />
           <LanguageCard locale={me.data.locale === "en" ? "en" : "el"} />
           {me.data.role === "admin" ? (
