@@ -1,11 +1,6 @@
 import { HosthubReservationPageSchema, type HosthubReservationPage } from "./types.dto.js";
 import { normalizeHosthubReservationPagePayload, parseHosthubGenericDataList } from "./normalize.js";
-import {
-  errorFromHttpStatus,
-  hosthubError,
-  isRetryableHosthubError,
-  type HosthubClientError,
-} from "./errors.js";
+import { errorFromHttpStatus, hosthubError, isRetryableHosthubError, type HosthubClientError } from "./errors.js";
 
 export const STAY_OPS_SYNC_USER_AGENT = "stay-ops-planner-sync/0.1";
 
@@ -140,7 +135,9 @@ export class HosthubClient {
   private resolveRequestUrl(nextPageUrl: string): string {
     const t = nextPageUrl.trim();
     if (t.startsWith("http://") || t.startsWith("https://")) {
-      return t;
+      // The API token goes with every request: never follow a "next" link off the Hosthub host.
+      const u = new URL(t);
+      return u.origin === this.baseOrigin ? t : new URL(`${u.pathname}${u.search}`, this.baseOrigin).toString();
     }
     if (t.startsWith("?")) {
       const baseListPath = this.listReservationsPath.startsWith("/")

@@ -49,6 +49,7 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   // Inlined into the browser bundle so client events carry the same release as the uploaded source maps.
   env: sentryRelease ? { NEXT_PUBLIC_SENTRY_RELEASE: sentryRelease } : {},
   transpilePackages: ["@stay-ops/shared", "@stay-ops/audit"],
