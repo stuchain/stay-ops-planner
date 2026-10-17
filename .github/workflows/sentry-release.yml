@@ -38,10 +38,14 @@ jobs:
 
       - name: Require Sentry upload secrets on tag builds
         if: github.ref_type == 'tag'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
-          test -n "${{ secrets.SENTRY_AUTH_TOKEN }}"
-          test -n "${{ secrets.SENTRY_ORG }}"
-          test -n "${{ secrets.SENTRY_PROJECT }}"
+          test -n "$SENTRY_AUTH_TOKEN"
+          test -n "$SENTRY_ORG"
+          test -n "$SENTRY_PROJECT"
 
       - name: Build @stay-ops/shared
         run: pnpm --filter @stay-ops/shared build

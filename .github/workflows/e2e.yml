@@ -142,6 +142,7 @@ jobs:
         if: failure()
         with:
           name: playwright-output
+          retention-days: 7
           path: |
             apps/web/test-results/
             apps/web/playwright-report/

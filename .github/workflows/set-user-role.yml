@@ -30,13 +30,16 @@ jobs:
     environment: production
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      SET_ROLE_EMAIL: ${{ inputs.email }}
       SET_ROLE: ${{ inputs.role }}
 
     steps:
-      # The repository is public, so its logs are too: hide the e-mail from every later line of the log.
+      # The repository is public, so its logs are too. A job `env:` value is printed in every step's header
+      # before any mask exists, so the e-mail is read from the event file, masked, and only then exported.
       - name: Mask the e-mail in the log
-        run: echo "::add-mask::$SET_ROLE_EMAIL"
+        run: |
+          email="$(jq -r '.inputs.email' "$GITHUB_EVENT_PATH")"
+          echo "::add-mask::$email"
+          echo "SET_ROLE_EMAIL=$email" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v4
 

@@ -28,8 +28,9 @@ jobs:
         run: |
           set -euo pipefail
           target="${READINESS_URL// /}"
-          if [[ "$target" != http://* && "$target" != https://* ]]; then
-            echo "::error::readiness_url must start with http:// or https://"
+          # The bypass secret goes with the request, so only Vercel deployments may be probed.
+          if [[ ! "$target" =~ ^https://[A-Za-z0-9.-]+\.vercel\.app(/|$) ]]; then
+            echo "::error::readiness_url must be an https://….vercel.app address"
             exit 1
           fi
           echo "Probing $target"
