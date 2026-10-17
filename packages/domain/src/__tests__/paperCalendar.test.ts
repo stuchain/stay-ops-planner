@@ -68,15 +68,15 @@ describe("paperStays", () => {
 
   it("starts a new stay for another name, a gap, or a guest back later; ignores cells without a name", () => {
     const stays = paperStays([
-      ...nights(0, "2026-07-01", 2, "TODNER 2"),
+      ...nights(0, "2026-07-01", 2, "SMITH 2"),
       ...nights(0, "2026-07-03", 2, "MEIER"),
       ...nights(0, "2026-07-08", 1, "MEIER"),
       ...nights(1, "2026-07-01", 1, " 5 "),
-      ...nights(1, "2026-07-02", 1, "TODNER"),
+      ...nights(1, "2026-07-02", 1, "SMITH"),
     ]);
     expect(stays.map((s) => [s.name, s.start, s.end, s.parts.length])).toEqual([
-      ["TODNER", "2026-07-01", "2026-07-03", 1],
-      ["TODNER", "2026-07-02", "2026-07-03", 1],
+      ["SMITH", "2026-07-01", "2026-07-03", 1],
+      ["SMITH", "2026-07-02", "2026-07-03", 1],
       ["MEIER", "2026-07-03", "2026-07-05", 1],
       ["MEIER", "2026-07-08", "2026-07-09", 1],
     ]);

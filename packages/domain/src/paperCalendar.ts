@@ -2,7 +2,7 @@ import { addDays, daysBetween, type IsoDate } from "./stay.js";
 
 /**
  * The family's own calendar in Excel (Φύλλο1): every night, each apartment's cell holds the guest's name and how
- * many they are ("TODNER 2"). This turns those cells into stays and finds the booking each one is.
+ * many they are ("SMITH 2"). This turns those cells into stays and finds the booking each one is.
  */
 
 /** One filled cell: the text written in an apartment's column (0 = the first apartment) for one night. */

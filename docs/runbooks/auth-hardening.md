@@ -89,7 +89,7 @@ The API still returns a generic **401** (`INVALID_CREDENTIALS`) for â€œno userâ€
 ### 1. Read-only CLI (`DATABASE_URL` from repo `.env`)
 
 ```powershell
-$env:CHECK_USER_EMAIL = "info@heavensdoorsamos.gr"
+$env:CHECK_USER_EMAIL = "you@example.com"
 corepack pnpm --filter @stay-ops/db run check-user
 ```
 
@@ -105,7 +105,7 @@ Interpretation:
 With `pnpm dev` and `NODE_ENV` not `production`:
 
 ```http
-GET /api/auth/_diag?email=info@heavensdoorsamos.gr
+GET /api/auth/_diag?email=you@example.com
 ```
 
 Response `data`: `exists`, `isActive`, `role`, `recentFailedAttempts`, `lockedOut` (same semantics as above; no passwords or hashes).
@@ -113,7 +113,7 @@ Response `data`: `exists`, `isActive`, `role`, `recentFailedAttempts`, `lockedOu
 ### 3. Upsert password and re-enable (writes; use only on the DB you intend)
 
 ```powershell
-$env:CREATE_USER_EMAIL = "info@heavensdoorsamos.gr"
+$env:CREATE_USER_EMAIL = "you@example.com"
 $env:CREATE_USER_PASSWORD = "<at least 8 characters>"
 $env:CREATE_USER_ROLE = "admin"   # or operator | viewer
 corepack pnpm --filter @stay-ops/db run create-user

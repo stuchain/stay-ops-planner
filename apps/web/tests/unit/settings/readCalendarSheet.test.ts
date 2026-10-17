@@ -11,8 +11,8 @@ describe("readCalendarSheet", () => {
         { date: "2026-07-08", apartment: 3, text: "STELIOS 2" },
         { date: "2026-07-09", apartment: 2, text: "STELIOS 2" },
         { date: "2026-07-10", apartment: 2, text: "STELIOS 2" },
-        { date: "2026-08-01", apartment: 0, text: "TODNER 2" },
-        { date: "2026-08-02", apartment: 0, text: "TODNER 2" },
+        { date: "2026-08-01", apartment: 0, text: "SMITH 2" },
+        { date: "2026-08-02", apartment: 0, text: "SMITH 2" },
         { date: "2026-08-02", apartment: 1, text: "Μαρία" },
       ],
       { bannerYear: { 8: 2025 }, noDayNumber: ["2026-08-02"], stray: "You" },
@@ -22,13 +22,13 @@ describe("readCalendarSheet", () => {
       { date: "2026-07-08", apartment: 3, text: "STELIOS 2" },
       { date: "2026-07-09", apartment: 2, text: "STELIOS 2" },
       { date: "2026-07-10", apartment: 2, text: "STELIOS 2" },
-      { date: "2026-08-01", apartment: 0, text: "TODNER 2" },
-      { date: "2026-08-02", apartment: 0, text: "TODNER 2" },
+      { date: "2026-08-01", apartment: 0, text: "SMITH 2" },
+      { date: "2026-08-02", apartment: 0, text: "SMITH 2" },
       { date: "2026-08-02", apartment: 1, text: "Μαρία" },
     ]);
     expect(paperStays(nights).map((s) => [s.name, s.start, s.end, s.parts.length])).toEqual([
       ["STELIOS", "2026-07-08", "2026-07-11", 2],
-      ["TODNER", "2026-08-01", "2026-08-03", 1],
+      ["SMITH", "2026-08-01", "2026-08-03", 1],
       ["Μαρία", "2026-08-02", "2026-08-03", 1],
     ]);
   });
