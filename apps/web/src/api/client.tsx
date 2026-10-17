@@ -2,7 +2,7 @@
 
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createTRPCClient, httpBatchLink, type TRPCLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink, splitLink, type TRPCLink } from "@trpc/client";
 import { observable, type Unsubscribable } from "@trpc/server/observable";
 import { createTRPCContext } from "@trpc/tanstack-react-query";
 import { useEffect, useState, type ReactNode } from "react";
@@ -68,7 +68,17 @@ export const sessionLink: TRPCLink<AppRouter> =
 export function ApiProvider({ children, userId }: { children: ReactNode; userId?: string }) {
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
-    createTRPCClient<AppRouter>({ links: [sessionLink, httpBatchLink({ url: "/api/trpc" })] }),
+    createTRPCClient<AppRouter>({
+      links: [
+        sessionLink,
+        // The guest search carries what was typed (names, phones): sent as POST so it never sits in a URL.
+        splitLink({
+          condition: (op) => op.path === "booking.search",
+          true: httpBatchLink({ url: "/api/trpc", methodOverride: "POST" }),
+          false: httpBatchLink({ url: "/api/trpc" }),
+        }),
+      ],
+    }),
   );
   const [persister] = useState(() => (userId ? createOfflinePersister(userId) : null));
   useEffect(() => {

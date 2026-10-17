@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState } from "react";
 import { isIsoDate, type IsoDate } from "@stay-ops/domain";
@@ -84,7 +84,6 @@ export function SearchScreen() {
   const trpc = useTRPC();
   const ids = useId();
   const params = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
 
   const [text, setText] = useState(() => params?.get("q") ?? "");
@@ -93,7 +92,9 @@ export function SearchScreen() {
   const [includeCancelled, setIncludeCancelled] = useState(() => params?.get("cancelled") === "1");
   const settledText = useSettled(text.trim());
 
-  // The search stays in the address, so coming back from the calendar shows the same results.
+  // The search stays in the address, so coming back from the calendar shows the same results. Written with
+  // the History API, not the router: a router change asks the server for the page, and the server's request
+  // log would then hold what was typed (a guest's name or phone).
   useEffect(() => {
     const next = new URLSearchParams();
     if (settledText) next.set("q", settledText);
@@ -101,8 +102,8 @@ export function SearchScreen() {
     if (to) next.set("to", to);
     if (includeCancelled) next.set("cancelled", "1");
     const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : (pathname ?? "/app/search"), { scroll: false });
-  }, [settledText, from, to, includeCancelled, router, pathname]);
+    window.history.replaceState(window.history.state, "", query ? `${pathname}?${query}` : (pathname ?? "/app/search"));
+  }, [settledText, from, to, includeCancelled, pathname]);
 
   const hasQuery = settledText.length >= 2 || from !== null || to !== null;
   const search = useQuery({

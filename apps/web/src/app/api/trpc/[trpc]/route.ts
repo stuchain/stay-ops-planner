@@ -9,6 +9,8 @@ function handler(req: Request) {
     endpoint: "/api/trpc",
     req,
     router: appRouter,
+    // Lets the client send the guest search as POST, so what was typed stays out of URLs and request logs.
+    allowMethodOverride: true,
     createContext: ({ resHeaders }) => createTrpcContext({ headers: req.headers, resHeaders }),
   });
 }
